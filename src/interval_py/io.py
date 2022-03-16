@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Awaitable, TypeAlias, Callable, Literal, TypeVar, Generic, Any
 from uuid import uuid4
 
-from .io_schema import IORender, MethodName, IOResponse
+from .io_schema import *
 from .component import Component
 
 IOErrorKind = Literal["CANCELED", "TRANSACTION_CLOSED"]
@@ -45,18 +45,24 @@ class Logger:
             print(**kwargs)
 
 
+ComponentRenderer: TypeAlias = Callable[[list[Component]], Awaitable[list[Any]]]
+
 # TODO: Exclusive / groupable
 # TODO: Separate type for Optional
 class IOPromise(Generic[MN]):
     component: Component
     optional: bool
+    renderer: ComponentRenderer
 
-    def __init__(self, component: Component, optional=False):
+    def __init__(
+        self, component: Component, renderer: ComponentRenderer, optional=False
+    ):
         self.component = component
+        self.renderer = renderer
         self.optional = optional
 
-    async def __await__(self):
-        yield None
+    def __await__(self):
+        yield self.renderer([self.component]).__await__()
 
 
 class IOClient:
@@ -82,7 +88,7 @@ class IOClient:
             except Exception as err:
                 self._logger.error("Error in on_response_handler:", err)
 
-    async def render_components(self, components: list[Component]):
+    async def render_components(self, components: list[Component]) -> list[Any]:
         if self._is_canceled:
             raise IOError("TRANSACTION_CLOSED")
 
@@ -101,17 +107,73 @@ class IOClient:
         loop = asyncio.get_event_loop()
         fut = loop.create_future()
 
-        async def on_response_handler():
-            pass
+        async def on_response_handler(result: IOResponse):
+            if result.kind == "CANCELED":
+                self._is_canceled = True
+                fut.set_exception(IOError("CANCELED"))
+                return
+
+            if len(result.values) != len(components):
+                raise Exception("Mismatch in return array length")
+
+            if result.kind == "RETURN":
+                for i, value in enumerate(result.values):
+                    components[i].set_return_value(value)
+                return
+
+            if result.kind == "SET_STATE":
+                for index, new_state in enumerate(result.values):
+                    prev_state = components[index].instance.state
+
+                    if new_state != prev_state:
+                        await components[index].set_state(new_state)
+                await render()
+
+        self._on_response_handler = on_response_handler
+
+        for c in components:
+            if c.on_state_change:
+                c.on_state_change = render
+
+        # initial render
+        await render()
+
+        asyncio.gather(
+            component.return_value for component in components
+        ).add_done_callback(fut.set_result)
+
+        return await fut
 
     async def group(self, io_promises: list[IOPromise]):
-        pass
+        return self.render_components([p.component for p in io_promises])
 
     class IO:
-        pass
-
+        @dataclass
         class Input:
-            pass
+            _renderer: ComponentRenderer
+
+            def __init__(self, renderer: ComponentRenderer):
+                self._renderer = renderer
+
+            def text(
+                self,
+                label: str,
+                help_text: str | None = None,
+                default_value: str | None = None,
+                multiline: bool | None = None,
+                lines: int | None = None,
+            ) -> IOPromise:
+                c = Component(
+                    method_name="INPUT_TEXT",
+                    label=label,
+                    initial_props=InputTextProps(
+                        help_text=help_text,
+                        default_value=default_value,
+                        multiline=multiline,
+                        lines=lines,
+                    ).dict(),
+                )
+                return IOPromise(c, renderer=self._renderer)
 
         class Select:
             pass
@@ -124,3 +186,19 @@ class IOClient:
 
             class Progress:
                 pass
+
+        renderer: ComponentRenderer
+        input: Input
+
+        def __init__(self, renderer: ComponentRenderer):
+            self.renderer = renderer
+            self.input = self.Input(renderer)
+
+        def alias_component_name(self, method_name: MN):
+            PropsType = io_schema[method_name].props
+
+            def io_fn(label: str, props: PropsType | None):
+                c = Component(method_name=method_name, label=label, initial_props=props)
+                return IOPromise[MN](c, renderer=self.renderer)
+
+            return io_fn
