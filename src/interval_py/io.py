@@ -1,204 +1,52 @@
-import asyncio, sys
-from asyncio.futures import Future
 from dataclasses import dataclass
-from typing import Awaitable, TypeAlias, Callable, Literal, TypeVar, Generic, Any
-from uuid import uuid4
 
 from .io_schema import *
-from .component import Component
-
-IOErrorKind = Literal["CANCELED", "TRANSACTION_CLOSED"]
+from .component import IOPromise, Component, ComponentRenderer
 
 
-class IOError(Exception):
-    kind: IOErrorKind
-    message: str | None
-
-    def __init__(self, kind: IOErrorKind, message: str | None = None):
-        super()
-        self.kind = kind
-        self.message = message
-
-
-MN = TypeVar("MN", bound=MethodName)
-
-LogLevel: TypeAlias = Literal["prod", "debug"]
-
-
-class Logger:
-    log_level: LogLevel = "prod"
-
-    def __init__(self, log_level: LogLevel = "prod"):
-        self.log_level = log_level
-
-    def prod(self, *kwargs):
-        print("[Interval]", *kwargs)
-
-    def warn(self, *kwargs):
-        print(*kwargs, file=sys.stderr)
-
-    def error(self, *kwargs):
-        print(*kwargs, file=sys.stderr)
-
-    def debug(self, **kwargs):
-        if self.log_level == "debug":
-            print(**kwargs)
-
-
-ComponentRenderer: TypeAlias = Callable[[list[Component]], Awaitable[list[Any]]]
-
-# TODO: Exclusive / groupable
-# TODO: Separate type for Optional
-class IOPromise(Generic[MN]):
-    component: Component
-    optional: bool
-    renderer: ComponentRenderer
-
-    def __init__(
-        self, component: Component, renderer: ComponentRenderer, optional=False
-    ):
-        self.component = component
-        self.renderer = renderer
-        self.optional = optional
-
-    def __await__(self):
-        yield self.renderer([self.component]).__await__()
-
-
-class IOClient:
-    Sender: TypeAlias = Callable[[IORender], Awaitable[None]]
-    _logger: Logger
-    _send: Sender
-    _on_response_handler: Callable[[IOResponse], Awaitable[None]]
-
-    _is_canceled = False
-
-    def __init__(self, logger: Logger, send: Sender):
-        self._logger = logger
-        self._send = send
-
-    @property
-    def is_canceled(self):
-        return self._is_canceled
-
-    async def on_response(self, response: IOResponse):
-        if self._on_response_handler:
-            try:
-                self._on_response_handler(response)
-            except Exception as err:
-                self._logger.error("Error in on_response_handler:", err)
-
-    async def render_components(self, components: list[Component]) -> list[Any]:
-        if self._is_canceled:
-            raise IOError("TRANSACTION_CLOSED")
-
-        input_group_key = uuid4()
-
-        async def render():
-            packed = IORender(
-                id=uuid4(),
-                input_group_key=input_group_key,
-                to_render=[inst.render_info for inst in components],
-                kind="RENDER",
-            )
-
-            await self._send(packed)
-
-        loop = asyncio.get_event_loop()
-        fut = loop.create_future()
-
-        async def on_response_handler(result: IOResponse):
-            if result.kind == "CANCELED":
-                self._is_canceled = True
-                fut.set_exception(IOError("CANCELED"))
-                return
-
-            if len(result.values) != len(components):
-                raise Exception("Mismatch in return array length")
-
-            if result.kind == "RETURN":
-                for i, value in enumerate(result.values):
-                    components[i].set_return_value(value)
-                return
-
-            if result.kind == "SET_STATE":
-                for index, new_state in enumerate(result.values):
-                    prev_state = components[index].instance.state
-
-                    if new_state != prev_state:
-                        await components[index].set_state(new_state)
-                await render()
-
-        self._on_response_handler = on_response_handler
-
-        for c in components:
-            if c.on_state_change:
-                c.on_state_change = render
-
-        # initial render
-        await render()
-
-        asyncio.gather(
-            component.return_value for component in components
-        ).add_done_callback(fut.set_result)
-
-        return await fut
-
-    async def group(self, io_promises: list[IOPromise]):
-        return self.render_components([p.component for p in io_promises])
-
-    class IO:
-        @dataclass
-        class Input:
-            _renderer: ComponentRenderer
-
-            def __init__(self, renderer: ComponentRenderer):
-                self._renderer = renderer
-
-            def text(
-                self,
-                label: str,
-                help_text: str | None = None,
-                default_value: str | None = None,
-                multiline: bool | None = None,
-                lines: int | None = None,
-            ) -> IOPromise:
-                c = Component(
-                    method_name="INPUT_TEXT",
-                    label=label,
-                    initial_props=InputTextProps(
-                        help_text=help_text,
-                        default_value=default_value,
-                        multiline=multiline,
-                        lines=lines,
-                    ).dict(),
-                )
-                return IOPromise(c, renderer=self._renderer)
-
-        class Select:
-            pass
-
-        class Display:
-            pass
-
-        class Experimental:
-            pass
-
-            class Progress:
-                pass
-
-        renderer: ComponentRenderer
-        input: Input
+class IO:
+    @dataclass
+    class Input:
+        _renderer: ComponentRenderer
 
         def __init__(self, renderer: ComponentRenderer):
-            self.renderer = renderer
-            self.input = self.Input(renderer)
+            self._renderer = renderer
 
-        def alias_component_name(self, method_name: MN):
-            PropsType = io_schema[method_name].props
+        def text(
+            self,
+            label: str,
+            help_text: str | None = None,
+            default_value: str | None = None,
+            multiline: bool | None = None,
+            lines: int | None = None,
+        ) -> IOPromise:
+            c = Component(
+                method_name="INPUT_TEXT",
+                label=label,
+                initial_props=InputTextProps(
+                    help_text=help_text,
+                    default_value=default_value,
+                    multiline=multiline,
+                    lines=lines,
+                ).dict(),
+            )
+            return IOPromise(c, renderer=self._renderer)
 
-            def io_fn(label: str, props: PropsType | None):
-                c = Component(method_name=method_name, label=label, initial_props=props)
-                return IOPromise[MN](c, renderer=self.renderer)
+    class Select:
+        pass
 
-            return io_fn
+    class Display:
+        pass
+
+    class Experimental:
+        pass
+
+        class Progress:
+            pass
+
+    renderer: ComponentRenderer
+    input: Input
+
+    def __init__(self, renderer: ComponentRenderer):
+        self.renderer = renderer
+        self.input = self.Input(renderer)

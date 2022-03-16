@@ -111,3 +111,24 @@ class Component(Generic[MN]):
             is_stateful=self.instance.is_stateful,
             is_optional=self.instance.is_optional,
         )
+
+
+ComponentRenderer: TypeAlias = Callable[[list[Component]], Awaitable[list[Any]]]
+
+
+# TODO: Exclusive / groupable
+# TODO: Separate type for Optional
+class IOPromise(Generic[MN]):
+    component: Component
+    optional: bool
+    renderer: ComponentRenderer
+
+    def __init__(
+        self, component: Component, renderer: ComponentRenderer, optional=False
+    ):
+        self.component = component
+        self.renderer = renderer
+        self.optional = optional
+
+    def __await__(self):
+        yield self.renderer([self.component]).__await__()

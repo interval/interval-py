@@ -1,4 +1,2 @@
 from .main import *
-from .io import IOClient
-
-IO = IOClient.IO
+from .io import IO

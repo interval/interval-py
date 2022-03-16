@@ -1,11 +1,10 @@
 from typing import Optional, TypeAlias, Callable, Awaitable
 
 from .io_schema import IOFunctionReturnType
-from .io import IOClient, Logger, LogLevel
+from .io_client import Logger, LogLevel
+from .io import IO
 
-IntervalActionHandler: TypeAlias = Callable[
-    [IOClient.IO], Awaitable[IOFunctionReturnType]
-]
+IntervalActionHandler: TypeAlias = Callable[[IO], Awaitable[IOFunctionReturnType]]
 
 
 class Interval:
