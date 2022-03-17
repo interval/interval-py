@@ -22,6 +22,10 @@ def camel_to_snake(name: str) -> str:
     return camel_p2.sub(r"\1_\2", name).lower()
 
 
+def dict_keys_to_camel(d: dict[str, Any]) -> dict[str, Any]:
+    return {snake_to_camel(key): val for (key, val) in d.items()}
+
+
 def json_loads_camel(s: str, **kwargs) -> Any:
     obj = json.loads(s, **kwargs)
     return {camel_to_snake(key): val for (key, val) in obj}

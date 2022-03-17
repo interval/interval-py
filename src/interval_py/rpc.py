@@ -6,7 +6,7 @@ from pydantic import parse_raw_as
 
 from .internal_rpc_schema import DuplexMessage, MethodDef
 from .isocket import ISocket
-from .types import BaseModel
+from .types import BaseModel, dict_keys_to_camel
 
 # I think this is right? or covariant=
 CallerSchema = TypeVar("CallerSchema", bound=MethodDef)
@@ -86,7 +86,10 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
         id = generate_id()
 
         message = DuplexMessage(
-            id=id, data=inputs, method_name=method_name, kind="CALL"
+            id=id,
+            data=dict_keys_to_camel(inputs.dict()),
+            method_name=method_name,
+            kind="CALL",
         )
         print("send", method_name, message)
 

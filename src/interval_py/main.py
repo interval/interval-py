@@ -8,7 +8,7 @@ from .isocket import ISocket
 from .io_schema import ActionResult, IOFunctionReturnType
 from .io_client import IOClient, Logger, LogLevel, IOError
 from .io import IO, IOResponse, IORender
-from .rpc import DuplexRPCClient, DuplexMessage
+from .rpc import DuplexRPCClient
 from .internal_rpc_schema import *
 
 IntervalActionHandler: TypeAlias = Callable[
@@ -50,9 +50,11 @@ class Interval:
 
     def enqueue(self, slug: str):
         pass
+        # TODO
 
     def dequeue(self, id: str):
         pass
+        # TODO
 
     @property
     def _log(self):
