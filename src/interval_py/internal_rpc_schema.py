@@ -97,6 +97,7 @@ WSServerSchemaMethodName = Literal[
     "RESPOND_TO_IO_CALL",
     "SEND_IO_CALL",
     "MARK_TRANSACTION_COMPLETE",
+    "INITIALIZE_HOST",
     "ENQUEUE_ACTION",
     "DEQUEUE_ACTION",
 ]
@@ -119,6 +120,10 @@ ws_server_schema: WSServerSchema = {
     "MARK_TRANSACTION_COMPLETE": RPCMethod(
         inputs=MarkTransactionCompleteInputs,
         returns=bool,
+    ),
+    "INITIALIZE_HOST": RPCMethod(
+        inputs=InitializeHostInputs,
+        returns=InitializeHostReturns,
     ),
     "ENQUEUE_ACTION": RPCMethod(
         inputs=EnqueueActionInputs,

@@ -67,14 +67,17 @@ class Interval:
     def is_connected(self):
         return self._is_connected
 
-    async def listen(self):
+    def listen(self):
+        loop = asyncio.get_event_loop()
+        loop.create_task(self._listen())
+        loop.run_forever()
+
+    async def _listen(self):
         await self._create_socket_connection()
         self._create_rpc_client()
         await self._initialize_host()
 
     async def _create_socket_connection(self, instance_id: UUID = uuid4()):
-        print("create_socket_connection")
-
         async def on_close(code: int, reason: str):
             if not self._is_connected:
                 return
@@ -124,7 +127,6 @@ class Interval:
         await self._initialize_host()
 
     def _create_rpc_client(self):
-        print("create_rpc_client")
         if self._isocket is None:
             raise Exception("ISocket not initialized")
 
@@ -189,7 +191,7 @@ class Interval:
                 except:
                     pass
 
-            task = asyncio.create_task(call_handler(), name="call_handler")
+            _ = asyncio.create_task(call_handler(), name="call_handler")
 
         async def io_response(inputs: IOResponseInputs):
             self._log.debug("Got IO response", inputs)
@@ -211,7 +213,6 @@ class Interval:
         )
 
     async def _initialize_host(self):
-        print("initialize_host")
         if self._isocket is None:
             raise Exception("isocket not initialized")
 
@@ -219,7 +220,6 @@ class Interval:
             raise Exception("server_rpc not initialized")
 
         slugs = list(self._actions.keys())
-        print(slugs)
 
         logged_in: InitializeHostReturns | None = await self._server_rpc.send(
             "INITIALIZE_HOST",
@@ -230,8 +230,6 @@ class Interval:
                 sdk_version="dev",
             ),
         )
-
-        print("hmmm???")
 
         if logged_in is None:
             raise Exception("The provided API key is not valid")

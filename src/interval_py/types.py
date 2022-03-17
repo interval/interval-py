@@ -1,5 +1,5 @@
 import json, re
-from typing import Any
+from typing import Any, Tuple
 
 
 from pydantic import BaseModel as PydanticBaseModel
@@ -26,16 +26,23 @@ def dict_keys_to_camel(d: dict[str, Any]) -> dict[str, Any]:
     return {snake_to_camel(key): val for (key, val) in d.items()}
 
 
-def json_loads_camel(s: str, **kwargs) -> Any:
-    obj = json.loads(s, **kwargs)
-    return {camel_to_snake(key): val for (key, val) in obj}
+def load_camel_pairs(pairs: list[Tuple[str, Any]]) -> dict[str, Any]:
+    return {camel_to_snake(key): val for (key, val) in pairs}
 
 
-def json_dumps_camel(obj: Any, **kwargs) -> str:
+def json_loads_camel(*args, **kwargs) -> Any:
+    return json.loads(*args, **kwargs, object_pairs_hook=load_camel_pairs)
+
+
+def dump_snake_obj(obj: Any) -> Any:
     if isinstance(obj, dict):
-        obj = {snake_to_camel(key): val for (key, val) in obj.items()}
+        obj = {snake_to_camel(key): dump_snake_obj(val) for (key, val) in obj.items()}
 
-    return json.dumps(obj, **kwargs)
+    return obj
+
+
+def json_dumps_camel(obj: Any, *args, **kwargs) -> str:
+    return json.dumps(dump_snake_obj(obj), *args, **kwargs)
 
 
 class BaseModel(PydanticBaseModel):

@@ -85,7 +85,7 @@ class IOClient:
 
             await self._send(packed)
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         fut = loop.create_future()
 
         async def on_response_handler(result: IOResponse):

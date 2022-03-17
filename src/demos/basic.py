@@ -1,4 +1,3 @@
-import asyncio
 from interval_py import Interval, IO
 
 
@@ -9,6 +8,10 @@ def main():
     )
 
     @interval.action
+    async def hello_interval(io: IO, _):
+        return {"hello": "interval"}
+
+    @interval.action
     async def add_a_number(io: IO, _):
         await io.input.text("ok", help_text="ok")
 
@@ -16,7 +19,7 @@ def main():
     async def add_two_numbers(io: IO, _):
         await io.input.text("ok", help_text="ok")
 
-    asyncio.run(interval.listen())
+    interval.listen()
 
 
 if __name__ == "__main__":

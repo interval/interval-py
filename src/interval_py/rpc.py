@@ -2,7 +2,7 @@ import asyncio
 from asyncio import Future
 from typing import Any, Callable, Generic, TypeVar, TypeAlias, Awaitable
 
-from pydantic import parse_raw_as
+from pydantic import parse_raw_as, parse_obj_as
 
 from .internal_rpc_schema import DuplexMessage, MethodDef
 from .isocket import ISocket
@@ -53,7 +53,6 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
         self._communicator.on_message = self._on_message
 
     async def _on_message(self, data: str):
-        print("on_message")
         input = DuplexMessage.parse_raw(data)
 
         if input.kind == "RESPONSE":
@@ -62,7 +61,6 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
             return await self._handle_received_call(input)
 
     async def _handle_received_response(self, parsed: DuplexMessage):
-        print("\n\n***received", parsed)
         on_reply_fut = self._pending_calls.pop(parsed.id, None)
         if on_reply_fut is not None:
             on_reply_fut.set_result(parsed.data)
@@ -82,7 +80,6 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
             kind="RESPONSE",
         )
         prepared_response_text = message.json()
-        print(prepared_response_text)
 
         await self._communicator.send(prepared_response_text)
 
@@ -97,13 +94,13 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
             kind="CALL",
         )
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         fut = loop.create_future()
         self._pending_calls[id] = fut
 
         asyncio.create_task(self._communicator.send(message.json()), name="send")
 
         raw_response_text = await fut
-        parsed = parse_raw_as(self._can_call[method_name].returns, raw_response_text)
+        parsed = parse_obj_as(self._can_call[method_name].returns, raw_response_text)
 
         return parsed

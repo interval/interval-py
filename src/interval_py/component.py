@@ -63,7 +63,7 @@ class Component(Generic[MN]):
         )
         self._handle_state_change = handle_state_change
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         self._fut = loop.create_future()
 
     def set_return_value(self, value: Any):

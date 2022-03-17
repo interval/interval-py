@@ -66,7 +66,7 @@ class ISocket:
         if self.on_open:
             await self.on_open()
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         fut = loop.create_future()
         self.on_authenticated = fut
 
@@ -85,7 +85,6 @@ class ISocket:
         self, ws: websockets.client.WebSocketClientProtocol
     ) -> None:
         async for message in ws:
-            print("consumer", message)
             meta = Message.parse_raw(message)
 
             if meta.type == "ACK":
@@ -94,16 +93,13 @@ class ISocket:
                     pm.on_ack_received.set_result(None)
                     self._pending_messages.pop(meta.id)
             elif meta.type == "MESSAGE":
-                print("message", meta)
                 await self._out_queue.put(Message(id=meta.id, data=None, type="ACK"))
                 if meta.data == "authenticated":
                     self._is_authenticated = True
                     self.on_authenticated.set_result(None)
-                    return
+                    continue
 
-                print("message", meta)
                 if self.on_message:
-                    print("on_message found!")
                     await self.on_message(meta.data)
 
     async def _producer_handler(
@@ -118,19 +114,17 @@ class ISocket:
         if self._ws is None:
             raise NotConnectedError
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         id = uuid4()
         fut = loop.create_future()
         message = Message(id=id, data=data, type="MESSAGE")
-        print("send", message)
         self._pending_messages[message.id] = PendingMessage(
             message=message, on_ack_received=fut
         )
         await self._out_queue.put(message)
 
         await asyncio.wait_for(fut, self._send_timeout)
-        print("sent!")
 
     async def close(self):
         if self._ws is None:

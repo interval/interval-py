@@ -1,7 +1,17 @@
 from __future__ import annotations
 from enum import Enum
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Literal, TypeAlias, Type, Generic, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Optional,
+    Literal,
+    TypeAlias,
+    Type,
+    Generic,
+    TypeVar,
+    Mapping,
+)
 from datetime import date, datetime
 from uuid import UUID
 
@@ -73,8 +83,10 @@ KeyValueObject: TypeAlias = (
     ObjectLiteral | list[ObjectLiteral] | dict[str, ObjectLiteral]
 )
 
-DeserializableRecord: TypeAlias = str | int | float | bool | None
-SerializableRecord: TypeAlias = str | int | float | bool | None | date | datetime
+Deserializable: TypeAlias = str | int | float | bool | None
+DeserializableRecord: TypeAlias = Mapping[str, Deserializable]
+Serializable: TypeAlias = str | int | float | bool | None | date | datetime
+SerializableRecord: TypeAlias = Mapping[str, Serializable]
 
 
 class TableRowLabelValue(BaseModel):
@@ -82,8 +94,8 @@ class TableRowLabelValue(BaseModel):
     _value: ObjectLiteral
 
 
-RawActionReturnData: TypeAlias = dict[str, SerializableRecord]
-IOFunctionReturnType: TypeAlias = SerializableRecord
+RawActionReturnData: TypeAlias = Mapping[str, SerializableRecord]
+IOFunctionReturnType: TypeAlias = SerializableRecord | None
 
 
 class ParsedActionReturnDataLink(BaseModel):
