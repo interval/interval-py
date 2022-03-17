@@ -28,6 +28,7 @@ class NotConnectedError(Exception):
 class ISocket:
     _ws: websockets.client.WebSocketClientProtocol
     _send_timeout: float
+    _connect_timeout: float
     _is_authenticated: bool
 
     id: UUID
@@ -35,7 +36,7 @@ class ISocket:
     on_open: Callable[[], Awaitable[None]] | None
     on_error: Callable[[Exception], Awaitable[None]] | None
     on_close: Callable[[int, str], Awaitable[None]] | None
-    on_authenticated: Callable[[], Awaitable[None]] | None
+    on_authenticated: Future[None]
 
     _out_queue: asyncio.Queue[Message] = asyncio.Queue()
     _pending_messages: dict[UUID, PendingMessage] = {}
@@ -45,25 +46,29 @@ class ISocket:
         ws: websockets.client.WebSocketClientProtocol,
         id: UUID = uuid4(),
         send_timeout: float = 3,
+        connect_timeout: float = 10,
         on_message: Callable[[str], Awaitable[None]] | None = None,
         on_open: Callable[[], Awaitable[None]] | None = None,
         on_error: Callable[[Exception], Awaitable[None]] | None = None,
         on_close: Callable[[int, str], Awaitable[None]] | None = None,
-        on_authenticated: Callable[[], Awaitable[None]] | None = None,
     ):
         self._ws = ws
         self.id = id
         self._send_timeout = send_timeout
+        self._connect_timeout = connect_timeout
 
         self.on_message = on_message
         self.on_open = on_open
         self.on_error = on_error
         self.on_close = on_close
-        self.on_authenticated = on_authenticated
 
     async def connect(self) -> None:
         if self.on_open:
-            self.on_open()
+            await self.on_open()
+
+        loop = asyncio.get_event_loop()
+        fut = loop.create_future()
+        self.on_authenticated = fut
 
         try:
             asyncio.gather(
@@ -73,6 +78,8 @@ class ISocket:
         except websockets.exceptions.ConnectionClosed as e:
             if self.on_close:
                 await self.on_close(e.code, e.reason)
+
+        await asyncio.wait_for(fut, self._connect_timeout)
 
     async def _consumer_handler(
         self, ws: websockets.client.WebSocketClientProtocol
@@ -87,26 +94,25 @@ class ISocket:
                     pm.on_ack_received.set_result(None)
                     self._pending_messages.pop(meta.id)
             elif meta.type == "MESSAGE":
+                print("message", meta)
                 await self._out_queue.put(Message(id=meta.id, data=None, type="ACK"))
                 if meta.data == "authenticated":
                     self._is_authenticated = True
-                    if self.on_authenticated:
-                        self.on_authenticated()
+                    self.on_authenticated.set_result(None)
                     return
 
+                print("message", meta)
                 if self.on_message:
-                    self.on_message(meta.data)
+                    print("on_message found!")
+                    await self.on_message(meta.data)
 
     async def _producer_handler(
         self, ws: websockets.client.WebSocketClientProtocol
     ) -> None:
 
         while True:
-            print("producer waiting...")
             message = await self._out_queue.get()
-            print("producer", message.json())
             await ws.send(message.json())
-            print("produced")
 
     async def send(self, data: str) -> None:
         if self._ws is None:
@@ -122,9 +128,9 @@ class ISocket:
             message=message, on_ack_received=fut
         )
         await self._out_queue.put(message)
-        print("queued")
 
         await asyncio.wait_for(fut, self._send_timeout)
+        print("sent!")
 
     async def close(self):
         if self._ws is None:

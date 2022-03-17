@@ -39,9 +39,12 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
         handlers: dict[str, RPCHandler],
     ):
         self._communicator = communicator
+        self._communicator.on_message = self._on_message
         self._can_call = can_call
         self._can_respond_to = can_respond_to
         self._handlers = handlers
+
+        self.set_communicator(communicator)
 
     def set_communicator(self, communicator: ISocket):
         if self._communicator is not None:
@@ -50,6 +53,7 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
         self._communicator.on_message = self._on_message
 
     async def _on_message(self, data: str):
+        print("on_message")
         input = DuplexMessage.parse_raw(data)
 
         if input.kind == "RESPONSE":
@@ -58,9 +62,10 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
             return await self._handle_received_call(input)
 
     async def _handle_received_response(self, parsed: DuplexMessage):
-        on_reply_fn = self._pending_calls.pop(parsed.id, None)
-        if on_reply_fn is not None:
-            on_reply_fn.set_result(parsed.data)
+        print("\n\n***received", parsed)
+        on_reply_fut = self._pending_calls.pop(parsed.id, None)
+        if on_reply_fut is not None:
+            on_reply_fut.set_result(parsed.data)
 
     async def _handle_received_call(self, parsed: DuplexMessage):
         method_name = parsed.method_name
@@ -91,7 +96,6 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
             method_name=method_name,
             kind="CALL",
         )
-        print("send", method_name, message)
 
         loop = asyncio.get_event_loop()
         fut = loop.create_future()

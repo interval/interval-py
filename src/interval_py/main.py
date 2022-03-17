@@ -99,22 +99,23 @@ class Interval:
                 self._log.prod("Unable to reconnect. Retrying in 3s...")
                 await asyncio.sleep(3)
 
+        ws = await websockets.client.connect(
+            self._endpoint,
+            extra_headers={
+                "x-api-key": self._api_key,
+                "x-instance-id": str(instance_id),
+            },
+            open_timeout=10,
+        )
+
         self._isocket = ISocket(
             id=instance_id,
-            ws=await websockets.client.connect(
-                self._endpoint,
-                extra_headers={
-                    "x-api-key": self._api_key,
-                    "x-instance-id": str(instance_id),
-                },
-            ),
+            ws=ws,
             on_close=on_close,
         )
 
-        print("awaiting connection...")
         await self._isocket.connect()
         self._is_connected = True
-        print("connected")
 
         if self._server_rpc is None:
             return
@@ -229,6 +230,8 @@ class Interval:
                 sdk_version="dev",
             ),
         )
+
+        print("hmmm???")
 
         if logged_in is None:
             raise Exception("The provided API key is not valid")
