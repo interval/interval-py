@@ -2,10 +2,11 @@ import asyncio
 from asyncio import Future
 from typing import Any, Callable, Generic, TypeVar, TypeAlias, Awaitable
 
-from pydantic import parse_obj_as
+from pydantic import parse_raw_as
 
 from .internal_rpc_schema import DuplexMessage, MethodDef
 from .isocket import ISocket
+from .types import BaseModel
 
 # I think this is right? or covariant=
 CallerSchema = TypeVar("CallerSchema", bound=MethodDef)
@@ -27,8 +28,8 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
     _communicator: ISocket
     _can_call: CallerSchema
     _can_respond_to: ResponderSchema
-    _handlers: dict[str, RPCHandler]
-    _pending_calls: dict[str, Future[Any]]
+    _handlers: dict[str, RPCHandler] = {}
+    _pending_calls: dict[str, Future[Any]] = {}
 
     def __init__(
         self,
@@ -49,7 +50,7 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
         self._communicator.on_message = self._on_message
 
     async def _on_message(self, data: str):
-        input = DuplexMessage.parse_obj(data)
+        input = DuplexMessage.parse_raw(data)
 
         if input.kind == "RESPONSE":
             return await self._handle_received_response(input)
@@ -65,7 +66,7 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
         method_name = parsed.method_name
         method = self._can_respond_to[method_name]
 
-        inputs = parse_obj_as(method.inputs, parsed.data)
+        inputs = parse_raw_as(method.inputs, parsed.data)
         handler = self._handlers[method_name]
         return_value = await handler(inputs)
 
@@ -76,24 +77,26 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
             kind="RESPONSE",
         )
         prepared_response_text = message.json()
+        print(prepared_response_text)
 
         await self._communicator.send(prepared_response_text)
 
     # TODO: Can this be typed?
-    async def send(self, method_name: str, inputs: Any):
+    async def send(self, method_name: str, inputs: BaseModel):
         id = generate_id()
 
         message = DuplexMessage(
             id=id, data=inputs, method_name=method_name, kind="CALL"
         )
+        print("send", method_name, message)
 
         loop = asyncio.get_event_loop()
         fut = loop.create_future()
         self._pending_calls[id] = fut
 
-        await self._communicator.send(message.json())
+        asyncio.create_task(self._communicator.send(message.json()), name="send")
 
         raw_response_text = await fut
-        parsed = parse_obj_as(self._can_call[method_name].returns, raw_response_text)
+        parsed = parse_raw_as(self._can_call[method_name].returns, raw_response_text)
 
         return parsed

@@ -96,8 +96,8 @@ ParsedActionReturnDataValue = SerializableRecord | ParsedActionReturnDataLink
 ParsedActionReturnData: TypeAlias = dict[str, ParsedActionReturnDataValue]
 
 
-class ActionResultSchema(BaseModel):
-    schema_version: Literal[0, 1]
+class ActionResult(BaseModel):
+    schema_version: Literal[0, 1] = 1
     status: Literal["SUCCESS", "FAILURE"]
     data: IOFunctionReturnType | None
 

@@ -15,8 +15,6 @@ class DuplexMessage(BaseModel):
     kind: Literal["CALL", "RESPONSE"]
 
 
-TRANSACTION_RESULT_SCHEMA_VERSION = 1
-
 ActionEnvironment: TypeAlias = Literal["live", "development"]
 
 
@@ -103,7 +101,9 @@ WSServerSchemaMethodName = Literal[
     "DEQUEUE_ACTION",
 ]
 
-ws_server_schema: dict[WSServerSchemaMethodName, RPCMethod] = {
+WSServerSchema = dict[WSServerSchemaMethodName, RPCMethod]
+
+ws_server_schema: WSServerSchema = {
     "CONNECT_TO_TRANSACTION_AS_CLIENT": RPCMethod(
         inputs=ConnectToTransactionAsClientInputs,
         returns=bool,
@@ -149,7 +149,9 @@ ClientSchemaMethodName = Literal[
     "RENDER",
 ]
 
-client_schema: dict[ClientSchemaMethodName, RPCMethod] = {
+ClientSchema = dict[ClientSchemaMethodName, RPCMethod]
+
+client_schema: ClientSchema = {
     "CLIENT_USURPED": RPCMethod(
         inputs=None,
         returns=None,
@@ -175,7 +177,7 @@ client_schema: dict[ClientSchemaMethodName, RPCMethod] = {
 
 class IOResponseInputs(BaseModel):
     value: str
-    transactionId: str
+    transaction_id: str
 
 
 class ActionContextUser(BaseModel):
@@ -194,8 +196,9 @@ class StartTransactionInputs(ActionContext):
 
 
 HostSchemaMethodName = Literal["IO_RESPONSE", "START_TRANSACTION"]
+HostSchema = dict[HostSchemaMethodName, RPCMethod]
 
-host_schema: dict[HostSchemaMethodName, RPCMethod] = {
+host_schema: HostSchema = {
     "IO_RESPONSE": RPCMethod(
         inputs=IOResponseInputs,
         returns=None,

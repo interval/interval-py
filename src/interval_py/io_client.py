@@ -30,18 +30,18 @@ class Logger:
     def __init__(self, log_level: LogLevel = "prod"):
         self.log_level = log_level
 
-    def prod(self, *kwargs):
-        print("[Interval]", *kwargs)
+    def prod(self, *args, **kwargs):
+        print("[Interval]", *args, **kwargs)
 
-    def warn(self, *kwargs):
-        print(*kwargs, file=sys.stderr)
+    def warn(self, *args, **kwargs):
+        print(*args, **kwargs, file=sys.stderr)
 
-    def error(self, *kwargs):
-        print(*kwargs, file=sys.stderr)
+    def error(self, *args, **kwargs):
+        print(*args, **kwargs, file=sys.stderr)
 
-    def debug(self, **kwargs):
+    def debug(self, *args, **kwargs):
         if self.log_level == "debug":
-            print(**kwargs)
+            print(*args, **kwargs)
 
 
 class IOClient:
@@ -119,9 +119,10 @@ class IOClient:
         # initial render
         await render()
 
-        asyncio.gather(
-            component.return_value for component in components
-        ).add_done_callback(fut.set_result)
+        task = asyncio.create_task(
+            (component.return_value for component in components), name="render"
+        )
+        task.add_done_callback(fut.set_result)
 
         return await fut
 

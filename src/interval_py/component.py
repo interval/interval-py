@@ -11,7 +11,7 @@ from typing import (
 )
 
 
-from pydantic import parse_obj_as, ValidationError
+from pydantic import parse_raw_as, ValidationError
 
 from .io_schema import MethodDef, MethodName, io_schema, ComponentRenderInfo
 from .types import GenericModel
@@ -72,7 +72,7 @@ class Component(Generic[MN]):
             return_schema = return_schema | None
 
         try:
-            parsed = parse_obj_as(return_schema, value)
+            parsed = parse_raw_as(return_schema, value)
             self._fut.set_result(parsed)
         except ValidationError as err:
             print("Received invalid return value:", err, file=sys.stderr)
@@ -81,7 +81,7 @@ class Component(Generic[MN]):
         state_schema = self.schema.state
 
         try:
-            parsed = parse_obj_as(state_schema, value)
+            parsed = parse_raw_as(state_schema, value)
             if self._handle_state_change:
                 self.instance.props.update(await self._handle_state_change(parsed))
             elif parsed is not None:
