@@ -1,4 +1,5 @@
 import asyncio, sys
+import traceback
 from typing import Awaitable, TypeAlias, Callable, Literal, TypeVar, Any
 from uuid import uuid4
 
@@ -59,15 +60,16 @@ class IOClient:
         self.io = IO(self.render_components)
 
     @property
-    def is_canceled(self):
+    def is_canceled(self) -> bool:
         return self._is_canceled
 
     async def on_response(self, response: IOResponse):
         if self._on_response_handler:
             try:
-                self._on_response_handler(response)
+                await self._on_response_handler(response)
             except Exception as err:
                 self._logger.error("Error in on_response_handler:", err)
+                traceback.print_exception(err)
 
     async def render_components(self, components: list[Component]) -> list[Any]:
         if self._is_canceled:
@@ -88,27 +90,27 @@ class IOClient:
         loop = asyncio.get_running_loop()
         fut = loop.create_future()
 
-        async def on_response_handler(result: IOResponse):
-            if result.kind == "CANCELED":
+        async def on_response_handler(response: IOResponse):
+            if response.kind == "CANCELED":
                 self._is_canceled = True
                 fut.set_exception(IOError("CANCELED"))
                 return
 
-            if len(result.values) != len(components):
+            if len(response.values) != len(components):
                 raise Exception("Mismatch in return array length")
 
-            if result.kind == "RETURN":
-                for i, value in enumerate(result.values):
+            if response.kind == "RETURN":
+                for i, value in enumerate(response.values):
                     components[i].set_return_value(value)
                 return
 
-            if result.kind == "SET_STATE":
-                for index, new_state in enumerate(result.values):
+            elif response.kind == "SET_STATE":
+                for index, new_state in enumerate(response.values):
                     prev_state = components[index].instance.state
 
                     if new_state != prev_state:
                         await components[index].set_state(new_state)
-                await render()
+                asyncio.create_task(render())
 
         self._on_response_handler = on_response_handler
 
@@ -117,14 +119,11 @@ class IOClient:
                 c.on_state_change = render
 
         # initial render
-        await render()
+        asyncio.create_task(render())
 
-        task = asyncio.create_task(
-            (component.return_value for component in components), name="render"
-        )
-        task.add_done_callback(fut.set_result)
+        return_futures = [component.return_value for component in components]
+        return list(await asyncio.gather(*return_futures))
 
-        return await fut
-
-    async def group(self, io_promises: list[IOPromise]):
-        return self.render_components([p.component for p in io_promises])
+    # XXX: Pretty sure statically typing this is impossible
+    async def group(self, io_promises: list[IOPromise]) -> list[Any]:
+        return await self.render_components([p.component for p in io_promises])

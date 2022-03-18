@@ -7,7 +7,6 @@ from typing import (
     Optional,
     Literal,
     TypeAlias,
-    Type,
     Generic,
     TypeVar,
     Mapping,
@@ -125,11 +124,16 @@ class TableColumnDef(BaseModel):
     formatter: Optional[Callable[[Any], str]]
 
 
+PropsType = TypeVar("PropsType")
+StateType = TypeVar("StateType")
+ReturnType = TypeVar("ReturnType")
+
+
 @dataclass
-class MethodDef:
-    props: Type
-    state: Type
-    returns: Type
+class MethodDef(Generic[PropsType, StateType, ReturnType]):
+    props: PropsType
+    state: StateType
+    returns: ReturnType
     immediate: bool = False
     exclusive: bool = False
 
@@ -314,6 +318,17 @@ io_schema: dict[MethodName, MethodDef] = {
         returns=None,
     ),
 }
+
+
+class IOSchema(Generic[MN]):
+    method_def: MethodDef
+
+    def __init__(self, method_name: MN):
+        self.method_def = io_schema[method_name]
+
+    @classmethod
+    def props(cls):
+        return cls.method_def.props
 
 
 def resolves_immediately(method_name: MethodName) -> bool:

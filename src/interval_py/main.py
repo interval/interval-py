@@ -1,4 +1,4 @@
-import asyncio
+import asyncio, traceback
 from typing import Optional, TypeAlias, Callable, Awaitable
 from uuid import uuid4, UUID
 
@@ -172,8 +172,11 @@ class Interval:
                     except IOError as ioerr:
                         raise ioerr
                     except Exception as err:
+                        self._log.error("Error in action handler", err)
+                        traceback.print_exception(err)
                         result = ActionResult(
-                            status="FAILURE", data=str(err)  # FIXME: Proper message?
+                            status="FAILURE",
+                            data={"message": str(err)},  # FIXME: Proper message?
                         )
                     await self._server_rpc.send(
                         "MARK_TRANSACTION_COMPLETE",
@@ -197,8 +200,8 @@ class Interval:
             self._log.debug("Got IO response", inputs)
             io_resp = IOResponse.parse_raw(inputs.value)
             try:
-                reply_handler = self._io_response_handlers.pop(io_resp.transaction_id)
-                reply_handler(io_resp)
+                reply_handler = self._io_response_handlers[io_resp.transaction_id]
+                await reply_handler(io_resp)
             except KeyError:
                 self._log.debug("Missing reply handler for", inputs.transaction_id)
 

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass
 
 from .io_schema import *
@@ -9,9 +10,6 @@ class IO:
     class Input:
         _renderer: ComponentRenderer
 
-        def __init__(self, renderer: ComponentRenderer):
-            self._renderer = renderer
-
         def text(
             self,
             label: str,
@@ -19,7 +17,7 @@ class IO:
             default_value: str | None = None,
             multiline: bool | None = None,
             lines: int | None = None,
-        ) -> IOPromise:
+        ) -> IOPromise[Literal["INPUT_TEXT"], str]:
             c = Component(
                 method_name="INPUT_TEXT",
                 label=label,
@@ -32,21 +30,31 @@ class IO:
             )
             return IOPromise(c, renderer=self._renderer)
 
+    @dataclass
     class Select:
-        pass
+        _renderer: ComponentRenderer
 
+    @dataclass
     class Display:
-        pass
+        _renderer: ComponentRenderer
 
+    @dataclass
     class Experimental:
-        pass
+        _renderer: ComponentRenderer
 
+        @dataclass
         class Progress:
-            pass
+            _renderer: ComponentRenderer
 
     renderer: ComponentRenderer
     input: Input
+    select: Select
+    display: Display
+    experimental: Experimental
 
     def __init__(self, renderer: ComponentRenderer):
         self.renderer = renderer
         self.input = self.Input(renderer)
+        self.select = self.Select(renderer)
+        self.display = self.Display(renderer)
+        self.experimental = self.Experimental(renderer)

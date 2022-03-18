@@ -100,7 +100,7 @@ class ISocket:
                     continue
 
                 if self.on_message:
-                    await self.on_message(meta.data)
+                    asyncio.ensure_future(self.on_message(meta.data))
 
     async def _producer_handler(
         self, ws: websockets.client.WebSocketClientProtocol

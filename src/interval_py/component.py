@@ -1,9 +1,9 @@
 import asyncio, sys
 from asyncio.futures import Future
-from dataclasses import dataclass
 from typing import (
     Any,
     Callable,
+    Generator,
     Generic,
     TypeVar,
     TypeAlias,
@@ -11,15 +11,14 @@ from typing import (
 )
 
 
-from pydantic import parse_raw_as, ValidationError
+from pydantic import parse_obj_as, parse_raw_as, ValidationError
 
 from .io_schema import MethodDef, MethodName, io_schema, ComponentRenderInfo
-from .types import GenericModel
+from .types import GenericModel, dict_strip_none
 
 MN = TypeVar("MN", bound=MethodName)
 
 
-@dataclass
 class ComponentInstance(GenericModel, Generic[MN]):
     method_name: MN
     label: str
@@ -32,11 +31,10 @@ class ComponentInstance(GenericModel, Generic[MN]):
 
 class Component(Generic[MN]):
     # TODO: Try typing this
-    ReturnFuture: TypeAlias = Future[Any]
     StateChangeHandler: TypeAlias = Callable[[Any], Awaitable[Any]]
 
     _handle_state_change: StateChangeHandler | None = None
-    _fut: ReturnFuture
+    _fut: Future[Any]
 
     schema: MethodDef
     instance: ComponentInstance
@@ -56,7 +54,7 @@ class Component(Generic[MN]):
         self.instance = ComponentInstance(
             method_name=method_name,
             label=label,
-            props=initial_props,
+            props=dict_strip_none(initial_props),
             state=None,
             is_stateful=True if handle_state_change is not None else False,
             is_optional=False,
@@ -72,10 +70,11 @@ class Component(Generic[MN]):
             return_schema = return_schema | None
 
         try:
-            parsed = parse_raw_as(return_schema, value)
+            parsed = parse_obj_as(return_schema, value)
             self._fut.set_result(parsed)
         except ValidationError as err:
             print("Received invalid return value:", err, file=sys.stderr)
+            self._fut.set_exception(err)
 
     async def set_state(self, value: Any):
         state_schema = self.schema.state
@@ -115,20 +114,18 @@ class Component(Generic[MN]):
 
 ComponentRenderer: TypeAlias = Callable[[list[Component]], Awaitable[list[Any]]]
 
+Output = TypeVar("Output")
 
 # TODO: Exclusive / groupable
 # TODO: Separate type for Optional
-class IOPromise(Generic[MN]):
+class IOPromise(Generic[MN, Output]):
     component: Component
-    optional: bool
     renderer: ComponentRenderer
 
-    def __init__(
-        self, component: Component, renderer: ComponentRenderer, optional=False
-    ):
+    def __init__(self, component: Component, renderer: ComponentRenderer):
         self.component = component
         self.renderer = renderer
-        self.optional = optional
 
-    def __await__(self):
-        yield self.renderer([self.component]).__await__()
+    def __await__(self) -> Generator[Any, None, Output]:
+        res = yield from self.renderer([self.component]).__await__()
+        return res[0]

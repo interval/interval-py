@@ -37,8 +37,14 @@ def json_loads_camel(*args, **kwargs) -> Any:
 def dump_snake_obj(obj: Any) -> Any:
     if isinstance(obj, dict):
         obj = {snake_to_camel(key): dump_snake_obj(val) for (key, val) in obj.items()}
+    elif isinstance(obj, list):
+        obj = [dump_snake_obj(item) for item in obj]
 
     return obj
+
+
+def dict_strip_none(d: dict[str, Any]) -> dict[str, Any]:
+    return {key: val for (key, val) in d.items() if val is not None}
 
 
 def json_dumps_camel(obj: Any, *args, **kwargs) -> str:

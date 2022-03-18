@@ -1,5 +1,6 @@
 import asyncio
 from asyncio import Future
+import traceback
 from typing import Any, Callable, Generic, TypeVar, TypeAlias, Awaitable
 
 from pydantic import parse_raw_as, parse_obj_as
@@ -69,7 +70,7 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
         method_name = parsed.method_name
         method = self._can_respond_to[method_name]
 
-        inputs = parse_raw_as(method.inputs, parsed.data)
+        inputs = parse_obj_as(method.inputs, parsed.data)
         handler = self._handlers[method_name]
         return_value = await handler(inputs)
 
@@ -100,7 +101,14 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
 
         asyncio.create_task(self._communicator.send(message.json()), name="send")
 
-        raw_response_text = await fut
-        parsed = parse_obj_as(self._can_call[method_name].returns, raw_response_text)
+        try:
+            raw_response_text = await fut
+            parsed = parse_obj_as(
+                self._can_call[method_name].returns, raw_response_text
+            )
 
-        return parsed
+            return parsed
+        except Exception as err:
+            traceback.print_exception(err)
+
+        return None
