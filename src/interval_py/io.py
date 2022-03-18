@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
+from typing import ParamSpec, Awaitable
 
 from .io_schema import *
 from .component import IOPromise, Component, ComponentRenderer
@@ -52,9 +53,14 @@ class IO:
     display: Display
     experimental: Experimental
 
-    def __init__(self, renderer: ComponentRenderer):
+    def __init__(
+        self,
+        renderer: ComponentRenderer,
+        group: Callable[[list[IOPromise]], Awaitable[list[Any]]],
+    ):
         self.renderer = renderer
         self.input = self.Input(renderer)
         self.select = self.Select(renderer)
         self.display = self.Display(renderer)
         self.experimental = self.Experimental(renderer)
+        self.group = group

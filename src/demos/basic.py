@@ -1,5 +1,6 @@
-import asyncio
 from interval_py import Interval, IO
+from interval_py.io_schema import io_schema, InputTextProps
+from interval_py.types import BaseModel
 
 
 def main():
@@ -15,9 +16,11 @@ def main():
 
     @interval.action
     async def add_a_number(io: IO, _):
-        message = await io.input.text("Hello!", help_text="From python!")
+        message = await io.group([io.input.text("Hello!", help_text="From python!")])
 
-        return {"message": message}
+        print(message)
+
+        return {"message": message[0]}
 
     @interval.action_with_slug("add-two-numbers")
     async def add_two_numbers(io: IO, _):
@@ -35,8 +38,10 @@ def main():
     # f1: asyncio.Future[str] = loop.create_future()
     # f2: asyncio.Future[int] = loop.create_future()
     #
-    # f = asyncio.gather(f1, f2)
+    # [r1, r2] = await asyncio.gather(f1, f2)
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    props: BaseModel = io_schema["INPUT_TEXT"].props
+    print(props.schema())

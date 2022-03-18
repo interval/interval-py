@@ -98,7 +98,7 @@ class Component(Generic[MN]):
         self.instance.is_optional = optional
 
     @property
-    def return_value(self):
+    def return_value(self) -> Future[Any]:
         return self._fut
 
     @property

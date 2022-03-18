@@ -10,12 +10,16 @@ from typing import (
     Generic,
     TypeVar,
     Mapping,
+    Type,
 )
 from datetime import date, datetime
 from uuid import UUID
 
 
 from .types import BaseModel, GenericModel
+
+# TODO: Try generating most of this with datamode-code-generator
+# https://github.com/koxudaxi/datamodel-code-generator/
 
 MethodName = Literal[
     "INPUT_TEXT",
@@ -124,9 +128,9 @@ class TableColumnDef(BaseModel):
     formatter: Optional[Callable[[Any], str]]
 
 
-PropsType = TypeVar("PropsType")
-StateType = TypeVar("StateType")
-ReturnType = TypeVar("ReturnType")
+PropsType = TypeVar("PropsType", bound=Type)
+StateType = TypeVar("StateType", bound=Type)
+ReturnType = TypeVar("ReturnType", bound=Type)
 
 
 @dataclass

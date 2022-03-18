@@ -57,7 +57,7 @@ class IOClient:
         self._logger = logger
         self._send = send
 
-        self.io = IO(self.render_components)
+        self.io = IO(self.render_components, group=self.group)
 
     @property
     def is_canceled(self) -> bool:
@@ -122,6 +122,7 @@ class IOClient:
         asyncio.create_task(render())
 
         return_futures = [component.return_value for component in components]
+
         return list(await asyncio.gather(*return_futures))
 
     # XXX: Pretty sure statically typing this is impossible
