@@ -56,11 +56,14 @@ class IO:
     def __init__(
         self,
         renderer: ComponentRenderer,
-        group: Callable[[list[IOPromise]], Awaitable[list[Any]]],
     ):
         self.renderer = renderer
         self.input = self.Input(renderer)
         self.select = self.Select(renderer)
         self.display = self.Display(renderer)
         self.experimental = self.Experimental(renderer)
-        self.group = group
+
+    # TODO: Generate generic stubs for up to a certain number of args
+    # https://github.com/python/typeshed/blob/master/stdlib/asyncio/tasks.pyi#L82-L165
+    async def group(self, io_promises: list[IOPromise]) -> list[Any]:
+        return await self.renderer([p.component for p in io_promises])

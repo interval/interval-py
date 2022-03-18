@@ -133,7 +133,6 @@ class Interval:
         async def start_transaction(inputs: StartTransactionInputs):
             slug = inputs.action_name
             handler = self._actions.get(slug, None)
-            self._log.debug(handler)
 
             if handler is None:
                 self._log.debug("No handler", slug)

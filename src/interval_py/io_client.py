@@ -57,7 +57,7 @@ class IOClient:
         self._logger = logger
         self._send = send
 
-        self.io = IO(self.render_components, group=self.group)
+        self.io = IO(self.render_components)
 
     @property
     def is_canceled(self) -> bool:
@@ -124,7 +124,3 @@ class IOClient:
         return_futures = [component.return_value for component in components]
 
         return list(await asyncio.gather(*return_futures))
-
-    # XXX: Pretty sure statically typing this is impossible
-    async def group(self, io_promises: list[IOPromise]) -> list[Any]:
-        return await self.render_components([p.component for p in io_promises])
