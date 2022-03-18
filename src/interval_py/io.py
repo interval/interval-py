@@ -64,6 +64,6 @@ class IO:
         self.experimental = self.Experimental(renderer)
 
     # TODO: Generate generic stubs for up to a certain number of args
-    # https://github.com/python/typeshed/blob/master/stdlib/asyncio/tasks.pyi#L82-L165
+    # https://github.com/python/typeshed/blob/4d23919200d9e89486f4d9e2587f82314d4af0f6/stdlib/asyncio/tasks.pyi#L82-L165
     async def group(self, io_promises: list[IOPromise]) -> list[Any]:
         return await self.renderer([p.component for p in io_promises])

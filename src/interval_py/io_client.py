@@ -1,10 +1,10 @@
 import asyncio, sys
 import traceback
-from typing import Awaitable, TypeAlias, Callable, Literal, TypeVar, Any
+from typing import cast, Awaitable, TypeAlias, Callable, Literal, TypeVar, Any
 from uuid import uuid4
 
 from .io_schema import *
-from .component import IOPromise, Component
+from .component import Component
 from .io import IO
 
 IOErrorKind = Literal["CANCELED", "TRANSACTION_CLOSED"]
@@ -123,4 +123,6 @@ class IOClient:
 
         return_futures = [component.return_value for component in components]
 
-        return list(await asyncio.gather(*return_futures))
+        # Actually does return a list, just says Tuple for variadic type
+        # https://github.com/python/typeshed/blob/4d23919200d9e89486f4d9e2587f82314d4af0f6/stdlib/asyncio/tasks.pyi#L82-L85
+        return cast(list[Any], await asyncio.gather(*return_futures))
