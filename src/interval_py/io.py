@@ -1,6 +1,4 @@
-from __future__ import annotations
 from dataclasses import dataclass
-from typing import ParamSpec, Awaitable
 
 from .io_schema import *
 from .component import IOPromise, Component, ComponentRenderer

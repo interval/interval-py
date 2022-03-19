@@ -1,5 +1,5 @@
 from interval_py import Interval, IO
-from interval_py.io_schema import io_schema, InputTextProps
+from interval_py.io_schema import io_schema, dump_method
 from interval_py.types import BaseModel
 
 
@@ -42,6 +42,5 @@ def main():
 
 
 if __name__ == "__main__":
+    dump_method("INPUT_TEXT")
     # main()
-    props: BaseModel = io_schema["INPUT_TEXT"].props
-    print(props.schema())

@@ -2,6 +2,7 @@ from __future__ import annotations
 from enum import Enum
 from dataclasses import dataclass
 from typing import (
+    cast,
     Any,
     Callable,
     Optional,
@@ -15,8 +16,11 @@ from typing import (
 from datetime import date, datetime
 from uuid import UUID
 
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic.fields import ModelField
 
-from .types import BaseModel, GenericModel
+
+from .types import BaseModel, GenericModel, camel_to_snake
 
 # TODO: Try generating most of this with datamode-code-generator
 # https://github.com/koxudaxi/datamodel-code-generator/
@@ -351,3 +355,30 @@ class IOResponse(BaseModel):
     transaction_id: str
     kind: Literal["RETURN", "SET_STATE"]
     values: list[Any]
+
+
+def dump_method(method_name: MethodName):
+    method_def = io_schema[method_name]
+    props = method_def.props
+    props_type = cast(Type[PydanticBaseModel], props)  # type: ignore
+    name = camel_to_snake(props_type.__name__)
+
+    [_, fn_name, _] = name.split("_")
+
+    print(f"def {fn_name}(")
+    print("    self,")
+    print("    label: str,")
+
+    if not isinstance(props, dict):
+        for name, field in props.__fields__.items():
+            field = cast(ModelField, field)
+            field_type: str = field.outer_type_.__name__
+            if not field.required:
+                field_type += " | None"
+            field_type += f" = {field.default}"
+            print(f"    {name}: {field_type},")
+
+    return_type = "None"
+    if method_def.returns is not None:
+        return_type = method_def.returns.__name__
+    print(f') -> IOPromise["{method_name}", {return_type}]:')

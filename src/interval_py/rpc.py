@@ -3,7 +3,7 @@ from asyncio import Future
 import traceback
 from typing import Any, Callable, Generic, TypeVar, TypeAlias, Awaitable
 
-from pydantic import parse_raw_as, parse_obj_as
+from pydantic import parse_obj_as
 
 from .internal_rpc_schema import DuplexMessage, MethodDef
 from .isocket import ISocket
