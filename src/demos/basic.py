@@ -1,6 +1,4 @@
 from interval_py import Interval, IO
-from interval_py.io_schema import io_schema, dump_method
-from interval_py.types import BaseModel
 
 
 def main():
@@ -11,11 +9,11 @@ def main():
     )
 
     @interval.action
-    async def hello_interval(io: IO, _):
+    async def hello_interval():
         return {"hello": "from python!"}
 
     @interval.action
-    async def add_a_number(io: IO, _):
+    async def echo_message(io: IO):
         message = await io.group([io.input.text("Hello!", help_text="From python!")])
 
         print(message)
@@ -23,10 +21,9 @@ def main():
         return {"message": message[0]}
 
     @interval.action_with_slug("add-two-numbers")
-    async def add_two_numbers(io: IO, _):
-        n1 = int(await io.input.text("First number"))
-        print("n1", n1)
-        n2 = int(await io.input.text("Second number"))
+    async def add_two_numbers(io: IO):
+        n1 = await io.input.number("First number")
+        n2 = await io.input.number("Second number")
 
         print("sum", n1 + n2)
 
@@ -34,13 +31,6 @@ def main():
 
     interval.listen()
 
-    # loop = asyncio.get_event_loop()
-    # f1: asyncio.Future[str] = loop.create_future()
-    # f2: asyncio.Future[int] = loop.create_future()
-    #
-    # [r1, r2] = await asyncio.gather(f1, f2)
-
 
 if __name__ == "__main__":
-    dump_method("INPUT_TEXT")
-    # main()
+    main()

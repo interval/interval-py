@@ -6,6 +6,7 @@ authors = ["Your Name <you@example.com>"]
 
 [tool.poe.tasks]
 basic = { script = 'demos.basic:main' }
+dump_schema = { script = 'interval_py.io_schema:dump_all_methods' }
 
 [tool.poetry.dependencies]
 python = "^3.10"

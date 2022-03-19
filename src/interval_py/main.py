@@ -1,4 +1,5 @@
 import asyncio, traceback
+from inspect import signature
 from typing import Optional, TypeAlias, Callable, Awaitable
 from uuid import uuid4, UUID
 
@@ -11,9 +12,27 @@ from .io import IO, IOResponse, IORender
 from .rpc import DuplexRPCClient
 from .internal_rpc_schema import *
 
-IntervalActionHandler: TypeAlias = Callable[
-    [IO, ActionContext], Awaitable[IOFunctionReturnType]
-]
+
+# class IntervalActionHandler(Protocol):
+#     __name__: str
+#
+#     @overload
+#     def __call__(self, *args) -> Awaitable[IOFunctionReturnType]:
+#         ...
+#
+#     @overload
+#     def __call__(self, io: IO, *args) -> Awaitable[IOFunctionReturnType]:
+#         ...
+#
+#     @overload
+#     def __call__(self, io: IO, ctx: ActionContext) -> Awaitable[IOFunctionReturnType]:
+#         ...
+
+IntervalActionHandler: TypeAlias = (
+    Callable[[], Awaitable[IOFunctionReturnType]]
+    | Callable[[IO], Awaitable[IOFunctionReturnType]]
+    | Callable[[IO, ActionContext], Awaitable[IOFunctionReturnType]]
+)
 
 IOResponseHandler: TypeAlias = Callable[[IOResponse], Awaitable[None]]
 
@@ -166,7 +185,19 @@ class Interval:
                 try:
                     result: ActionResult
                     try:
-                        resp = await handler(client.io, ctx)
+                        sig = signature(handler)
+                        params = sig.parameters
+                        if len(params) == 0:
+                            resp = await handler()  # type: ignore
+                        elif len(params) == 1:
+                            resp = await handler(client.io)  # type: ignore
+                        elif len(params) == 2:
+                            resp = await handler(client.io, ctx)  # type: ignore
+                        else:
+                            raise Exception(
+                                "handler accepts invalid number of arguments"
+                            )
+
                         result = ActionResult(status="SUCCESS", data=resp)
                     except IOError as ioerr:
                         raise ioerr

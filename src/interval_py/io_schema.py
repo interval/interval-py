@@ -15,6 +15,7 @@ from typing import (
 )
 from datetime import date, datetime
 from uuid import UUID
+import io, sys
 
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic.fields import ModelField
@@ -176,8 +177,8 @@ class InputRichTextProps(BaseModel):
 
 
 class InputSpreadsheetProps(BaseModel):
-    help_text: Optional[str]
     columns: dict[str, TypeValue]
+    help_text: Optional[str]
 
 
 class ConfirmProps(BaseModel):
@@ -185,9 +186,9 @@ class ConfirmProps(BaseModel):
 
 
 class SelectTableProps(BaseModel):
+    data: list[TableRow]
     help_text: Optional[str]
     columns: Optional[TableColumnDef]
-    data: list[TableRow]
 
 
 class SelectSingleProps(BaseModel):
@@ -265,7 +266,9 @@ io_schema: dict[MethodName, MethodDef] = {
         returns=str,
     ),
     "INPUT_SPREADSHEET": MethodDef(
-        props=InputSpreadsheetProps, state=None, returns=list[SerializableRecord]
+        props=InputSpreadsheetProps,
+        state=None,
+        returns=list[SerializableRecord],
     ),
     "CONFIRM": MethodDef(
         props=ConfirmProps,
@@ -274,7 +277,7 @@ io_schema: dict[MethodName, MethodDef] = {
         exclusive=True,
     ),
     "SELECT_TABLE": MethodDef(
-        props=SelectSingleProps,
+        props=SelectTableProps,
         state=None,
         returns=list[TableRow],
     ),
@@ -357,28 +360,80 @@ class IOResponse(BaseModel):
     values: list[Any]
 
 
-def dump_method(method_name: MethodName):
+def dump_method(method_name: MethodName) -> str:
     method_def = io_schema[method_name]
     props = method_def.props
-    props_type = cast(Type[PydanticBaseModel], props)  # type: ignore
-    name = camel_to_snake(props_type.__name__)
+    pieces = method_name.split("_", maxsplit=1)
+    if len(pieces) > 1:
+        [namespace, fn_name] = pieces
+    else:
+        namespace = "IO"
+        [fn_name] = pieces
 
-    [_, fn_name, _] = name.split("_")
+    contents = io.StringIO()
 
-    print(f"def {fn_name}(")
-    print("    self,")
-    print("    label: str,")
+    print(f"{namespace}:", file=contents)
+    print(f"def {fn_name.lower()}(", file=contents)
+    print("    self,", file=contents)
+    print("    label: str,", file=contents)
 
+    prop_names = []
     if not isinstance(props, dict):
         for name, field in props.__fields__.items():
+            prop_names.append(name)
             field = cast(ModelField, field)
-            field_type: str = field.outer_type_.__name__
+            if str(field.outer_type_).startswith("<class"):
+                field_type: str = field.outer_type_.__name__
+            else:
+                field_type: str = field.outer_type_
             if not field.required:
                 field_type += " | None"
-            field_type += f" = {field.default}"
-            print(f"    {name}: {field_type},")
+                field_type += f" = {field.default}"
+
+            print(f"    {name}: {field_type},", file=contents)
 
     return_type = "None"
     if method_def.returns is not None:
         return_type = method_def.returns.__name__
-    print(f') -> IOPromise["{method_name}", {return_type}]:')
+    print(f') -> IOPromise[Literal["{method_name}"], {return_type}]:', file=contents)
+    print(
+        f"""\
+        c = Component(
+            method_name="{method_name}",
+            label=label,\
+        """,
+        file=contents,
+    )
+
+    if isinstance(props, dict):
+        print("            initial_props={},", file=contents)
+    else:
+        props_type = cast(Type[PydanticBaseModel], props)
+        props_model_name = props_type.__name__
+
+        print(f"            initial_props={props_model_name}(", file=contents)
+
+        for name in prop_names:
+            print(f"                {name}={name},", file=contents)
+
+        print("            ).dict(),", file=contents)
+
+    print(
+        f"""\
+        )
+        return IOPromise(c, renderer=self._renderer)
+        """,
+        file=contents,
+    )
+
+    output = contents.getvalue()
+    contents.close()
+    return output
+
+
+def dump_all_methods():
+    for method_name in io_schema.keys():
+        try:
+            print(dump_method(method_name))
+        except Exception as err:
+            print(f"Failed to dump method for {method_name}:", err, file=sys.stderr)
