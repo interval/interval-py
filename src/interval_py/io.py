@@ -100,7 +100,7 @@ class IO:
         def spreadsheet(
             self,
             label: str,
-            columns: dict,
+            columns: dict[str, TypeValue],
             help_text: str | None = None,
         ) -> IOPromise[Literal["INPUT_SPREADSHEET"], list]:
             c = Component(

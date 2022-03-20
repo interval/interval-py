@@ -13,21 +13,6 @@ from .rpc import DuplexRPCClient
 from .internal_rpc_schema import *
 
 
-# class IntervalActionHandler(Protocol):
-#     __name__: str
-#
-#     @overload
-#     def __call__(self, *args) -> Awaitable[IOFunctionReturnType]:
-#         ...
-#
-#     @overload
-#     def __call__(self, io: IO, *args) -> Awaitable[IOFunctionReturnType]:
-#         ...
-#
-#     @overload
-#     def __call__(self, io: IO, ctx: ActionContext) -> Awaitable[IOFunctionReturnType]:
-#         ...
-
 IntervalActionHandler: TypeAlias = (
     Callable[[], Awaitable[IOFunctionReturnType]]
     | Callable[[IO], Awaitable[IOFunctionReturnType]]
@@ -229,6 +214,7 @@ class Interval:
         async def io_response(inputs: IOResponseInputs):
             self._log.debug("Got IO response", inputs)
             io_resp = IOResponse.parse_raw(inputs.value)
+            print(io_resp)
             try:
                 reply_handler = self._io_response_handlers[io_resp.transaction_id]
                 await reply_handler(io_resp)

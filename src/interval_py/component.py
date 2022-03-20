@@ -14,7 +14,7 @@ from typing import (
 from pydantic import parse_obj_as, parse_raw_as, ValidationError
 
 from .io_schema import MethodDef, MethodName, io_schema, ComponentRenderInfo
-from .types import GenericModel, dict_strip_none
+from .types import GenericModel, dict_strip_none, dict_keys_to_camel
 
 MN = TypeVar("MN", bound=MethodName)
 
@@ -54,7 +54,7 @@ class Component(Generic[MN]):
         self.instance = ComponentInstance(
             method_name=method_name,
             label=label,
-            props=dict_strip_none(initial_props),
+            props=dict_keys_to_camel(dict_strip_none(initial_props)),
             state=None,
             is_stateful=True if handle_state_change is not None else False,
             is_optional=False,
@@ -68,6 +68,8 @@ class Component(Generic[MN]):
         return_schema = self.schema.returns
         if self.instance.is_optional:
             return_schema = return_schema | None
+
+        print("set_return_value", value)
 
         try:
             parsed = parse_obj_as(return_schema, value)
@@ -106,7 +108,7 @@ class Component(Generic[MN]):
         return ComponentRenderInfo(
             method_name=self.instance.method_name,
             label=self.instance.label,
-            props=self.instance.props,
+            props=dict_keys_to_camel(self.instance.props),
             is_stateful=self.instance.is_stateful,
             is_optional=self.instance.is_optional,
         )

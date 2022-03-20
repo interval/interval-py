@@ -1,5 +1,5 @@
 import json, re
-from typing import Any, Tuple
+from typing import Any, Mapping, Tuple, Callable
 
 
 from pydantic import BaseModel as PydanticBaseModel
@@ -26,12 +26,37 @@ def dict_keys_to_camel(d: dict[str, Any]) -> dict[str, Any]:
     return {snake_to_camel(key): val for (key, val) in d.items()}
 
 
-def load_camel_pairs(pairs: list[Tuple[str, Any]]) -> dict[str, Any]:
+def dict_keys_to_snake(d: dict[str, Any]) -> dict[str, Any]:
+    return {camel_to_snake(key): val for (key, val) in d.items()}
+
+
+def load_snake_pairs(pairs: list[Tuple[str, Any]]) -> dict[str, Any]:
     return {camel_to_snake(key): val for (key, val) in pairs}
 
 
+def json_loads_some_snake(
+    *keys_to_include: str,
+) -> Callable:
+    """
+    Note: this does not recurse.
+    """
+    camel_keys_to_include = [snake_to_camel(key) for key in keys_to_include]
+
+    def json_loads(*args, **kwargs) -> Any:
+        obj = json.loads(*args, **kwargs)
+        if isinstance(obj, dict):
+            return {
+                camel_to_snake(key) if key in camel_keys_to_include else key: val
+                for (key, val) in obj.items()
+            }
+
+        return obj
+
+    return json_loads
+
+
 def json_loads_camel(*args, **kwargs) -> Any:
-    return json.loads(*args, **kwargs, object_pairs_hook=load_camel_pairs)
+    return json.loads(*args, **kwargs, object_pairs_hook=load_snake_pairs)
 
 
 def dump_snake_obj(obj: Any) -> Any:
@@ -47,17 +72,33 @@ def dict_strip_none(d: dict[str, Any]) -> dict[str, Any]:
     return {key: val for (key, val) in d.items() if val is not None}
 
 
-def json_dumps_camel(obj: Any, *args, **kwargs) -> str:
+def json_dumps_snake(obj: Any, *args, **kwargs) -> str:
     return json.dumps(dump_snake_obj(obj), *args, **kwargs)
+
+
+def json_dumps_some_snake(
+    *keys_to_include: str,
+):
+    def json_dumps(obj: Mapping[str, Any], *args, **kwargs) -> str:
+        obj = {}
+        for key, val in obj.items():
+            if key in keys_to_include:
+                obj[key] = val
+            else:
+                obj[snake_to_camel(key)] = dump_snake_obj(val)
+
+        return json.dumps(obj, *args, **kwargs)
+
+    return json_dumps
 
 
 class BaseModel(PydanticBaseModel):
     class Config:
         json_loads = json_loads_camel
-        json_dumps = json_dumps_camel
+        json_dumps = json_dumps_snake
 
 
 class GenericModel(PydanticGenericModel):
     class Config:
         json_loads = json_loads_camel
-        json_dumps = json_dumps_camel
+        json_dumps = json_dumps_snake

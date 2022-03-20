@@ -29,6 +29,19 @@ def main():
 
         return {"sum": n1 + n2, "from": "🐍"}
 
+    @interval.action
+    async def spreadsheet_test(io: IO):
+        sheet = await io.input.spreadsheet(
+            "Add a spreadsheet",
+            columns={
+                "firstName": "string",
+                "last_name": "string",
+                "age": "number?",
+            },
+        )
+
+        print(sheet)
+
     interval.listen()
 
 

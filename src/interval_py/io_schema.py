@@ -1,5 +1,4 @@
 from __future__ import annotations
-from enum import Enum
 from dataclasses import dataclass
 from typing import (
     cast,
@@ -15,13 +14,20 @@ from typing import (
 )
 from datetime import date, datetime
 from uuid import UUID
-import io, sys
+import io, json, sys
 
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic.fields import ModelField
 
 
-from .types import BaseModel, GenericModel, camel_to_snake
+from .types import (
+    BaseModel,
+    GenericModel,
+    snake_to_camel,
+    dict_keys_to_camel,
+    json_dumps_some_snake,
+    json_loads_some_snake,
+)
 
 # TODO: Try generating most of this with datamode-code-generator
 # https://github.com/koxudaxi/datamodel-code-generator/
@@ -58,18 +64,19 @@ class ComponentRenderInfo(GenericModel, Generic[MN]):
     is_stateful: bool
     is_optional: bool
 
+    class Config:
+        json_loads = json_loads_some_snake("method_name", "is_stateful", "is_optional")
+        json_dumps = json_dumps_some_snake("method_name", "is_stateful", "is_optional")
 
-TypeValue = Enum(
-    "TypeValue",
-    [
-        "string",
-        "string?",
-        "number",
-        "number?",
-        "boolean",
-        "boolean?",
-    ],
-)
+
+TypeValue = Literal[
+    "string",
+    "string?",
+    "number",
+    "number?",
+    "boolean",
+    "boolean?",
+]
 
 # TODO: Passthrough?
 class LabelValue(BaseModel):
@@ -346,18 +353,40 @@ def resolves_immediately(method_name: MethodName) -> bool:
     return io_schema[method_name].immediate
 
 
+def json_dumps_io_render(io_render: dict[str, Any], *args, **kwargs) -> str:
+    """
+    We don't want to clobber any user-provided keys in props.
+    """
+    obj = {}
+    for key, val in io_render.items():
+        if key == "to_render":
+            obj[snake_to_camel(key)] = [dict_keys_to_camel(info) for info in val]
+        else:
+            obj[snake_to_camel(key)] = val
+
+    print(obj)
+    return json.dumps(obj, *args, **kwargs)
+
+
 class IORender(BaseModel):
     id: UUID
     input_group_key: UUID
     to_render: list[ComponentRenderInfo]
     kind: Literal["RENDER"]
 
+    class Config:
+        json_dumps = json_dumps_io_render
 
-class IOResponse(BaseModel):
+
+class IOResponse(PydanticBaseModel):
     id: UUID
     transaction_id: str
     kind: Literal["RETURN", "SET_STATE"]
     values: list[Any]
+
+    class Config:
+        json_loads = json_loads_some_snake("transaction_id")
+        json_dumps = json_dumps_some_snake("transaction_id")
 
 
 def dump_method(method_name: MethodName) -> str:
