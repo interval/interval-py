@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import date, datetime
 
 from .io_schema import *
 from .component import IOPromise, Component, ComponentRenderer
@@ -196,6 +197,50 @@ class IO:
                 method_name="DISPLAY_MARKDOWN",
                 label=label,
                 initial_props={},
+            )
+            return IOPromise(c, renderer=self._renderer)
+
+        def object(
+            self,
+            label: str,
+            data: KeyValueObject,
+        ) -> IOPromise[Literal["DISPLAY_OBJECT"], None]:
+            c = Component(
+                method_name="DISPLAY_OBJECT",
+                label=label,
+                initial_props=DisplayObjectProps(
+                    data=KeyValueObjectModel.parse_obj(data),
+                ).dict(),
+            )
+            return IOPromise(c, renderer=self._renderer)
+
+        def table(
+            self,
+            label: str,
+            data: list[
+                dict[
+                    str,
+                    str
+                    | int
+                    | float
+                    | bool
+                    | None
+                    | date
+                    | datetime
+                    | TableRowLabelValue,
+                ]
+            ],
+            help_text: str | None = None,
+            columns: list[TableColumnDef] | None = None,
+        ) -> IOPromise[Literal["DISPLAY_TABLE"], None]:
+            c = Component(
+                method_name="DISPLAY_TABLE",
+                label=label,
+                initial_props=DisplayTableProps(
+                    help_text=help_text,
+                    columns=columns,
+                    data=data,
+                ).dict(),
             )
             return IOPromise(c, renderer=self._renderer)
 
