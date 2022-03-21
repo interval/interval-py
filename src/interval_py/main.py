@@ -43,10 +43,10 @@ class Interval:
         self._actions = {}
         self._logger = Logger(log_level)
 
-    def action(self, action_callback: IntervalActionHandler):
-        self._add_action(action_callback.__name__, action_callback)
+    def action(self, action_callback: IntervalActionHandler) -> None:
+        return self._add_action(action_callback.__name__, action_callback)
 
-    def action_with_slug(self, slug: str):
+    def action_with_slug(self, slug: str) -> Callable[[IntervalActionHandler], None]:
         def action_adder(action_callback: IntervalActionHandler):
             self._add_action(slug, action_callback)
 
@@ -64,7 +64,7 @@ class Interval:
     def _log(self):
         return self._logger
 
-    def _add_action(self, slug: str, action_callback: IntervalActionHandler):
+    def _add_action(self, slug: str, action_callback: IntervalActionHandler) -> None:
         self._actions[slug] = action_callback
 
     @property
