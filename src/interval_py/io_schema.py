@@ -92,7 +92,7 @@ class RichSelectOption(BaseModel):
     image_url: str
 
 
-ObjectLiteral: TypeAlias = str | int | float | bool | None | date | datetime
+ObjectLiteral: TypeAlias = bool | int | float | date | datetime | None | str
 
 KeyValueObject: TypeAlias = (
     ObjectLiteral | list["KeyValueObject"] | dict[str, "KeyValueObject"]

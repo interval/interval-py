@@ -36,6 +36,27 @@ async def add_two_numbers(io: IO):
     return {"sum": n1 + n2, "from": "🐍"}
 
 
+@interval.action_with_slug("io.display.object")
+async def io_display_object(io: IO):
+    await io.group(
+        [
+            io.display.object(
+                "Here's an object",
+                data={
+                    "isTrue": True,
+                    "isFalse": False,
+                    "number": 15,
+                    "none_value": None,
+                    "nested": {
+                        "name": "Interval",
+                    },
+                    "longList": [f"Item {i}" for i in range(100)],
+                },
+            )
+        ]
+    )
+
+
 @interval.action
 async def spreadsheet_test(io: IO):
     sheet = await io.input.spreadsheet(
