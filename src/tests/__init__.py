@@ -1,4 +1,4 @@
-import importlib, os
+import os
 from dataclasses import dataclass
 
 from playwright.async_api import Playwright, Page, expect
@@ -53,7 +53,7 @@ class Transaction:
     page: Page
 
     async def console(self):
-        await self.page.goto(config.dashboard_url("develop/console"))
+        await self.page.goto(base_config.dashboard_url("develop/console"))
 
     async def run(self, slug: str):
         print("Starting test", slug)
@@ -85,7 +85,7 @@ class Transaction:
             await self.expect_result(result)
 
 
-config = Config(
+base_config = Config(
     url="http://localhost:3000",
     login=Config.Login(
         email="test-runner@interval.com",
@@ -94,8 +94,3 @@ config = Config(
     api_key="d790283e-d845-48f6-95f2-27c8a7119b16",
     live_api_key="live_test_runner_test_api_key",
 )
-
-
-def run():
-    test = os.getenv("SDK_VERSION", "main").replace(".", "_")
-    importlib.import_module("." + test, package="tests")
