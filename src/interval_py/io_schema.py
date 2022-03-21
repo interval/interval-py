@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
+import traceback
 from typing import (
     cast,
     Any,
@@ -93,10 +94,18 @@ class RichSelectOption(BaseModel):
 
 ObjectLiteral: TypeAlias = str | int | float | bool | None | date | datetime
 
-# FIXME: Pydantic doesn't like recursive type here
 KeyValueObject: TypeAlias = (
-    ObjectLiteral | list[ObjectLiteral] | dict[str, ObjectLiteral]
+    ObjectLiteral | list["KeyValueObject"] | dict[str, "KeyValueObject"]
 )
+
+
+class KeyValueObjectModel(BaseModel):
+    __root__: ObjectLiteral | list[KeyValueObjectModel | None] | dict[
+        str, KeyValueObjectModel | None
+    ]
+
+
+KeyValueObjectModel.update_forward_refs()
 
 Deserializable: TypeAlias = str | int | float | bool | None
 DeserializableRecord: TypeAlias = Mapping[str, Deserializable]
@@ -216,13 +225,13 @@ class SelectMultipleProps(BaseModel):
 
 
 class DisplayObjectProps(BaseModel):
-    data: KeyValueObject
+    data: KeyValueObjectModel
 
 
 class DisplayTableProps(BaseModel):
+    data: list[TableRow]
     help_text: Optional[str]
     columns: Optional[list[TableColumnDef]]
-    data: list[TableRow]
 
 
 class DisplayProgressStepsSteps(BaseModel):
@@ -414,7 +423,7 @@ def dump_method(method_name: MethodName) -> str:
             if str(field.outer_type_).startswith("<class"):
                 field_type: str = field.outer_type_.__name__
             else:
-                field_type: str = field.outer_type_
+                field_type: str = str(field.outer_type_)
             if not field.required:
                 field_type += " | None"
                 field_type += f" = {field.default}"
@@ -466,3 +475,4 @@ def dump_all_methods():
             print(dump_method(method_name))
         except Exception as err:
             print(f"Failed to dump method for {method_name}:", err, file=sys.stderr)
+            traceback.print_exception(err, file=sys.stderr)
