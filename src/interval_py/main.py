@@ -73,10 +73,10 @@ class Interval:
 
     def listen(self):
         loop = asyncio.get_event_loop()
-        loop.create_task(self._listen())
+        loop.create_task(self.listen_async())
         loop.run_forever()
 
-    async def _listen(self):
+    async def listen_async(self):
         await self._create_socket_connection()
         self._create_rpc_client()
         await self._initialize_host()

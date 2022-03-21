@@ -186,7 +186,9 @@ class IOResponseInputs(BaseModel):
 
 
 class ActionContextUser(BaseModel):
-    pass
+    email: str
+    first_name: str | None = None
+    last_name: str | None = None
 
 
 class ActionContext(BaseModel):

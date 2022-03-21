@@ -21,6 +21,11 @@ async def echo_message(io: IO):
     return {"message": message[0]}
 
 
+@interval.action
+async def io_display_heading(io: IO):
+    await io.display.heading("io.display.heading result")
+
+
 @interval.action_with_slug("add-two-numbers")
 async def add_two_numbers(io: IO):
     n1 = await io.input.number("First number")

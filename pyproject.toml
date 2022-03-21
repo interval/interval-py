@@ -6,18 +6,19 @@ authors = ["Your Name <you@example.com>"]
 
 [tool.poe.tasks]
 basic = { script = 'demos:run_demo("basic")' }
+test = { script = 'tests:run' }
 dump_schema = { script = 'interval_py.io_schema:dump_all_methods' }
 
 [tool.poetry.dependencies]
 python = "^3.10"
-websockets = "^10.2"
+websockets = "^10.1"
 pydantic = "^1.9.0"
-pyee = "^9.0.4"
 
 [tool.poetry.dev-dependencies]
 black = "^22.1.0"
 pylint = "^2.12.2"
 poethepoet = "^0.13.1"
+playwright = "^1.20.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
