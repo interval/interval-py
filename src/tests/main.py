@@ -27,8 +27,35 @@ async def context(_: IO, ctx: ActionContext):
     }
 
 
-loop = asyncio.get_event_loop()
-listen = loop.create_task(interval.listen_async())
+@interval.action_with_slug("io.group")
+async def io_group(io: IO):
+    await io.group(
+        [
+            io.display.markdown("1. First item"),
+            io.display.markdown("2. Second item"),
+        ]
+    )
+
+
+@interval.action_with_slug("io.display.object")
+async def io_display_object(io: IO):
+    await io.group(
+        [
+            io.display.object(
+                "Here's an object",
+                data={
+                    "isTrue": True,
+                    "isFalse": False,
+                    "number": 15,
+                    "none_value": None,
+                    "nested": {
+                        "name": "Interval",
+                    },
+                    "longList": [f"Item {i}" for i in range(100)],
+                },
+            )
+        ]
+    )
 
 
 async def main():
@@ -54,10 +81,33 @@ async def main():
             }
         )
 
+        await transactions.console()
+        await transactions.run("io.group")
+        await expect(page.locator("text=First item")).to_be_visible()
+        await expect(page.locator("text=Second item")).to_be_visible()
+        await transactions.press_continue()
+        await transactions.expect_success()
 
+        await transactions.console()
+        await transactions.run("io.display.object")
+        await expect(page.locator('dt:has-text("isTrue")')).to_be_visible()
+        await expect(page.locator('dd:has-text("true")')).to_be_visible()
+        await expect(page.locator('dt:has-text("none_value")')).to_be_visible()
+        await expect(page.locator('dd:has-text("null")')).to_be_visible()
+        await expect(page.locator('dt:has-text("name")')).to_be_visible()
+        await expect(page.locator('dd:has-text("Interval")')).to_be_visible()
+        await expect(page.locator('summary:has-text("longList")')).to_be_visible()
+        await expect(page.locator('dd:has-text("Item 99")')).to_be_hidden()
+        await page.locator('summary:has-text("longList")').click()
+        await expect(page.locator('dd:has-text("Item 99")')).to_be_visible()
+        await transactions.press_continue()
+        await transactions.expect_success()
+
+
+loop = asyncio.get_event_loop()
 loop.run_until_complete(
     asyncio.gather(
-        listen,
+        interval.listen_async(),
         main(),
     )
 )
