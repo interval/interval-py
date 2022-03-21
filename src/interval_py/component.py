@@ -72,7 +72,11 @@ class Component(Generic[MN]):
         print("set_return_value", value)
 
         try:
-            parsed = parse_obj_as(return_schema, value)
+            if return_schema is None:
+                parsed = None
+            else:
+                parsed = parse_obj_as(return_schema, value)
+
             self._fut.set_result(parsed)
         except ValidationError as err:
             print("Received invalid return value:", err, file=sys.stderr)
