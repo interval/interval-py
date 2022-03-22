@@ -12,6 +12,7 @@ from typing import (
     TypeVar,
     Mapping,
     Type,
+    TypedDict,
 )
 from datetime import date, datetime
 from uuid import UUID
@@ -78,13 +79,13 @@ TypeValue = Literal[
     "boolean?",
 ]
 
-# TODO: Passthrough?
-class LabelValue(BaseModel):
+
+class LabelValue(TypedDict):
     label: str
     value: str
 
 
-class RichSelectOption(BaseModel):
+class RichSelectOption(TypedDict):
     label: str
     value: str
     description: str

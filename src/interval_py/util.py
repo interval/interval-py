@@ -89,9 +89,9 @@ def json_dumps_some_snake(
     return json_dumps
 
 
-Deserializable: TypeAlias = str | int | float | bool | None
+Deserializable: TypeAlias = bool | int | float | None | str
 DeserializableRecord: TypeAlias = Mapping[str, Deserializable]
-Serializable: TypeAlias = str | int | float | bool | None | datetime | date
+Serializable: TypeAlias = bool | int | float | None | datetime | date | str
 SerializableRecord: TypeAlias = Mapping[str, Serializable]
 
 

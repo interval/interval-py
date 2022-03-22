@@ -4,6 +4,7 @@ import pytest
 from playwright.async_api import Page, expect
 
 from interval_py import Interval, IO, ActionContext
+from interval_py.io_schema import LabelValue
 
 from . import base_config, Transaction
 
@@ -93,6 +94,38 @@ async def host(event_loop: asyncio.AbstractEventLoop):
             ```
             """
         )
+
+    @interval.action_with_slug("io.select.multiple")
+    async def select_multiple(io: IO):
+        options: list[LabelValue] = [
+            {
+                "value": "A",
+                "label": "A",
+            },
+            {
+                "value": "B",
+                "label": "B",
+            },
+            {
+                "value": "C",
+                "label": "C",
+            },
+        ]
+
+        selected = await io.select.multiple("Select zero or more", options=options)
+
+        selected = await io.select.multiple(
+            "Optionally modify the selection", options=options, default_value=selected
+        )
+
+        selected_values = [o["value"] for o in selected]
+
+        ret = {}
+
+        for option in options:
+            ret[option["label"]] = option["value"] in selected_values
+
+        return ret
 
     event_loop.create_task(interval.listen_async())
 
@@ -216,3 +249,27 @@ async def test_rich_text(page: Page, transactions: Transaction):
     )
     await transactions.press_continue()
     await transactions.expect_success()
+
+
+async def test_select_multiple(page: Page, transactions: Transaction):
+    await transactions.console()
+    await transactions.run("io.select.multiple")
+
+    await expect(page.locator("text=Select zero or more")).to_be_visible()
+    await page.click('input[type="checkbox"][value="A"]')
+    await page.click('input[type="checkbox"][value="C"]')
+    await transactions.press_continue()
+
+    await expect(page.locator("text=Optionally modify the selection")).to_be_visible()
+    await expect(page.locator('input[type="checkbox"][value="A"]')).to_be_checked()
+    await expect(page.locator('input[type="checkbox"][value="C"]')).to_be_checked()
+    await page.click('input[type="checkbox"][value="C"]')
+    await transactions.press_continue()
+
+    await transactions.expect_success(
+        {
+            "A": "true",
+            "B": "false",
+            "C": "false",
+        }
+    )

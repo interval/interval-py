@@ -169,7 +169,7 @@ class IO:
         def multiple(
             self,
             label: str,
-            options: list,
+            options: list[LabelValue],
             help_text: str | None = None,
             default_value: list[LabelValue] = [],
         ) -> IOPromise[Literal["SELECT_MULTIPLE"], list]:
