@@ -428,4 +428,4 @@ class IO:
         ...
 
     async def group(self, *io_promises: IOPromise[MethodName, Any]):  # type: ignore
-        return await self.renderer([p.component for p in io_promises])
+        return await self._renderer([p.component for p in io_promises])
