@@ -11,6 +11,7 @@ from .io_client import IOClient, Logger, LogLevel, IOError
 from .io import IO, IOResponse, IORender
 from .rpc import DuplexRPCClient
 from .internal_rpc_schema import *
+from .util import deserialize_dates
 
 
 IntervalActionHandler: TypeAlias = (
@@ -159,7 +160,7 @@ class Interval:
 
             ctx = ActionContext(
                 user=inputs.user,
-                params=inputs.params,  # TODO: Deserialize dates
+                params=deserialize_dates(inputs.params),
                 environment=inputs.environment,
             )
 

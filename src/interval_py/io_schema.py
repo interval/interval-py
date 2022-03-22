@@ -21,9 +21,8 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic.fields import ModelField
 
 
-from .types import (
-    BaseModel,
-    GenericModel,
+from .types import BaseModel, GenericModel, SerializableRecord
+from .util import (
     snake_to_camel,
     dict_keys_to_camel,
     json_dumps_some_snake,
@@ -92,7 +91,7 @@ class RichSelectOption(BaseModel):
     image_url: str
 
 
-ObjectLiteral: TypeAlias = bool | int | float | date | datetime | None | str
+ObjectLiteral: TypeAlias = bool | int | float | datetime | date | None | str
 
 KeyValueObject: TypeAlias = (
     ObjectLiteral | list["KeyValueObject"] | dict[str, "KeyValueObject"]
@@ -106,11 +105,6 @@ class KeyValueObjectModel(BaseModel):
 
 
 KeyValueObjectModel.update_forward_refs()
-
-Deserializable: TypeAlias = str | int | float | bool | None
-DeserializableRecord: TypeAlias = Mapping[str, Deserializable]
-Serializable: TypeAlias = str | int | float | bool | None | date | datetime
-SerializableRecord: TypeAlias = Mapping[str, Serializable]
 
 
 class TableRowLabelValue(BaseModel):
@@ -138,7 +132,7 @@ class ActionResult(BaseModel):
     data: IOFunctionReturnType | None
 
 
-TableRowValue = str | int | float | bool | None | date | datetime | TableRowLabelValue
+TableRowValue = str | int | float | bool | None | datetime | date | TableRowLabelValue
 
 TableRow: TypeAlias = dict[str, TableRowValue]
 

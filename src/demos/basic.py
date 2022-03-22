@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from interval_py import Interval, IO
 
 interval = Interval(
@@ -50,6 +52,7 @@ async def io_display_object(io: IO):
                     "name": "Interval",
                 },
                 "longList": [f"Item {i}" for i in range(100)],
+                "date": datetime.now(),
             },
         )
     )

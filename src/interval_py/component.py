@@ -14,7 +14,8 @@ from typing import (
 from pydantic import parse_obj_as, parse_raw_as, ValidationError
 
 from .io_schema import MethodDef, MethodName, io_schema, ComponentRenderInfo
-from .types import GenericModel, dict_strip_none, dict_keys_to_camel
+from .types import GenericModel
+from .util import dict_strip_none, dict_keys_to_camel
 
 MN = TypeVar("MN", bound=MethodName, covariant=True)
 
