@@ -31,30 +31,26 @@ async def host(event_loop: asyncio.AbstractEventLoop):
     @interval.action_with_slug("io.group")
     async def io_group(io: IO):
         await io.group(
-            [
-                io.display.markdown("1. First item"),
-                io.display.markdown("2. Second item"),
-            ]
+            io.display.markdown("1. First item"),
+            io.display.markdown("2. Second item"),
         )
 
     @interval.action_with_slug("io.display.object")
     async def io_display_object(io: IO):
         await io.group(
-            [
-                io.display.object(
-                    "Here's an object",
-                    data={
-                        "isTrue": True,
-                        "isFalse": False,
-                        "number": 15,
-                        "none_value": None,
-                        "nested": {
-                            "name": "Interval",
-                        },
-                        "longList": [f"Item {i}" for i in range(100)],
+            io.display.object(
+                "Here's an object",
+                data={
+                    "isTrue": True,
+                    "isFalse": False,
+                    "number": 15,
+                    "none_value": None,
+                    "nested": {
+                        "name": "Interval",
                     },
-                )
-            ]
+                    "longList": [f"Item {i}" for i in range(100)],
+                },
+            )
         )
 
     event_loop.create_task(interval.listen_async())

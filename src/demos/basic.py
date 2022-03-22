@@ -14,11 +14,9 @@ async def hello_interval():
 
 @interval.action
 async def echo_message(io: IO):
-    message = await io.group([io.input.text("Hello!", help_text="From python!")])
+    [message] = await io.group(io.input.text("Hello!", help_text="From python!"))
 
-    print(message)
-
-    return {"message": message[0]}
+    return {"message": message}
 
 
 @interval.action
@@ -29,7 +27,9 @@ async def io_display_heading(io: IO):
 @interval.action_with_slug("add-two-numbers")
 async def add_two_numbers(io: IO):
     n1 = await io.input.number("First number")
-    n2 = await io.input.number("Second number")
+    n2 = await io.input.number(
+        "Second number", min=n1, help_text=f"Must be greater than {n1}"
+    )
 
     print("sum", n1 + n2)
 
@@ -39,21 +39,19 @@ async def add_two_numbers(io: IO):
 @interval.action_with_slug("io.display.object")
 async def io_display_object(io: IO):
     await io.group(
-        [
-            io.display.object(
-                "Here's an object",
-                data={
-                    "isTrue": True,
-                    "isFalse": False,
-                    "number": 15,
-                    "none_value": None,
-                    "nested": {
-                        "name": "Interval",
-                    },
-                    "longList": [f"Item {i}" for i in range(100)],
+        io.display.object(
+            "Here's an object",
+            data={
+                "isTrue": True,
+                "isFalse": False,
+                "number": 15,
+                "none_value": None,
+                "nested": {
+                    "name": "Interval",
                 },
-            )
-        ]
+                "longList": [f"Item {i}" for i in range(100)],
+            },
+        )
     )
 
 

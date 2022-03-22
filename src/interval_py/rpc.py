@@ -9,7 +9,6 @@ from .internal_rpc_schema import DuplexMessage, MethodDef
 from .isocket import ISocket
 from .types import BaseModel, dict_keys_to_camel
 
-# I think this is right? or covariant=
 CallerSchema = TypeVar("CallerSchema", bound=MethodDef)
 ResponderSchema = TypeVar("ResponderSchema", bound=MethodDef)
 
