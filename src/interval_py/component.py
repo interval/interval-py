@@ -84,9 +84,14 @@ class Component(Generic[MN]):
         print("set_return_value", value)
 
         try:
-            parsed = parse_obj_as(return_schema, value)
+            if value is None:
+                if not self.instance.is_optional and self.schema.returns is not None:
+                    raise ValueError("Received invalid None return value")
+                parsed = None
+            else:
+                parsed = parse_obj_as(return_schema, value)
             self._fut.set_result(parsed)
-        except ValidationError as err:
+        except ValueError as err:
             print("Received invalid return value:", err, file=sys.stderr)
             self._fut.set_exception(err)
 
