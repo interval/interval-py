@@ -101,4 +101,37 @@ async def dates(io: IO):
     return result
 
 
+@interval.action
+async def optional_values(io: IO):
+    [name, num, color] = await io.group(
+        io.input.text("Your name"),
+        io.input.number("Pick a number").optional(),
+        io.select.single(
+            "Your favorite color",
+            options=[
+                {
+                    "label": "Red",
+                    "value": "red",
+                },
+                {
+                    "label": "Blue",
+                    "value": "blue",
+                },
+                {
+                    "label": "Orange",
+                    "value": "orange",
+                },
+            ],
+        ).optional(),
+    )
+
+    print(name, num, color)
+
+    return {
+        "Name": name,
+        "Number": num if num is not None else "No number selected",
+        "Favorite color": color["label"] if color is not None else "Unknown",
+    }
+
+
 interval.listen()

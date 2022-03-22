@@ -26,7 +26,6 @@ from pydantic.fields import ModelField
 from .types import (
     BaseModel,
     GenericModel,
-    DeserializableRecord,
     SerializableRecord,
     Serializable,
     ObjectLiteral,

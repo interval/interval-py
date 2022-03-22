@@ -57,6 +57,7 @@ class Component(Generic[MN]):
         label: str,
         initial_props: dict[str, Any] | None,
         handle_state_change: StateChangeHandler | None = None,
+        is_optional: bool = False,
     ):
         if initial_props is None:
             initial_props = {}
@@ -68,7 +69,7 @@ class Component(Generic[MN]):
             props=dict_keys_to_camel(dict_strip_none(initial_props)),
             state=None,
             is_stateful=True if handle_state_change is not None else False,
-            is_optional=False,
+            is_optional=is_optional,
         )
         self._handle_state_change = handle_state_change
 
@@ -83,11 +84,7 @@ class Component(Generic[MN]):
         print("set_return_value", value)
 
         try:
-            if return_schema is None:
-                parsed = None
-            else:
-                parsed = parse_obj_as(return_schema, value)
-
+            parsed = parse_obj_as(return_schema, value)
             self._fut.set_result(parsed)
         except ValidationError as err:
             print("Received invalid return value:", err, file=sys.stderr)
@@ -134,8 +131,7 @@ ComponentRenderer: TypeAlias = Callable[[list[Component]], Awaitable[list[Any]]]
 Output = TypeVar("Output")
 
 # TODO: Exclusive / groupable
-# TODO: Separate type for Optional
-class IOPromise(Generic[MN, Output]):
+class BaseIOPromise(Generic[MN, Output]):
     component: Component
     renderer: ComponentRenderer
 
@@ -151,11 +147,45 @@ class IOPromise(Generic[MN, Output]):
         return val
 
 
+class OptionalIOPromise(BaseIOPromise[MN, Output]):
+    def __init__(self, component: Component, renderer: ComponentRenderer):
+        component.instance.is_optional = True
+        super().__init__(component, renderer)
+
+
+class IOPromise(BaseIOPromise[MN, Output]):
+    def optional(self) -> OptionalIOPromise[MN, Output | None]:
+        return OptionalIOPromise[MN, Output | None](self.component, self.renderer)
+
+
+class OptionalIODatePromise(OptionalIOPromise[Literal["INPUT_DATE"], date | None]):
+    def _get_value(self, val: Any) -> date | None:
+        if val is None:
+            return None
+
+        obj: DateModel = val
+
+        return date(obj.year, obj.month, obj.day)
+
+
 class IODatePromise(IOPromise[Literal["INPUT_DATE"], date]):
     def _get_value(self, val: Any) -> date:
         obj: DateModel = val
 
         return date(obj.year, obj.month, obj.day)
+
+    def optional(self) -> OptionalIODatePromise:
+        return OptionalIODatePromise(self.component, self.renderer)
+
+
+class OptionalIOTimePromise(OptionalIOPromise[Literal["INPUT_TIME"], time | None]):
+    def _get_value(self, val: Any) -> time | None:
+        if val is None:
+            return None
+
+        obj: TimeModel = val
+
+        return time(obj.hour, obj.minute)
 
 
 class IOTimePromise(IOPromise[Literal["INPUT_TIME"], time]):
@@ -164,9 +194,25 @@ class IOTimePromise(IOPromise[Literal["INPUT_TIME"], time]):
 
         return time(obj.hour, obj.minute)
 
+    def optional(self) -> OptionalIOTimePromise:
+        return OptionalIOTimePromise(self.component, self.renderer)
+
+
+class OptionalIODateTimePromise(IOPromise[Literal["INPUT_DATETIME"], datetime | None]):
+    def _get_value(self, val: Any) -> datetime | None:
+        if val is None:
+            return None
+
+        obj: DateTimeModel = val
+
+        return datetime(obj.year, obj.month, obj.day, obj.hour, obj.minute)
+
 
 class IODateTimePromise(IOPromise[Literal["INPUT_DATETIME"], datetime]):
     def _get_value(self, val: Any) -> datetime:
         obj: DateTimeModel = val
 
         return datetime(obj.year, obj.month, obj.day, obj.hour, obj.minute)
+
+    def optional(self) -> OptionalIODatePromise:
+        return OptionalIODatePromise(self.component, self.renderer)
