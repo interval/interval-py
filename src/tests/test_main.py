@@ -166,6 +166,11 @@ async def host(event_loop: asyncio.AbstractEventLoop):
             """
         )
 
+    @interval.action
+    async def error(io: IO):
+        await io.input.text("First name")
+        raise Exception("Unauthorized")
+
     event_loop.create_task(interval.listen_async())
 
     yield interval
@@ -348,3 +353,12 @@ async def test_select_table(page: Page, transactions: Transaction):
     )
     await transactions.press_continue()
     await transactions.expect_success()
+
+
+async def test_error(page: Page, transactions: Transaction):
+    await transactions.console()
+    await transactions.run("error")
+    await page.click("text=First name")
+    await page.fill('input[type="text"]', "Interval")
+    await transactions.press_continue()
+    await transactions.expect_failure({"message": "Unauthorized"})
