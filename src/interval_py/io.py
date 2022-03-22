@@ -3,7 +3,15 @@ from datetime import date, datetime
 from typing import overload, Tuple
 
 from .io_schema import *
-from .component import IOPromise, Component, ComponentRenderer
+from .component import (
+    IODatePromise,
+    IOTimePromise,
+    IODateTimePromise,
+    IOPromise,
+    Component,
+    ComponentRenderer,
+)
+from .util import serialize_dates
 
 from pydantic import parse_obj_as
 
@@ -226,7 +234,7 @@ class IO:
                 method_name="DISPLAY_OBJECT",
                 label=label,
                 initial_props=DisplayObjectProps(
-                    data=KeyValueObjectModel.parse_obj(data),
+                    data=KeyValueObjectModel.parse_obj(serialize_dates(data)),
                 ).dict(),
             )
             return IOPromise(c, renderer=self._renderer)
@@ -309,6 +317,76 @@ class IO:
                     ).dict(),
                 )
                 return IOPromise(c, renderer=self._renderer)
+
+        def date(
+            self,
+            label: str,
+            help_text: str | None = None,
+            default_value: date | None = None,
+        ) -> IODatePromise:
+            model_default = None
+            if default_value is not None:
+                model_default = DateModel(
+                    year=default_value.year,
+                    month=default_value.month,
+                    day=default_value.day,
+                )
+            c = Component(
+                method_name="INPUT_DATE",
+                label=label,
+                initial_props=InputDateProps(
+                    help_text=help_text,
+                    default_value=model_default,
+                ).dict(),
+            )
+            return IODatePromise(c, renderer=self._renderer)
+
+        def time(
+            self,
+            label: str,
+            help_text: str | None = None,
+            default_value: time | None = None,
+        ) -> IOTimePromise:
+            model_default = None
+            if default_value is not None:
+                model_default = TimeModel(
+                    hour=default_value.hour,
+                    minute=default_value.minute,
+                )
+            c = Component(
+                method_name="INPUT_TIME",
+                label=label,
+                initial_props=InputTimeProps(
+                    help_text=help_text,
+                    default_value=model_default,
+                ).dict(),
+            )
+            return IOTimePromise(c, renderer=self._renderer)
+
+        def datetime(
+            self,
+            label: str,
+            help_text: str | None = None,
+            default_value: datetime | None = None,
+        ) -> IODateTimePromise:
+            model_default = None
+            if default_value is not None:
+                model_default = DateTimeModel(
+                    year=default_value.year,
+                    month=default_value.month,
+                    day=default_value.day,
+                    hour=default_value.hour,
+                    minute=default_value.minute,
+                )
+            c = Component(
+                method_name="INPUT_DATETIME",
+                label=label,
+                initial_props=InputDateTimeProps(
+                    help_text=help_text,
+                    default_value=model_default,
+                ).dict(),
+            )
+            return IODateTimePromise(c, renderer=self._renderer)
 
         _renderer: ComponentRenderer
         progress: Progress
@@ -428,4 +506,5 @@ class IO:
         ...
 
     async def group(self, *io_promises: IOPromise[MethodName, Any]):  # type: ignore
-        return await self._renderer([p.component for p in io_promises])
+        raw_values = await self._renderer([p.component for p in io_promises])
+        return [io_promises[i]._get_value(val) for (i, val) in enumerate(raw_values)]

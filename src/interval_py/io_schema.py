@@ -14,7 +14,7 @@ from typing import (
     Type,
     TypedDict,
 )
-from datetime import date, datetime
+from datetime import date, datetime, time
 from typing_extensions import NotRequired
 from uuid import UUID
 import io, json, sys
@@ -23,7 +23,13 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic.fields import ModelField
 
 
-from .types import BaseModel, GenericModel, SerializableRecord
+from .types import (
+    BaseModel,
+    GenericModel,
+    DeserializableRecord,
+    SerializableRecord,
+    Serializable,
+)
 from .util import (
     snake_to_camel,
     dict_keys_to_camel,
@@ -41,9 +47,9 @@ MethodName = Literal[
     "INPUT_BOOLEAN",
     "INPUT_RICH_TEXT",
     "INPUT_SPREADSHEET",
-    # TODO: "INPUT_DATE",
-    # TODO: "INPUT_TIME",
-    # TODO: "INPUT_DATETIME",
+    "INPUT_DATE",
+    "INPUT_TIME",
+    "INPUT_DATETIME",
     "CONFIRM",
     "SELECT_TABLE",
     "SELECT_SINGLE",
@@ -103,7 +109,7 @@ class RichSelectOptionModel(TypedDict, total=False):
     imageUrl: str | None
 
 
-ObjectLiteral: TypeAlias = bool | int | float | datetime | date | None | str
+ObjectLiteral: TypeAlias = int | float | bool | datetime | date | None | str
 
 KeyValueObject: TypeAlias = (
     ObjectLiteral | list["KeyValueObject"] | dict[str, "KeyValueObject"]
@@ -124,7 +130,7 @@ class TableRowLabelValue(BaseModel):
     _value: ObjectLiteral
 
 
-RawActionReturnData: TypeAlias = Mapping[str, SerializableRecord]
+RawActionReturnData: TypeAlias = Mapping[str, Serializable]
 IOFunctionReturnType: TypeAlias = SerializableRecord | None
 
 
@@ -141,7 +147,7 @@ ParsedActionReturnData: TypeAlias = dict[str, ParsedActionReturnDataValue]
 class ActionResult(BaseModel):
     schema_version: Literal[0, 1] = 1
     status: Literal["SUCCESS", "FAILURE"]
-    data: IOFunctionReturnType | None
+    data: DeserializableRecord | None
 
 
 TableRowValue = str | int | float | bool | None | datetime | date | TableRowLabelValue
@@ -196,6 +202,40 @@ class InputBooleanProps(BaseModel):
 
 class InputRichTextProps(BaseModel):
     help_text: Optional[str]
+
+
+class DateModel(BaseModel):
+    year: int
+    month: int
+    day: int
+
+
+class TimeModel(BaseModel):
+    hour: int
+    minute: int
+
+
+class DateTimeModel(BaseModel):
+    year: int
+    month: int
+    day: int
+    hour: int
+    minute: int
+
+
+class InputDateProps(BaseModel):
+    help_text: Optional[str]
+    default_value: Optional[DateModel]
+
+
+class InputTimeProps(BaseModel):
+    help_text: Optional[str]
+    default_value: Optional[TimeModel]
+
+
+class InputDateTimeProps(BaseModel):
+    help_text: Optional[str]
+    default_value: Optional[DateTimeModel]
 
 
 class InputSpreadsheetProps(BaseModel):
@@ -286,6 +326,21 @@ io_schema: dict[MethodName, MethodDef] = {
         props=InputRichTextProps,
         state=None,
         returns=str,
+    ),
+    "INPUT_DATE": MethodDef(
+        props=InputDateProps,
+        state=None,
+        returns=DateModel,
+    ),
+    "INPUT_TIME": MethodDef(
+        props=InputTimeProps,
+        state=None,
+        returns=TimeModel,
+    ),
+    "INPUT_DATETIME": MethodDef(
+        props=InputDateTimeProps,
+        state=None,
+        returns=DateTimeModel,
     ),
     "INPUT_SPREADSHEET": MethodDef(
         props=InputSpreadsheetProps,

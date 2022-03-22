@@ -1,5 +1,6 @@
 import asyncio, sys
 from asyncio.futures import Future
+from datetime import date, time, datetime
 from typing import (
     Any,
     Callable,
@@ -8,12 +9,21 @@ from typing import (
     TypeVar,
     TypeAlias,
     Awaitable,
+    Literal,
 )
 
 
 from pydantic import parse_obj_as, parse_raw_as, ValidationError
 
-from .io_schema import MethodDef, MethodName, io_schema, ComponentRenderInfo
+from .io_schema import (
+    DateModel,
+    DateTimeModel,
+    TimeModel,
+    MethodDef,
+    MethodName,
+    io_schema,
+    ComponentRenderInfo,
+)
 from .types import GenericModel
 from .util import dict_strip_none, dict_keys_to_camel
 
@@ -135,4 +145,28 @@ class IOPromise(Generic[MN, Output]):
 
     def __await__(self) -> Generator[Any, None, Output]:
         res = yield from self.renderer([self.component]).__await__()
-        return res[0]
+        return self._get_value(res[0])
+
+    def _get_value(self, val: Any) -> Output:
+        return val
+
+
+class IODatePromise(IOPromise[Literal["INPUT_DATE"], date]):
+    def _get_value(self, val: Any) -> date:
+        obj: DateModel = val
+
+        return date(obj.year, obj.month, obj.day)
+
+
+class IOTimePromise(IOPromise[Literal["INPUT_TIME"], time]):
+    def _get_value(self, val: Any) -> time:
+        obj: TimeModel = val
+
+        return time(obj.hour, obj.minute)
+
+
+class IODateTimePromise(IOPromise[Literal["INPUT_DATETIME"], datetime]):
+    def _get_value(self, val: Any) -> datetime:
+        obj: DateTimeModel = val
+
+        return datetime(obj.year, obj.month, obj.day, obj.hour, obj.minute)

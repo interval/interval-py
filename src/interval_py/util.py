@@ -1,6 +1,6 @@
 import json, re
 from typing import Any, Mapping, Tuple, Callable, TypeAlias
-from datetime import date, datetime
+from datetime import date, time, datetime
 
 
 def snake_to_camel(s: str) -> str:
@@ -89,9 +89,9 @@ def json_dumps_some_snake(
     return json_dumps
 
 
-Deserializable: TypeAlias = bool | int | float | None | str
+Deserializable: TypeAlias = int | float | bool | None | str
 DeserializableRecord: TypeAlias = Mapping[str, Deserializable]
-Serializable: TypeAlias = bool | int | float | None | datetime | date | str
+Serializable: TypeAlias = int | float | bool | None | datetime | date | str
 SerializableRecord: TypeAlias = Mapping[str, Serializable]
 
 
@@ -108,5 +108,22 @@ def deserialize_dates(
                 ret[key] = val
         else:
             ret[key] = val
+
+    return ret
+
+
+def serialize_dates(record: SerializableRecord | None) -> DeserializableRecord | None:
+    if record is None:
+        return None
+
+    ret = {}
+
+    for key, val in record.items():
+        if isinstance(val, datetime) or isinstance(val, date) or isinstance(val, time):
+            ret[key] = val.isoformat()
+        else:
+            ret[key] = val
+
+    print(ret)
 
     return ret

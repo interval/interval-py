@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from interval_py import Interval, IO
+from interval_py.io_schema import KeyValueObject
 
 interval = Interval(
     "alex_dev_kcLjzxNFxmGLf0aKtLVhuckt6sziQJtxFOdtM19tBrMUp5mj",
@@ -76,6 +77,29 @@ async def spreadsheet_test(io: IO):
 async def confirm(io: IO):
     confirmed = await io.confirm("Does this work?", help_text="I hope so...")
     return {"confirmed": confirmed}
+
+
+@interval.action
+async def dates(io: IO):
+    now = datetime.now()
+    [d, t, dt, _] = await io.group(
+        io.experimental.date("Enter a date", default_value=now.date()),
+        io.experimental.time("Enter a time", default_value=now.time()),
+        io.experimental.datetime("Enter a datetime", default_value=now),
+        io.input.text("Text input"),
+    )
+
+    result = {
+        "date": d,
+        "time": t,
+        "datetime": dt,
+    }
+
+    print(result)
+
+    await io.display.object("Result", data=result)
+
+    return result
 
 
 interval.listen()

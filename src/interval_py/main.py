@@ -11,7 +11,7 @@ from .io_client import IOClient, Logger, LogLevel, IOError
 from .io import IO, IOResponse, IORender
 from .rpc import DuplexRPCClient
 from .internal_rpc_schema import *
-from .util import deserialize_dates
+from .util import serialize_dates, deserialize_dates
 
 
 IntervalActionHandler: TypeAlias = (
@@ -184,7 +184,10 @@ class Interval:
                                 "handler accepts invalid number of arguments"
                             )
 
-                        result = ActionResult(status="SUCCESS", data=resp)
+                        result = ActionResult(
+                            status="SUCCESS",
+                            data=serialize_dates(resp),
+                        )
                     except IOError as ioerr:
                         raise ioerr
                     except Exception as err:
@@ -197,7 +200,8 @@ class Interval:
                     await self._server_rpc.send(
                         "MARK_TRANSACTION_COMPLETE",
                         MarkTransactionCompleteInputs(
-                            transaction_id=inputs.transaction_id, result=result.json()
+                            transaction_id=inputs.transaction_id,
+                            result=result.json(),
                         ),
                     )
                 except IOError as ioerr:
