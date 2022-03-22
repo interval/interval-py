@@ -317,7 +317,7 @@ class IO:
             self._renderer = renderer
             self.progress = IO.Experimental.Progress(renderer)
 
-    renderer: ComponentRenderer
+    _renderer: ComponentRenderer
     input: Input
     select: Select
     display: Display
@@ -327,15 +327,28 @@ class IO:
         self,
         renderer: ComponentRenderer,
     ):
-        self.renderer = renderer
+        self._renderer = renderer
         self.input = self.Input(renderer)
         self.select = self.Select(renderer)
         self.display = self.Display(renderer)
         self.experimental = self.Experimental(renderer)
 
+    def confirm(
+        self,
+        label: str,
+        help_text: str | None = None,
+    ) -> IOPromise[Literal["CONFIRM"], bool]:
+        c = Component(
+            method_name="CONFIRM",
+            label=label,
+            initial_props=ConfirmProps(
+                help_text=help_text,
+            ).dict(),
+        )
+        return IOPromise(c, renderer=self._renderer)
+
     # Based on typing for asyncio.gather
     # https://github.com/python/typeshed/blob/4d23919200d9e89486f4d9e2587f82314d4af0f6/stdlib/asyncio/tasks.pyi#L82-L165
-
     @overload
     async def group(self, p1: IOPromise[MethodName, _T1]) -> Tuple[_T1]:
         """

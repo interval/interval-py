@@ -72,4 +72,10 @@ async def spreadsheet_test(io: IO):
     print(sheet)
 
 
+@interval.action
+async def confirm(io: IO):
+    confirmed = await io.confirm("Does this work?", help_text="I hope so...")
+    return {"confirmed": confirmed}
+
+
 interval.listen()

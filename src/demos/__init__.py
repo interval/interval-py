@@ -11,6 +11,8 @@ def main():
     parser.add_argument(
         "demo_name",
         help="Filename of the demo without the file extension, relative to demos directory",
+        nargs="?",
+        default="basic",
     )
     args = parser.parse_args()
 
