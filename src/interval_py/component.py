@@ -135,7 +135,7 @@ ComponentRenderer: TypeAlias = Callable[[list[Component]], Awaitable[list[Any]]]
 
 Output = TypeVar("Output")
 
-# TODO: Exclusive / groupable
+
 class BaseIOPromise(Generic[MN, Output]):
     component: Component
     renderer: ComponentRenderer
