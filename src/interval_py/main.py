@@ -1,4 +1,4 @@
-import asyncio, traceback
+import asyncio
 from inspect import signature
 from typing import Optional, TypeAlias, Callable, Awaitable
 from uuid import uuid4, UUID
@@ -188,7 +188,7 @@ class Interval:
                         raise ioerr
                     except Exception as err:
                         self._log.error("Error in action handler", err)
-                        traceback.print_exception(err)
+                        self._log.print_exception(err)
                         result = ActionResult(
                             status="FAILURE",
                             data={"message": str(err)},  # FIXME: Proper message?
@@ -201,13 +201,15 @@ class Interval:
                     )
                 except IOError as ioerr:
                     if ioerr.kind == "CANCELED":
-                        pass
-                        # TODO
+                        self._log.prod("Transaction canceled for action", slug)
                     elif ioerr.kind == "TRANSACTION_CLOSED":
-                        pass
-                        # TODO
-                except:
-                    pass
+                        self._log.prod(
+                            "Attempted to make IO call after transaction already closed in action",
+                            slug,
+                        )
+                except Exception as err:
+                    self._log.debug("Uncaught exception:", err)
+                    self._log.print_exception(err)
 
             _ = asyncio.create_task(call_handler(), name="call_handler")
 

@@ -44,6 +44,10 @@ class Logger:
         if self.log_level == "debug":
             print(*args, **kwargs)
 
+    def print_exception(self, err: Exception):
+        if self.log_level == "debug":
+            traceback.print_exception(err, file=sys.stderr)
+
 
 class IOClient:
     Sender: TypeAlias = Callable[[IORender], Awaitable[None]]
@@ -69,7 +73,7 @@ class IOClient:
                 await self._on_response_handler(response)
             except Exception as err:
                 self._logger.error("Error in on_response_handler:", err)
-                traceback.print_exception(err)
+                self._logger.print_exception(err)
 
     async def render_components(self, components: list[Component]) -> list[Any]:
         if self._is_canceled:
