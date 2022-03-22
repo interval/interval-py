@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "interval-py"
 version = "0.1.0"
-description = ""
-authors = ["Your Name <you@example.com>"]
+description = "Python SDK for Interval."
+authors = ["Interval"]
 
 [tool.poe.tasks]
-basic = { script = 'demos:run_demo("basic")' }
-test = { script = 'tests:run' }
+demo = { script = 'demos:main' }
+test = "pytest"
 dump_schema = { script = 'interval_py.io_schema:dump_all_methods' }
 
 [tool.poetry.dependencies]
