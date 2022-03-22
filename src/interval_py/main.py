@@ -1,6 +1,6 @@
 import asyncio
 from inspect import signature
-from typing import Optional, TypeAlias, Callable, Awaitable
+from typing import Optional, TypeAlias, Callable, Awaitable, TypedDict
 from uuid import uuid4, UUID
 
 import websockets, websockets.client, websockets.exceptions
@@ -11,7 +11,7 @@ from .io_client import IOClient, Logger, LogLevel, IOError
 from .io import IO, IOResponse, IORender
 from .rpc import DuplexRPCClient
 from .internal_rpc_schema import *
-from .util import serialize_dates, deserialize_dates
+from .util import ensure_serialized, serialize_dates, deserialize_dates
 
 
 IntervalActionHandler: TypeAlias = (
@@ -23,7 +23,87 @@ IntervalActionHandler: TypeAlias = (
 IOResponseHandler: TypeAlias = Callable[[IOResponse], Awaitable[None]]
 
 
+@dataclass
+class QueuedAction:
+    id: str
+    assignee: str | None
+    params: SerializableRecord | None
+
+
+class NotInitializedError(Exception):
+    pass
+
+
+class IntervalError(Exception):
+    pass
+
+
 class Interval:
+    @dataclass
+    class Actions:
+        _send: Callable[[str, Any], Awaitable[Any]]
+
+        async def enqueue(
+            self,
+            slug: str,
+            assignee_email: str | None = None,
+            params: SerializableRecord | None = None,
+        ) -> QueuedAction:
+            try:
+                params = serialize_dates(params)
+                if params is not None:
+                    try:
+                        ensure_serialized(params)
+                    except ValueError:
+                        raise IntervalError(
+                            "Invalid params, please pass an object of primitives."
+                        )
+
+                response: EnqueueActionReturnsSuccess | EnqueueActionReturnsError = (
+                    await self._send(
+                        "ENQUEUE_ACTION",
+                        EnqueueActionInputs(
+                            action_name=slug,
+                            assignee=assignee_email,
+                            params=params,
+                        ),
+                    )
+                )
+
+                if response.type == "error":
+                    raise IntervalError(
+                        f"There was a problem enqueueing the action: {response.message}"
+                    )
+
+                return QueuedAction(
+                    id=response.id, assignee=assignee_email, params=params
+                )
+
+            except NotInitializedError as err:
+                raise IntervalError(
+                    "Connection not established. Please be sure to call listen() before enqueueing actions."
+                )
+            except IntervalError as err:
+                raise err
+            except:
+                raise IntervalError("There was a problem enqueueing the action.")
+
+        async def dequeue(self, id: str) -> QueuedAction:
+            try:
+                response: DequeueActionReturnsSuccess | DequeueActionReturnsError | None = await self._send(
+                    "DEQUEUE_ACTION", DequeueActionInputs(id=id)
+                )
+                if response is None or response.type == "error":
+                    raise IntervalError("There was a problem dequeueing the action.")
+
+                return QueuedAction(
+                    id=response.id, assignee=response.assignee, params=response.params
+                )
+            except NotInitializedError:
+                raise IntervalError(
+                    "Connection not established. Please be sure to call listen() before enqueueing actions."
+                )
+
     _logger: Logger
     _endpoint: str = "wss://intervalkit.com/websocket"
     _api_key: str
@@ -34,6 +114,8 @@ class Interval:
     _server_rpc: DuplexRPCClient[WSServerSchema, HostSchema] | None = None
     _is_connected: bool = False
 
+    actions: Actions
+
     def __init__(
         self, api_key: str, endpoint: Optional[str] = None, log_level: LogLevel = "prod"
     ):
@@ -43,6 +125,7 @@ class Interval:
 
         self._actions = {}
         self._logger = Logger(log_level)
+        self.actions = Interval.Actions(_send=self._send)
 
     def action(self, action_callback: IntervalActionHandler) -> None:
         return self._add_action(action_callback.__name__, action_callback)
@@ -52,14 +135,6 @@ class Interval:
             self._add_action(slug, action_callback)
 
         return action_adder
-
-    def enqueue(self, slug: str):
-        pass
-        # TODO
-
-    def dequeue(self, id: str):
-        pass
-        # TODO
 
     @property
     def _log(self):
@@ -71,6 +146,12 @@ class Interval:
     @property
     def is_connected(self):
         return self._is_connected
+
+    async def _send(self, method_name: str, inputs: BaseModel):
+        if not self.is_connected or self._server_rpc is None:
+            raise NotInitializedError("server_rpc not initialized")
+
+        return await self._server_rpc.send(method_name, inputs)
 
     def listen(self):
         loop = asyncio.get_event_loop()
@@ -133,7 +214,7 @@ class Interval:
 
     def _create_rpc_client(self):
         if self._isocket is None:
-            raise Exception("ISocket not initialized")
+            raise NotInitializedError("ISocket not initialized")
 
         async def start_transaction(inputs: StartTransactionInputs):
             slug = inputs.action_name
@@ -144,10 +225,7 @@ class Interval:
                 return
 
             async def send(instruction: IORender):
-                if self._server_rpc is None:
-                    raise Exception("server_rpc not initialized")
-
-                await self._server_rpc.send(
+                await self._send(
                     "SEND_IO_CALL",
                     SendIOCallInputs(
                         transaction_id=inputs.transaction_id, io_call=instruction.json()
@@ -165,9 +243,6 @@ class Interval:
             )
 
             async def call_handler():
-                if self._server_rpc is None:
-                    raise Exception("server_rpc not initialized")
-
                 try:
                     result: ActionResult
                     try:
@@ -197,7 +272,7 @@ class Interval:
                             status="FAILURE",
                             data={"message": str(err)},  # FIXME: Proper message?
                         )
-                    await self._server_rpc.send(
+                    await self._send(
                         "MARK_TRANSACTION_COMPLETE",
                         MarkTransactionCompleteInputs(
                             transaction_id=inputs.transaction_id,
@@ -240,25 +315,27 @@ class Interval:
 
     async def _initialize_host(self):
         if self._isocket is None:
-            raise Exception("isocket not initialized")
-
-        if self._server_rpc is None:
-            raise Exception("server_rpc not initialized")
+            raise NotInitializedError("isocket not initialized")
 
         slugs = list(self._actions.keys())
 
-        logged_in: InitializeHostReturns | None = await self._server_rpc.send(
-            "INITIALIZE_HOST",
-            InitializeHostInputs(
-                api_key=self._api_key,
-                callable_action_names=slugs,
-                sdk_name="interval-py",
-                sdk_version="dev",
-            ),
-        )
+        try:
+            logged_in: InitializeHostReturns | None = await self._send(
+                "INITIALIZE_HOST",
+                InitializeHostInputs(
+                    api_key=self._api_key,
+                    callable_action_names=slugs,
+                    sdk_name="interval-py",
+                    sdk_version="dev",
+                ),
+            )
+        except Exception as err:
+            self._log.debug(err)
+            self._log.print_exception(err)
+            raise err
 
         if logged_in is None:
-            raise Exception("The provided API key is not valid")
+            raise IntervalError("The provided API key is not valid")
 
         if len(logged_in.invalid_slugs) > 0:
             self._log.warn("[Interval]", "⚠ Invalid slugs detected:", end="\n\n")
@@ -272,7 +349,9 @@ class Interval:
             )
 
             if len(logged_in.invalid_slugs) == len(slugs):
-                raise Exception("No valid slugs provided")
+                raise IntervalError("No valid slugs provided")
 
         self._log.prod("Connected! Access your actions at: ", logged_in.dashboard_url)
-        self._log.debug("Host ID:", self._isocket.id)
+        isocket = self._isocket
+        if isocket is not None:
+            self._log.debug("Host ID:", isocket.id)

@@ -52,8 +52,23 @@ def json_loads_some_snake(
     return json_loads
 
 
+def deserialize_date(val: str):
+    if isinstance(val, str):
+        try:
+            return datetime.fromisoformat(val)
+        except:
+            pass
+
+    return val
+
+
 def json_loads_camel(*args, **kwargs) -> Any:
-    return json.loads(*args, **kwargs, object_pairs_hook=load_snake_pairs)
+    return json.loads(
+        *args,
+        **kwargs,
+        object_pairs_hook=load_snake_pairs,
+        parse_constant=deserialize_date,
+    )
 
 
 def dump_snake_obj(obj: Any) -> Any:
@@ -61,6 +76,11 @@ def dump_snake_obj(obj: Any) -> Any:
         obj = {snake_to_camel(key): dump_snake_obj(val) for (key, val) in obj.items()}
     elif isinstance(obj, list):
         obj = [dump_snake_obj(item) for item in obj]
+    elif isinstance(obj, str):
+        try:
+            return datetime.fromisoformat(obj)
+        except:
+            pass
 
     return obj
 
@@ -91,8 +111,26 @@ def json_dumps_some_snake(
 
 Deserializable: TypeAlias = int | float | bool | None | str
 DeserializableRecord: TypeAlias = Mapping[str, Deserializable]
-Serializable: TypeAlias = int | float | bool | None | datetime | date | str
+Serializable: TypeAlias = bool | int | float | datetime | date | str | None
 SerializableRecord: TypeAlias = Mapping[str, Serializable]
+
+ObjectLiteral: TypeAlias = int | float | bool | datetime | date | None | str
+
+KeyValueObject: TypeAlias = (
+    ObjectLiteral | list["KeyValueObject"] | dict[str, "KeyValueObject"]
+)
+
+
+def ensure_serialized(record: DeserializableRecord):
+    for val in record.values():
+        if (
+            val is not None
+            and not isinstance(val, int)
+            and not isinstance(val, float)
+            and not isinstance(val, bool)
+            and not isinstance(val, str)
+        ):
+            raise ValueError("Invalid value type, must be a primitive.")
 
 
 def deserialize_dates(
@@ -123,7 +161,5 @@ def serialize_dates(record: SerializableRecord | None) -> DeserializableRecord |
             ret[key] = val.isoformat()
         else:
             ret[key] = val
-
-    print(ret)
 
     return ret

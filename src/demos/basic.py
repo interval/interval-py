@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from interval_py import Interval, IO
-from interval_py.io_schema import KeyValueObject
 
 interval = Interval(
     "alex_dev_kcLjzxNFxmGLf0aKtLVhuckt6sziQJtxFOdtM19tBrMUp5mj",

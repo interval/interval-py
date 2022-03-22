@@ -101,14 +101,7 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
 
         asyncio.create_task(self._communicator.send(message.json()), name="send")
 
-        try:
-            raw_response_text = await fut
-            parsed = parse_obj_as(
-                self._can_call[method_name].returns, raw_response_text
-            )
+        raw_response_text = await fut
+        parsed = parse_obj_as(self._can_call[method_name].returns, raw_response_text)
 
-            return parsed
-        except Exception as err:
-            traceback.print_exception(err)
-
-        return None
+        return parsed

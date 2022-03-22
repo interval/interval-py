@@ -14,12 +14,12 @@ from typing import (
     Type,
     TypedDict,
 )
-from datetime import date, datetime, time
+from datetime import date, datetime
 from typing_extensions import NotRequired
 from uuid import UUID
 import io, json, sys
 
-from pydantic import BaseModel as PydanticBaseModel
+from pydantic import BaseModel as PydanticBaseModel, StrictBool, StrictInt, StrictFloat
 from pydantic.fields import ModelField
 
 
@@ -29,6 +29,7 @@ from .types import (
     DeserializableRecord,
     SerializableRecord,
     Serializable,
+    ObjectLiteral,
 )
 from .util import (
     snake_to_camel,
@@ -109,15 +110,12 @@ class RichSelectOptionModel(TypedDict, total=False):
     imageUrl: str | None
 
 
-ObjectLiteral: TypeAlias = int | float | bool | datetime | date | None | str
-
-KeyValueObject: TypeAlias = (
-    ObjectLiteral | list["KeyValueObject"] | dict[str, "KeyValueObject"]
-)
+class ObjectLiteralModel(BaseModel):
+    __root__: StrictInt | StrictFloat | StrictBool | datetime | date | None | str
 
 
 class KeyValueObjectModel(BaseModel):
-    __root__: ObjectLiteral | list[KeyValueObjectModel | None] | dict[
+    __root__: ObjectLiteralModel | list[KeyValueObjectModel | None] | dict[
         str, KeyValueObjectModel | None
     ]
 
@@ -144,10 +142,18 @@ ParsedActionReturnDataValue = SerializableRecord | ParsedActionReturnDataLink
 ParsedActionReturnData: TypeAlias = dict[str, ParsedActionReturnDataValue]
 
 
+class DeserializableModel(BaseModel):
+    __root__: StrictInt | StrictFloat | StrictBool | None | str
+
+
+class DeserializableRecordModel(BaseModel):
+    __root__: dict[str, DeserializableModel]
+
+
 class ActionResult(BaseModel):
     schema_version: Literal[0, 1] = 1
     status: Literal["SUCCESS", "FAILURE"]
-    data: DeserializableRecord | None
+    data: SerializableRecord | None
 
 
 TableRowValue = str | int | float | bool | None | datetime | date | TableRowLabelValue

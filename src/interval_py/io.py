@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, time
 from typing import overload, Tuple
 
 from .io_schema import *
@@ -11,7 +11,7 @@ from .component import (
     Component,
     ComponentRenderer,
 )
-from .util import serialize_dates
+from .types import KeyValueObject
 
 from pydantic import parse_obj_as
 
@@ -234,7 +234,7 @@ class IO:
                 method_name="DISPLAY_OBJECT",
                 label=label,
                 initial_props=DisplayObjectProps(
-                    data=KeyValueObjectModel.parse_obj(serialize_dates(data)),
+                    data=KeyValueObjectModel.parse_obj(data),
                 ).dict(),
             )
             return IOPromise(c, renderer=self._renderer)
