@@ -5,6 +5,8 @@ from typing import overload, Tuple
 from .io_schema import *
 from .component import IOPromise, Component, ComponentRenderer
 
+from pydantic import parse_obj_as
+
 _T1 = TypeVar("_T1")
 _T2 = TypeVar("_T2")
 _T3 = TypeVar("_T3")
@@ -134,7 +136,7 @@ class IO:
             data: list[TableRow],
             help_text: str | None = None,
             columns: TableColumnDef | None = None,
-        ) -> IOPromise[Literal["SELECT_TABLE"], list]:
+        ) -> IOPromise[Literal["SELECT_TABLE"], list[TableRow]]:
             c = Component(
                 method_name="SELECT_TABLE",
                 label=label,
@@ -158,9 +160,14 @@ class IO:
                 method_name="SELECT_SINGLE",
                 label=label,
                 initial_props=SelectSingleProps(
-                    options=options,
+                    options=[
+                        parse_obj_as(RichSelectOptionModel, option)
+                        for option in options
+                    ],
                     help_text=help_text,
-                    default_value=default_value,
+                    default_value=parse_obj_as(RichSelectOptionModel, default_value)
+                    if default_value is not None
+                    else None,
                     searchable=searchable,
                 ).dict(),
             )
@@ -172,7 +179,7 @@ class IO:
             options: list[LabelValue],
             help_text: str | None = None,
             default_value: list[LabelValue] = [],
-        ) -> IOPromise[Literal["SELECT_MULTIPLE"], list]:
+        ) -> IOPromise[Literal["SELECT_MULTIPLE"], list[LabelValue]]:
             c = Component(
                 method_name="SELECT_MULTIPLE",
                 label=label,

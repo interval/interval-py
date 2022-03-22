@@ -15,6 +15,7 @@ from typing import (
     TypedDict,
 )
 from datetime import date, datetime
+from typing_extensions import NotRequired
 from uuid import UUID
 import io, json, sys
 
@@ -88,8 +89,15 @@ class LabelValue(TypedDict):
 class RichSelectOption(TypedDict):
     label: str
     value: str
-    description: str
-    image_url: str
+    description: NotRequired[str]
+    imageUrl: NotRequired[str]
+
+
+class RichSelectOptionModel(TypedDict, total=False):
+    label: str | None
+    value: str | None
+    description: str | None
+    imageUrl: str | None
 
 
 ObjectLiteral: TypeAlias = bool | int | float | datetime | date | None | str
@@ -203,9 +211,9 @@ class SelectTableProps(BaseModel):
 
 
 class SelectSingleProps(BaseModel):
-    options: list[RichSelectOption]
+    options: list[RichSelectOptionModel]
     help_text: Optional[str]
-    default_value: Optional[RichSelectOption]
+    default_value: Optional[RichSelectOptionModel]
     searchable: Optional[bool]
 
 
@@ -295,7 +303,7 @@ io_schema: dict[MethodName, MethodDef] = {
     "SELECT_SINGLE": MethodDef(
         props=SelectSingleProps,
         state=SelectSingleState,
-        returns=RichSelectOption,
+        returns=RichSelectOptionModel,
     ),
     "SELECT_MULTIPLE": MethodDef(
         props=SelectMultipleProps,

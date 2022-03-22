@@ -1,4 +1,4 @@
-import asyncio
+import asyncio, json, re
 
 import pytest
 from playwright.async_api import Page, expect
@@ -95,6 +95,19 @@ async def host(event_loop: asyncio.AbstractEventLoop):
             """
         )
 
+    @interval.action_with_slug("io.select.single")
+    async def select_single(io: IO):
+        selected = await io.select.single(
+            "Choose role",
+            options=[
+                {"label": "Admin", "value": "a"},
+                {"label": "Editor", "value": "b"},
+                {"label": "Viewer", "value": "c"},
+            ],
+        )
+
+        await io.display.markdown(f"You selected: {selected['label']}")
+
     @interval.action_with_slug("io.select.multiple")
     async def select_multiple(io: IO):
         options: list[LabelValue] = [
@@ -126,6 +139,32 @@ async def host(event_loop: asyncio.AbstractEventLoop):
             ret[option["label"]] = option["value"] in selected_values
 
         return ret
+
+    @interval.action_with_slug("io.select.table")
+    async def select_table(io: IO):
+        selected = await io.select.table(
+            "Select some rows",
+            data=[
+                {"firstName": "Alex", "lastName": "Arena"},
+                {"firstName": "Dan", "lastName": "Philibin"},
+                {"firstName": "Ryan", "lastName": "Coppolo"},
+                {
+                    "firstName": "Jacob",
+                    "lastName": "Mischka",
+                    "favoriteColor": "Orange",
+                },
+            ],
+        )
+
+        await io.display.markdown(
+            f"""
+            ## You selected:
+
+            ```
+            {json.dumps(selected)}
+            ```
+            """
+        )
 
     event_loop.create_task(interval.listen_async())
 
@@ -251,6 +290,26 @@ async def test_rich_text(page: Page, transactions: Transaction):
     await transactions.expect_success()
 
 
+async def test_select_single(page: Page, transactions: Transaction):
+    await transactions.console()
+    await transactions.run("io.select.single")
+
+    label = page.locator('label:has-text("Choose role")')
+    inputId = await label.get_attribute("for")
+    input = page.locator(f"#{inputId}")
+    await input.click()
+    await page.locator('.iv-select__menu div div:has-text("Admin")').click()
+    await expect(page.locator(".iv-select__single-value")).to_contain_text("Admin")
+
+    await input.fill("ed")
+    await input.press("Enter")
+    await transactions.press_continue()
+    await expect(page.locator("text=You selected: Editor")).to_be_visible()
+
+    await transactions.press_continue()
+    await transactions.expect_success()
+
+
 async def test_select_multiple(page: Page, transactions: Transaction):
     await transactions.console()
     await transactions.run("io.select.multiple")
@@ -273,3 +332,19 @@ async def test_select_multiple(page: Page, transactions: Transaction):
             "C": "false",
         }
     )
+
+
+async def test_select_table(page: Page, transactions: Transaction):
+    await transactions.console()
+    await transactions.run("io.select.table")
+
+    await expect(page.locator("text=Select some rows")).to_be_visible()
+    await page.locator('td:has-text("Orange")').click()
+    await transactions.press_continue()
+    await expect(page.locator("pre code")).to_have_text(
+        re.compile(
+            r'[{"firstName":"Jacob", "lastName":"Mischka", "favoriteColor":"Orange"}]\s*'
+        )
+    )
+    await transactions.press_continue()
+    await transactions.expect_success()
