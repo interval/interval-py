@@ -152,13 +152,21 @@ class BaseIOPromise(Generic[MN, Output]):
         return val
 
 
-class OptionalIOPromise(BaseIOPromise[MN, Output]):
+class ExclusiveIOPromise(BaseIOPromise[MN, Output]):
+    pass
+
+
+class GroupableIOPromise(BaseIOPromise[MN, Output]):
+    pass
+
+
+class OptionalIOPromise(GroupableIOPromise[MN, Output]):
     def __init__(self, component: Component, renderer: ComponentRenderer):
         component.instance.is_optional = True
         super().__init__(component, renderer)
 
 
-class IOPromise(BaseIOPromise[MN, Output]):
+class IOPromise(GroupableIOPromise[MN, Output]):
     def optional(self) -> OptionalIOPromise[MN, Output | None]:
         return OptionalIOPromise[MN, Output | None](self.component, self.renderer)
 

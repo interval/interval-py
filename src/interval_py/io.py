@@ -8,7 +8,8 @@ from .component import (
     IOTimePromise,
     IODateTimePromise,
     IOPromise,
-    BaseIOPromise,
+    GroupableIOPromise,
+    ExclusiveIOPromise,
     Component,
     ComponentRenderer,
 )
@@ -417,7 +418,7 @@ class IO:
         self,
         label: str,
         help_text: str | None = None,
-    ) -> IOPromise[Literal["CONFIRM"], bool]:
+    ) -> ExclusiveIOPromise[Literal["CONFIRM"], bool]:
         c = Component(
             method_name="CONFIRM",
             label=label,
@@ -425,12 +426,12 @@ class IO:
                 help_text=help_text,
             ).dict(),
         )
-        return IOPromise(c, renderer=self._renderer)
+        return ExclusiveIOPromise(c, renderer=self._renderer)
 
     # Based on typing for asyncio.gather
     # https://github.com/python/typeshed/blob/4d23919200d9e89486f4d9e2587f82314d4af0f6/stdlib/asyncio/tasks.pyi#L82-L165
     @overload
-    async def group(self, p1: BaseIOPromise[MethodName, _T1]) -> Tuple[_T1]:
+    async def group(self, p1: GroupableIOPromise[MethodName, _T1]) -> Tuple[_T1]:
         """
         Actually returns a list, claims to return a tuple because lists do not support
         variadic types.
@@ -440,73 +441,75 @@ class IO:
     @overload
     async def group(
         self,
-        p1: BaseIOPromise[MethodName, _T1],
-        p2: BaseIOPromise[MethodName, _T2],
+        p1: GroupableIOPromise[MethodName, _T1],
+        p2: GroupableIOPromise[MethodName, _T2],
     ) -> Tuple[_T1, _T2]:
         ...
 
     @overload
     async def group(
         self,
-        p1: BaseIOPromise[MethodName, _T1],
-        p2: BaseIOPromise[MethodName, _T2],
-        p3: BaseIOPromise[MethodName, _T3],
+        p1: GroupableIOPromise[MethodName, _T1],
+        p2: GroupableIOPromise[MethodName, _T2],
+        p3: GroupableIOPromise[MethodName, _T3],
     ) -> Tuple[_T1, _T2, _T3]:
         ...
 
     @overload
     async def group(
         self,
-        p1: BaseIOPromise[MethodName, _T1],
-        p2: BaseIOPromise[MethodName, _T2],
-        p3: BaseIOPromise[MethodName, _T3],
-        p4: BaseIOPromise[MethodName, _T4],
+        p1: GroupableIOPromise[MethodName, _T1],
+        p2: GroupableIOPromise[MethodName, _T2],
+        p3: GroupableIOPromise[MethodName, _T3],
+        p4: GroupableIOPromise[MethodName, _T4],
     ) -> Tuple[_T1, _T2, _T3, _T4]:
         ...
 
     @overload
     async def group(
         self,
-        p1: BaseIOPromise[MethodName, _T1],
-        p2: BaseIOPromise[MethodName, _T2],
-        p3: BaseIOPromise[MethodName, _T3],
-        p4: BaseIOPromise[MethodName, _T4],
-        p5: BaseIOPromise[MethodName, _T5],
-        p6: BaseIOPromise[MethodName, _T6],
+        p1: GroupableIOPromise[MethodName, _T1],
+        p2: GroupableIOPromise[MethodName, _T2],
+        p3: GroupableIOPromise[MethodName, _T3],
+        p4: GroupableIOPromise[MethodName, _T4],
+        p5: GroupableIOPromise[MethodName, _T5],
+        p6: GroupableIOPromise[MethodName, _T6],
     ) -> Tuple[_T1, _T2, _T3, _T4, _T5, _T6]:
         ...
 
     @overload
     async def group(
         self,
-        p1: BaseIOPromise[MethodName, _T1],
-        p2: BaseIOPromise[MethodName, _T2],
-        p3: BaseIOPromise[MethodName, _T3],
-        p4: BaseIOPromise[MethodName, _T4],
-        p5: BaseIOPromise[MethodName, _T5],
-        p6: BaseIOPromise[MethodName, _T6],
-        p7: BaseIOPromise[MethodName, _T7],
+        p1: GroupableIOPromise[MethodName, _T1],
+        p2: GroupableIOPromise[MethodName, _T2],
+        p3: GroupableIOPromise[MethodName, _T3],
+        p4: GroupableIOPromise[MethodName, _T4],
+        p5: GroupableIOPromise[MethodName, _T5],
+        p6: GroupableIOPromise[MethodName, _T6],
+        p7: GroupableIOPromise[MethodName, _T7],
     ) -> Tuple[_T1, _T2, _T3, _T4, _T5, _T6, _T7]:
         ...
 
     @overload
     async def group(
         self,
-        p1: BaseIOPromise[MethodName, _T1],
-        p2: BaseIOPromise[MethodName, _T2],
-        p3: BaseIOPromise[MethodName, _T3],
-        p4: BaseIOPromise[MethodName, _T4],
-        p5: BaseIOPromise[MethodName, _T5],
-        p6: BaseIOPromise[MethodName, _T6],
-        p7: BaseIOPromise[MethodName, _T7],
-        p8: BaseIOPromise[MethodName, _T8],
+        p1: GroupableIOPromise[MethodName, _T1],
+        p2: GroupableIOPromise[MethodName, _T2],
+        p3: GroupableIOPromise[MethodName, _T3],
+        p4: GroupableIOPromise[MethodName, _T4],
+        p5: GroupableIOPromise[MethodName, _T5],
+        p6: GroupableIOPromise[MethodName, _T6],
+        p7: GroupableIOPromise[MethodName, _T7],
+        p8: GroupableIOPromise[MethodName, _T8],
     ) -> Tuple[_T1, _T2, _T3, _T4, _T5, _T6, _T7, _T8]:
         ...
 
     @overload
-    async def group(self, *io_promises: BaseIOPromise[MethodName, Any]) -> list[Any]:
+    async def group(
+        self, *io_promises: GroupableIOPromise[MethodName, Any]
+    ) -> list[Any]:
         ...
 
-    async def group(self, *io_promises: BaseIOPromise[MethodName, Any]):  # type: ignore
+    async def group(self, *io_promises: GroupableIOPromise[MethodName, Any]):  # type: ignore
         raw_values = await self._renderer([p.component for p in io_promises])
         return [io_promises[i]._get_value(val) for (i, val) in enumerate(raw_values)]
