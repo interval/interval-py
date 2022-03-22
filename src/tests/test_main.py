@@ -17,7 +17,7 @@ async def host(event_loop: asyncio.AbstractEventLoop):
     )
 
     @interval.action_with_slug("io.display.heading")
-    async def io_display_heading(io: IO):
+    async def display_heading(io: IO):
         await io.display.heading("io.display.heading result")
 
     @interval.action
@@ -29,14 +29,14 @@ async def host(event_loop: asyncio.AbstractEventLoop):
         }
 
     @interval.action_with_slug("io.group")
-    async def io_group(io: IO):
+    async def group(io: IO):
         await io.group(
             io.display.markdown("1. First item"),
             io.display.markdown("2. Second item"),
         )
 
     @interval.action_with_slug("io.display.object")
-    async def io_display_object(io: IO):
+    async def display_object(io: IO):
         await io.group(
             io.display.object(
                 "Here's an object",
@@ -51,6 +51,47 @@ async def host(event_loop: asyncio.AbstractEventLoop):
                     "longList": [f"Item {i}" for i in range(100)],
                 },
             )
+        )
+
+    @interval.action_with_slug("io.display.table")
+    async def display_table(io: IO):
+        await io.display.table(
+            "io.display.table result",
+            data=[
+                {
+                    "string": "string",
+                    "number": 15,
+                    "boolean": True,
+                    "none": None,
+                }
+            ],
+        )
+
+    @interval.action_with_slug("io.input.text")
+    async def io_input_text(io: IO):
+        name = await io.input.text("First name")
+        return {"name": name}
+
+    @interval.action_with_slug("io.input.number")
+    async def input_number(io: IO):
+        num = await io.input.number("Enter a number")
+        num2 = await io.input.number(
+            f"Enter a second number that's greater than {num}", min=num + 1
+        )
+
+        return {"sum": num + num2}
+
+    @interval.action_with_slug("io.input.richText")
+    async def rich_text(io: IO):
+        body = await io.input.rich_text("Email body")
+        await io.display.markdown(
+            f"""
+            ## You entered:
+
+            ```
+            {body}
+            ```
+            """
         )
 
     event_loop.create_task(interval.listen_async())
@@ -101,5 +142,77 @@ async def test_object(page: Page, transactions: Transaction):
     await expect(page.locator('dd:has-text("Item 99")')).to_be_hidden()
     await page.locator('summary:has-text("longList")').click()
     await expect(page.locator('dd:has-text("Item 99")')).to_be_visible()
+    await transactions.press_continue()
+    await transactions.expect_success()
+
+
+async def test_table(page: Page, transactions: Transaction):
+    await transactions.console()
+    await transactions.run("io.display.table")
+    await expect(page.locator("text=io.display.table result")).to_be_visible()
+    await expect(page.locator('th:has-text("string")')).to_be_visible()
+    await expect(page.locator('td:has-text("string")')).to_be_visible()
+    await expect(page.locator('th:has-text("number")')).to_be_visible()
+    await expect(page.locator('td:has-text("15")')).to_be_visible()
+    await expect(page.locator('th:has-text("boolean")')).to_be_visible()
+    await expect(page.locator('td:has-text("true")')).to_be_visible()
+    await expect(page.locator('th:has-text("none")')).to_be_visible()
+    await expect(page.locator('td:has-text("-")')).to_be_visible()
+    await transactions.press_continue()
+    await transactions.expect_success()
+
+
+async def test_text(page: Page, transactions: Transaction):
+    await transactions.console()
+    await transactions.run("io.input.text")
+
+    await page.click("text=First name")
+    await page.fill('input[type="text"]', "Interval")
+    await transactions.press_continue()
+    await transactions.expect_success({"name": "Interval"})
+
+
+async def test_number(page: Page, transactions: Transaction):
+    await transactions.console()
+    await transactions.run("io.input.number")
+
+    await page.click("text=Enter a number")
+    await page.fill('input[type="number"]', "12")
+    await transactions.press_continue()
+
+    await page.click("text=Enter a second number")
+    await page.fill('input[type="number"]', "7")
+    await expect(
+        page.locator('.btn [role="button"]:has-text("Continue")')
+    ).to_have_attribute("aria-disabled", "true")
+    await page.fill('input[type="number"]', "13")
+
+    await transactions.press_continue()
+    await transactions.expect_success({"sum": "25"})
+
+
+async def test_rich_text(page: Page, transactions: Transaction):
+    await transactions.console()
+    await transactions.run("io.input.richText")
+    await expect(page.locator("text=Email body")).to_be_visible()
+
+    input = page.locator(".ProseMirror")
+
+    await page.select_option('select[title="Heading level"]', "1")
+    await input.type("Heading 1")
+    await input.press("Enter")
+    await page.click('button[title="Toggle italic"]')
+    await input.type("Emphasis")
+    await input.press("Enter")
+    await page.click('button[title="Toggle italic"]')
+    await page.click('button[title="Toggle underline"]')
+    await input.type("Underline")
+    await page.click('button[title="Toggle underline"]')
+
+    await transactions.press_continue()
+    await expect(page.locator('h2:has-text("You entered:")')).to_be_visible()
+    await expect(page.locator("pre code")).to_contain_text(
+        "<h1>Heading 1</h1><p><em>Emphasis</em></p><p><u>Underline</u></p>\n"
+    )
     await transactions.press_continue()
     await transactions.expect_success()
