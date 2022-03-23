@@ -60,6 +60,10 @@ Tasks are configured using [poethepoet](https://github.com/nat-n/poethepoet)
 - `poe demo [demo_name]` to run a demo (`basic` by default if `demo_name` omitted)
 - `poe test` to run `pytest` (can also run `pytest` directly in virtual env)
 
+Code is formatted using [Black](https://github.com/psf/black). Please configure
+your editor to format on save using Black, or run `poe format` to format the
+code before committing changes.
+
 ## Tests
 
 Tests use [pytest](https://docs.pytest.org/en/7.1.x/) and
