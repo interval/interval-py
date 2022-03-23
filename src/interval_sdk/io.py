@@ -153,7 +153,9 @@ class IO:
                 label=label,
                 initial_props=SelectTableProps(
                     help_text=help_text,
-                    columns=columns,
+                    columns=[TableColumnDefModel.parse_obj(col) for col in columns]
+                    if columns is not None
+                    else None,
                     data=data,
                 ).dict(),
             )
@@ -266,7 +268,9 @@ class IO:
                 label=label,
                 initial_props=DisplayTableProps(
                     help_text=help_text,
-                    columns=columns,
+                    columns=[TableColumnDefModel.parse_obj(col) for col in columns]
+                    if columns is not None
+                    else None,
                     data=data,
                 ).dict(),
             )

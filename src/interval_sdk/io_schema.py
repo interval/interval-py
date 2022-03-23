@@ -160,10 +160,16 @@ TableRowValue = str | int | float | bool | None | datetime | date | TableRowLabe
 TableRow: TypeAlias = dict[str, TableRowValue]
 
 
-class TableColumnDef(BaseModel):
+class TableColumnDef(TypedDict):
     key: str
-    label: Optional[str]
-    formatter: Optional[Callable[[Any], str]]
+    label: NotRequired[str]
+    # formatter: NotRequired[Callable[[Any], str]]
+
+
+class TableColumnDefModel(BaseModel):
+    key: str
+    label: str | None = None
+    # formatter: Callable[[Any], str] | None = None
 
 
 PropsType = TypeVar("PropsType", bound=Type)
@@ -255,7 +261,7 @@ class ConfirmProps(BaseModel):
 class SelectTableProps(BaseModel):
     data: list[TableRow]
     help_text: Optional[str]
-    columns: Optional[TableColumnDef]
+    columns: Optional[list[TableColumnDefModel]]
 
 
 class SelectSingleProps(BaseModel):
@@ -282,7 +288,7 @@ class DisplayObjectProps(BaseModel):
 class DisplayTableProps(BaseModel):
     data: list[TableRow]
     help_text: Optional[str]
-    columns: Optional[list[TableColumnDef]]
+    columns: Optional[list[TableColumnDefModel]]
 
 
 class DisplayProgressStepsSteps(BaseModel):

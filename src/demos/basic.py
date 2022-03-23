@@ -73,6 +73,21 @@ async def spreadsheet_test(io: IO):
 
 
 @interval.action
+async def table_test(io: IO):
+    await io.display.table(
+        "Table",
+        data=[{"a": 1, "b": 2, "c": 3} for _ in range(100)],
+        columns=[
+            {
+                "key": "a",
+                "label": "A",
+            },
+            {"key": "b", "label": "B"},
+        ],
+    )
+
+
+@interval.action
 async def confirm(io: IO):
     confirmed = await io.confirm("Does this work?", help_text="I hope so...")
     return {"confirmed": confirmed}

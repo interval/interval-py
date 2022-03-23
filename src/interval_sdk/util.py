@@ -86,7 +86,24 @@ def dump_snake_obj(obj: Any) -> Any:
 
 
 def dict_strip_none(d: dict[str, Any]) -> dict[str, Any]:
-    return {key: val for (key, val) in d.items() if val is not None}
+    ret = {}
+
+    for key, val in d.items():
+        if val is None:
+            continue
+
+        if isinstance(val, list):
+            ret[key] = [
+                dict_strip_none(item) if isinstance(item, dict) else item
+                for item in val
+            ]
+        elif isinstance(val, dict):
+            ret[key] = dict_strip_none(val)
+
+        else:
+            ret[key] = val
+
+    return ret
 
 
 def json_dumps_snake(obj: Any, *args, **kwargs) -> str:
