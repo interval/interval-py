@@ -3,8 +3,8 @@ import asyncio, json, re
 import pytest
 from playwright.async_api import Page, expect
 
-from interval_py import Interval, IO, ActionContext
-from interval_py.io_schema import LabelValue
+from interval_sdk import Interval, IO, ActionContext
+from interval_sdk.io_schema import LabelValue
 
 from . import base_config, Transaction
 

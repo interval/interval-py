@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime
 
-from interval_py import Interval, IO, ActionContext
+from interval_sdk import Interval, IO, ActionContext
 
 interval = Interval(
     "alex_dev_kcLjzxNFxmGLf0aKtLVhuckt6sziQJtxFOdtM19tBrMUp5mj",

@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "interval-py"
+name = "interval-sdk"
 version = "0.1.0"
 description = "Python SDK for Interval."
 authors = ["Interval"]
@@ -7,7 +7,7 @@ authors = ["Interval"]
 [tool.poe.tasks]
 demo = { script = 'demos:main' }
 test = "pytest"
-dump_schema = { script = 'interval_py.io_schema:dump_all_methods' }
+dump_schema = { script = 'interval_sdk.io_schema:dump_all_methods' }
 
 [tool.poetry.dependencies]
 python = "^3.10"

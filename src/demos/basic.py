@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from interval_py import Interval, IO
+from interval_sdk import Interval, IO
 
 interval = Interval(
     "alex_dev_kcLjzxNFxmGLf0aKtLVhuckt6sziQJtxFOdtM19tBrMUp5mj",

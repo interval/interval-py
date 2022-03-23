@@ -4,7 +4,7 @@ from typing import AsyncIterator
 import pytest
 from playwright.async_api import Page, async_playwright
 
-from interval_py import Interval
+from interval_sdk import Interval
 
 from . import Config, base_config as base_config, Transaction
 
