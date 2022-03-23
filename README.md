@@ -1,0 +1,70 @@
+# interval-sdk
+
+## API
+
+See `src/demos/basic.py` and `src/tests` for a better overview, but in short:
+
+```python
+from interval_sdk import Interval, IO
+
+# Initialize Interval
+interval = Interval(
+    "API_KEY",
+    endpoint="wss://intervalkit.com/websocket",
+    log_level="debug",
+)
+
+# Add an action using the function name as the slug
+@interval.action
+async def hello_interval():
+    return {"hello": "from python!"}
+
+# Add an action using a custom slug (can contain periods and hyphens)
+@interval.action_with_slug('echo-message')
+async def echo_message(io: IO):
+    [message] = await io.group(io.input.text("Hello!", help_text="From python!"))
+
+    return {"message": message}
+
+
+# Synchronously listen, blocking forever
+interval.listen()
+```
+
+To not block, interval can also be run asynchronously using
+`interval.listen_async()`. You must provide your own event loop.
+
+The task will complete as soon as connection to Interval completes, so you
+likely want to run forever or run alongside another permanent task.
+
+```python
+import asyncio
+
+# This is what synchronous `listen()` does under the hood
+loop = asyncio.new_event_loop()
+loop.create_task(interval.listen_async())
+loop.run_forever()
+```
+
+## Contributing
+
+This project uses [Poetry](https://python-poetry.org/) for dependency
+management
+
+1. `poetry install` to install dependencies
+2. `poetry shell` to activate the virtual environment
+
+Tasks are configured using [poethepoet](https://github.com/nat-n/poethepoet)
+(installed as a dev dependency).
+
+- `poe demo [demo_name]` to run a demo (`basic` by default if `demo_name` omitted)
+- `poe test` to run `pytest` (can also run `pytest` directly in virtual env)
+
+## Tests
+
+Tests use [pytest](https://docs.pytest.org/en/7.1.x/) and
+[playwright](https://playwright.dev/python/).
+
+Currently assumes the `test-runner@interval.com` user exists already.
+Run `yarn test` in the `web` directory at least once to create it before
+running these.
