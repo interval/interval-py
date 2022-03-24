@@ -81,8 +81,6 @@ class Component(Generic[MN]):
         if self.instance.is_optional:
             return_schema = return_schema | None
 
-        print("set_return_value", value)
-
         try:
             if value is None:
                 if not self.instance.is_optional and self.schema.returns is not None:
