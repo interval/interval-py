@@ -1,4 +1,4 @@
-import asyncio
+import asyncio, sys
 from asyncio.futures import Future
 from dataclasses import dataclass
 from typing import Any, Callable, Literal, Awaitable
@@ -40,6 +40,7 @@ class ISocket:
 
     _out_queue: asyncio.Queue[Message] = asyncio.Queue()
     _pending_messages: dict[UUID, PendingMessage] = {}
+    _connection_future: Future | None
 
     def __init__(
         self,
@@ -70,37 +71,40 @@ class ISocket:
         fut = loop.create_future()
         self.on_authenticated = fut
 
-        try:
-            asyncio.gather(
-                self._consumer_handler(self._ws),
-                self._producer_handler(self._ws),
-            )
-        except websockets.exceptions.ConnectionClosed as e:
-            if self.on_close:
-                await self.on_close(e.code, e.reason)
-
+        self._connection_future = asyncio.gather(
+            self._consumer_handler(self._ws),
+            self._producer_handler(self._ws),
+        )
         await asyncio.wait_for(fut, self._connect_timeout)
 
     async def _consumer_handler(
         self, ws: websockets.client.WebSocketClientProtocol
     ) -> None:
-        async for message in ws:
-            meta = Message.parse_raw(message)
+        try:
+            async for message in ws:
+                meta = Message.parse_raw(message)
 
-            if meta.type == "ACK":
-                pm = self._pending_messages.get(meta.id, None)
-                if pm:
-                    pm.on_ack_received.set_result(None)
-                    self._pending_messages.pop(meta.id)
-            elif meta.type == "MESSAGE":
-                await self._out_queue.put(Message(id=meta.id, data=None, type="ACK"))
-                if meta.data == "authenticated":
-                    self._is_authenticated = True
-                    self.on_authenticated.set_result(None)
-                    continue
+                if meta.type == "ACK":
+                    pm = self._pending_messages.get(meta.id, None)
+                    if pm:
+                        pm.on_ack_received.set_result(None)
+                        self._pending_messages.pop(meta.id)
+                elif meta.type == "MESSAGE":
+                    await self._out_queue.put(
+                        Message(id=meta.id, data=None, type="ACK")
+                    )
+                    if meta.data == "authenticated":
+                        self._is_authenticated = True
+                        self.on_authenticated.set_result(None)
+                        continue
 
-                if self.on_message:
-                    asyncio.ensure_future(self.on_message(meta.data))
+                    if self.on_message:
+                        asyncio.ensure_future(self.on_message(meta.data))
+        except websockets.exceptions.ConnectionClosed as e:
+            if self.on_close:
+                await self.on_close(e.code, e.reason)
+        except Exception as e:
+            print("Error in consumer handler", e, file=sys.stderr)
 
     async def _producer_handler(
         self, ws: websockets.client.WebSocketClientProtocol
@@ -108,7 +112,17 @@ class ISocket:
 
         while True:
             message = await self._out_queue.get()
-            await ws.send(message.json())
+            try:
+                await ws.send(message.json())
+                self._out_queue.task_done()
+            except websockets.exceptions.ConnectionClosed as e:
+                if self.on_close:
+                    await self.on_close(e.code, e.reason)
+            except asyncio.exceptions.TimeoutError as e:
+                # No need to put back in queue, we'll try resending again
+                pass
+            except Exception as e:
+                print("Error in producer handler", e, file=sys.stderr)
 
     async def send(self, data: str) -> None:
         if self._ws is None:
@@ -126,8 +140,9 @@ class ISocket:
 
         await asyncio.wait_for(fut, self._send_timeout)
 
-    async def close(self):
-        if self._ws is None:
-            raise NotConnectedError
+    async def close(self) -> None:
+        if self._connection_future is not None:
+            self._connection_future.cancel()
 
-        await self._ws.close()
+        if self._ws is not None:
+            await self._ws.close()

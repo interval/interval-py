@@ -168,6 +168,11 @@ class Interval:
             if not self._is_connected:
                 return
 
+            if self._isocket is not None:
+                # Must be sure to close the previous connection or its
+                # producer/consumer loops will continue forever.
+                await self._isocket.close()
+
             self._log.prod(
                 f"Lost connection to Interval (code {code}). Reason: {reason}"
             )
@@ -175,18 +180,15 @@ class Interval:
 
             self._is_connected = False
 
-            def on_reconnect(_):
-                self._log.prod("Reconnection successful")
-                self._is_connected = True
-
             while not self._is_connected:
-                task = asyncio.create_task(
-                    self._create_socket_connection(instance_id=instance_id)
-                )
-                task.add_done_callback(on_reconnect)
-
-                self._log.prod("Unable to reconnect. Retrying in 3s...")
-                await asyncio.sleep(3)
+                try:
+                    await self._create_socket_connection(instance_id=instance_id)
+                    self._log.prod("Reconnection successful")
+                    self._is_connected = True
+                except Exception as err:
+                    self._log.prod("Unable to reconnect. Retrying in 3s...")
+                    self._log.debug(err)
+                    await asyncio.sleep(3)
 
         ws = await websockets.client.connect(
             self._endpoint,
@@ -296,7 +298,6 @@ class Interval:
         async def io_response(inputs: IOResponseInputs):
             self._log.debug("Got IO response", inputs)
             io_resp = IOResponse.parse_raw(inputs.value)
-            print(io_resp)
             try:
                 reply_handler = self._io_response_handlers[io_resp.transaction_id]
                 await reply_handler(io_resp)
