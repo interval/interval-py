@@ -148,10 +148,19 @@ class Interval:
         return self._is_connected
 
     async def _send(self, method_name: str, inputs: BaseModel):
-        if not self.is_connected or self._server_rpc is None:
+        if self._server_rpc is None:
             raise NotInitializedError("server_rpc not initialized")
 
-        return await self._server_rpc.send(method_name, inputs)
+        while True:
+            if self._is_connected:
+                try:
+                    return await self._server_rpc.send(method_name, inputs)
+                except Exception as err:
+                    self._log.debug("RPC call timed out, retrying in 3s...", err)
+            else:
+                self._log.debug("Not connected, retrying again in 3s...")
+
+            await asyncio.sleep(3)
 
     def listen(self):
         loop = asyncio.get_event_loop()
