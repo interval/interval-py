@@ -61,7 +61,7 @@ class InitializeHostReturns(BaseModel):
 
 
 class EnqueueActionInputs(BaseModel):
-    action_name: str
+    slug: str
     assignee: str | None
     params: SerializableRecord | None
 
@@ -74,6 +74,12 @@ class EnqueueActionReturnsSuccess(BaseModel):
 class EnqueueActionReturnsError(BaseModel):
     type: Literal["error"]
     message: str
+
+
+EnqueueActionReturns = Annotated[
+    EnqueueActionReturnsSuccess | EnqueueActionReturnsError,
+    Field(discriminator="type"),
+]
 
 
 class DequeueActionInputs(BaseModel):
@@ -91,6 +97,11 @@ class DequeueActionReturnsError(BaseModel):
     type: Literal["error"]
     message: str
 
+
+DequeueActionReturns = Annotated[
+    DequeueActionReturnsSuccess | DequeueActionReturnsError,
+    Field(discriminator="type"),
+]
 
 WSServerSchemaMethodName = Literal[
     "CONNECT_TO_TRANSACTION_AS_CLIENT",
@@ -127,17 +138,11 @@ ws_server_schema: WSServerSchema = {
     ),
     "ENQUEUE_ACTION": RPCMethod(
         inputs=EnqueueActionInputs,
-        returns=Annotated[
-            EnqueueActionReturnsSuccess | EnqueueActionReturnsError,
-            Field(discriminator="type"),
-        ],
+        returns=EnqueueActionReturns,
     ),
     "DEQUEUE_ACTION": RPCMethod(
         inputs=DequeueActionInputs,
-        returns=Annotated[
-            DequeueActionReturnsSuccess | DequeueActionReturnsError,
-            Field(discriminator="type"),
-        ],
+        returns=DequeueActionReturns,
     ),
 }
 
