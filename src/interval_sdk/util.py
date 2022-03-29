@@ -167,7 +167,7 @@ def deserialize_dates(
     return ret
 
 
-def serialize_dates(record: SerializableRecord | None) -> DeserializableRecord | None:
+def serialize_dates(record: dict | None) -> dict | None:
     if record is None:
         return None
 

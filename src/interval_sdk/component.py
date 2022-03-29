@@ -10,6 +10,7 @@ from typing import (
     TypeAlias,
     Awaitable,
     Literal,
+    Mapping,
 )
 
 
@@ -18,6 +19,7 @@ from pydantic import parse_obj_as, parse_raw_as, ValidationError
 from .io_schema import (
     DateModel,
     DateTimeModel,
+    TableRowValue,
     TimeModel,
     MethodDef,
     MethodName,
@@ -209,7 +211,9 @@ class IOTimePromise(IOPromise[Literal["INPUT_TIME"], time]):
         return OptionalIOTimePromise(self.component, self.renderer)
 
 
-class OptionalIODateTimePromise(IOPromise[Literal["INPUT_DATETIME"], datetime | None]):
+class OptionalIODateTimePromise(
+    OptionalIOPromise[Literal["INPUT_DATETIME"], datetime | None]
+):
     def _get_value(self, val: Any) -> datetime | None:
         if val is None:
             return None
@@ -227,3 +231,44 @@ class IODateTimePromise(IOPromise[Literal["INPUT_DATETIME"], datetime]):
 
     def optional(self) -> OptionalIODatePromise:
         return OptionalIODatePromise(self.component, self.renderer)
+
+
+TR = TypeVar("TR", bound=Mapping[str, TableRowValue])
+
+
+class OptionalIOSelectTablePromise(
+    OptionalIOPromise[Literal["SELECT_TABLE"], list[TR] | None]
+):
+    _data: list[TR]
+
+    def __init__(
+        self, component: Component, renderer: ComponentRenderer, data: list[TR]
+    ):
+        super().__init__(component, renderer)
+        self._data = data
+
+    def _get_value(self, val: Any) -> list[TR] | None:
+        if val is None:
+            return None
+
+        indices = [int(row.key) for row in val]
+        rows = [row for (i, row) in enumerate(self._data) if i in indices]
+        return rows
+
+
+class IOSelectTablePromise(IOPromise[Literal["SELECT_TABLE"], list[TR]]):
+    _data: list[TR]
+
+    def __init__(
+        self, component: Component, renderer: ComponentRenderer, data: list[TR]
+    ):
+        super().__init__(component, renderer)
+        self._data = data
+
+    def _get_value(self, val: Any) -> list[TR]:
+        indices = [int(row.key) for row in val]
+        rows = [row for (i, row) in enumerate(self._data) if i in indices]
+        return rows
+
+    def optional(self) -> OptionalIOSelectTablePromise[TR]:
+        return OptionalIOSelectTablePromise(self.component, self.renderer, self._data)

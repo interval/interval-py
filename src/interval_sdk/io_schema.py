@@ -28,13 +28,13 @@ from .types import (
     GenericModel,
     SerializableRecord,
     Serializable,
-    ObjectLiteral,
 )
 from .util import (
     snake_to_camel,
     dict_keys_to_camel,
     json_dumps_some_snake,
     json_loads_some_snake,
+    serialize_dates,
 )
 
 # TODO: Try generating most of this with datamode-code-generator
@@ -122,11 +122,6 @@ class KeyValueObjectModel(BaseModel):
 KeyValueObjectModel.update_forward_refs()
 
 
-class TableRowLabelValue(BaseModel):
-    _label: str
-    _value: ObjectLiteral
-
-
 RawActionReturnData: TypeAlias = Mapping[str, Serializable]
 IOFunctionReturnType: TypeAlias = SerializableRecord | None
 
@@ -155,21 +150,65 @@ class ActionResult(BaseModel):
     data: SerializableRecord | None
 
 
-TableRowValue = str | int | float | bool | None | datetime | date | TableRowLabelValue
+class TableRowValueObject(TypedDict):
+    label: str
+    value: NotRequired[TableRowValue]
+    href: NotRequired[str]
 
+
+TableRowValueModelPrimitive = StrictInt | StrictFloat | StrictBool | None | str
+
+
+class TableRowValueObjectModel(BaseModel):
+    label: str
+    value: TableRowValueModelPrimitive | None = None
+    href: str | None = None
+
+
+TableRowValue: TypeAlias = (
+    str | int | float | bool | date | datetime | None | TableRowValueObject
+)
 TableRow: TypeAlias = dict[str, TableRowValue]
 
 
+class TableRowValueModel(BaseModel):
+    __root__: TableRowValueModelPrimitive | TableRowValueObjectModel
+
+
+class InternalTableRow(TypedDict):
+    key: str
+    data: TableRow
+
+
+class InternalTableRowModel(BaseModel):
+    key: str
+    data: dict[str, TableRowValueModel]
+
+
 class TableColumnDef(TypedDict):
-    key: str
-    label: NotRequired[str]
-    # formatter: NotRequired[Callable[[Any], str]]
+    label: str
+    render: Callable[[Any], TableRowValue]
 
 
-class TableColumnDefModel(BaseModel):
-    key: str
-    label: str | None = None
-    # formatter: Callable[[Any], str] | None = None
+class InternalTableColumn(TypedDict):
+    label: str
+
+
+def serialize_table_row(
+    index: int, row: TableRow, columns: list[TableColumnDef] | None = None
+) -> InternalTableRow:
+    key = str(index)
+    row = cast(TableRow, serialize_dates(row))
+
+    if columns is None:
+        final_row = row
+    else:
+        final_row = {}
+
+        for i, col in enumerate(columns):
+            final_row[str(i)] = col["render"](row)
+
+    return {"key": key, "data": final_row}
 
 
 PropsType = TypeVar("PropsType", bound=Type)
@@ -259,9 +298,9 @@ class ConfirmProps(BaseModel):
 
 
 class SelectTableProps(BaseModel):
-    data: list[TableRow]
+    data: list[InternalTableRowModel]
     help_text: Optional[str]
-    columns: Optional[list[TableColumnDefModel]]
+    columns: Optional[list[InternalTableColumn]]
 
 
 class SelectSingleProps(BaseModel):
@@ -286,9 +325,9 @@ class DisplayObjectProps(BaseModel):
 
 
 class DisplayTableProps(BaseModel):
-    data: list[TableRow]
+    data: list[InternalTableRowModel]
     help_text: Optional[str]
-    columns: Optional[list[TableColumnDefModel]]
+    columns: Optional[list[InternalTableColumn]]
 
 
 class DisplayProgressStepsSteps(BaseModel):
@@ -367,7 +406,7 @@ io_schema: dict[MethodName, MethodDef] = {
     "SELECT_TABLE": MethodDef(
         props=SelectTableProps,
         state=None,
-        returns=list[TableRow],
+        returns=list[InternalTableRowModel],
     ),
     "SELECT_SINGLE": MethodDef(
         props=SelectSingleProps,

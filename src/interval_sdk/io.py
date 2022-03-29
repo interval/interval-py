@@ -7,6 +7,7 @@ from .component import (
     IODatePromise,
     IOTimePromise,
     IODateTimePromise,
+    IOSelectTablePromise,
     IOPromise,
     GroupableIOPromise,
     ExclusiveIOPromise,
@@ -25,6 +26,8 @@ _T5 = TypeVar("_T5")
 _T6 = TypeVar("_T6")
 _T7 = TypeVar("_T7")
 _T8 = TypeVar("_T8")
+
+TR = TypeVar("TR", bound=Mapping[str, TableRowValue])
 
 
 class IO:
@@ -144,22 +147,28 @@ class IO:
         def table(
             self,
             label: str,
-            data: list[TableRow],
+            data: list[TR],
             help_text: str | None = None,
-            columns: TableColumnDef | None = None,
-        ) -> IOPromise[Literal["SELECT_TABLE"], list[TableRow]]:
+            columns: list[TableColumnDef] | None = None,
+        ) -> IOSelectTablePromise[TR]:
+            serialized = [
+                InternalTableRowModel.parse_obj(
+                    serialize_table_row(i, cast(dict, row), columns)
+                )
+                for (i, row) in enumerate(data)
+            ]
             c = Component(
                 method_name="SELECT_TABLE",
                 label=label,
                 initial_props=SelectTableProps(
                     help_text=help_text,
-                    columns=[TableColumnDefModel.parse_obj(col) for col in columns]
+                    columns=[{"label": col["label"]} for col in columns]
                     if columns is not None
                     else None,
-                    data=data,
+                    data=serialized,
                 ).dict(),
             )
-            return IOPromise(c, renderer=self._renderer)
+            return IOSelectTablePromise(c, renderer=self._renderer, data=data)
 
         def single(
             self,
@@ -247,31 +256,24 @@ class IO:
         def table(
             self,
             label: str,
-            data: list[
-                dict[
-                    str,
-                    str
-                    | int
-                    | float
-                    | bool
-                    | None
-                    | date
-                    | datetime
-                    | TableRowLabelValue,
-                ]
-            ],
+            data: list[TableRow],
             help_text: str | None = None,
             columns: list[TableColumnDef] | None = None,
         ) -> IOPromise[Literal["DISPLAY_TABLE"], None]:
+            serialized = [
+                InternalTableRowModel.parse_obj(serialize_table_row(i, row, columns))
+                for (i, row) in enumerate(data)
+            ]
+            print(serialized)
             c = Component(
                 method_name="DISPLAY_TABLE",
                 label=label,
                 initial_props=DisplayTableProps(
                     help_text=help_text,
-                    columns=[TableColumnDefModel.parse_obj(col) for col in columns]
+                    columns=[{"label": col["label"]} for col in columns]
                     if columns is not None
                     else None,
-                    data=data,
+                    data=serialized,
                 ).dict(),
             )
             return IOPromise(c, renderer=self._renderer)
