@@ -1,9 +1,12 @@
 import asyncio
 from inspect import signature
-from typing import Optional, TypeAlias, Callable, Awaitable, TypedDict
+from typing import Optional, TypeAlias, Callable, Awaitable
+from urllib.parse import urlparse, urlunparse
 from uuid import uuid4, UUID
 
+import aiohttp
 import websockets, websockets.client, websockets.exceptions
+from pydantic import parse_raw_as
 
 from .isocket import ISocket
 from .io_schema import ActionResult, IOFunctionReturnType
@@ -39,9 +42,31 @@ class IntervalError(Exception):
 
 
 class Interval:
-    @dataclass
     class Actions:
-        _send: Callable[[str, Any], Awaitable[Any]]
+        _api_key: str
+        _endpoint: str
+
+        def __init__(self, api_key: str, endpoint: str):
+            self._api_key = api_key
+            url = urlparse(endpoint)
+            self._endpoint = urlunparse(
+                url._replace(
+                    scheme=url.scheme.replace("ws", "http"), path="/api/actions"
+                )
+            )
+
+        def _get_address(self, path: str) -> str:
+            if path.startswith("/"):
+                path = path[1:]
+
+            return f"{self._endpoint}/{path}"
+
+        @property
+        def _headers(self) -> dict:
+            return {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self._api_key}",
+            }
 
         async def enqueue(
             self,
@@ -59,29 +84,32 @@ class Interval:
                             "Invalid params, please pass an object of primitives."
                         )
 
-                response: EnqueueActionReturnsSuccess | EnqueueActionReturnsError = (
-                    await self._send(
-                        "ENQUEUE_ACTION",
-                        EnqueueActionInputs(
-                            action_name=slug,
-                            assignee=assignee_email,
-                            params=params,
-                        ),
-                    )
-                )
+                try:
+                    data = EnqueueActionInputs(
+                        slug=slug,
+                        assignee=assignee_email,
+                        params=params,
+                    ).json()
+                except ValueError:
+                    raise IntervalError("Invalid input.")
+
+                async with aiohttp.ClientSession(headers=self._headers) as session:
+                    async with session.post(
+                        self._get_address("enqueue"), data=data
+                    ) as resp:
+                        try:
+                            text = await resp.text()
+                            response = parse_raw_as(EnqueueActionReturns, text)
+                        except:
+                            raise IntervalError("Received invalid API response.")
 
                 if response.type == "error":
                     raise IntervalError(
-                        f"There was a problem enqueueing the action: {response.message}"
+                        f"There was a problem enqueueing the action: {response.message}."
                     )
 
                 return QueuedAction(
                     id=response.id, assignee=assignee_email, params=params
-                )
-
-            except NotInitializedError as err:
-                raise IntervalError(
-                    "Connection not established. Please be sure to call listen() before enqueueing actions."
                 )
             except IntervalError as err:
                 raise err
@@ -90,19 +118,34 @@ class Interval:
 
         async def dequeue(self, id: str) -> QueuedAction:
             try:
-                response: DequeueActionReturnsSuccess | DequeueActionReturnsError | None = await self._send(
-                    "DEQUEUE_ACTION", DequeueActionInputs(id=id)
-                )
-                if response is None or response.type == "error":
-                    raise IntervalError("There was a problem dequeueing the action.")
+                try:
+                    data = DequeueActionInputs(id=id).json()
+                except ValueError:
+                    raise IntervalError("Invalid input.")
+
+                async with aiohttp.ClientSession(headers=self._headers) as session:
+                    async with session.post(
+                        self._get_address("dequeue"), data=data
+                    ) as resp:
+                        try:
+                            response = parse_raw_as(
+                                DequeueActionReturns, await resp.text()
+                            )
+                        except:
+                            raise IntervalError("Received invalid API response.")
+
+                if response.type == "error":
+                    raise IntervalError(
+                        f"There was a problem enqueueing the action: {response.message}."
+                    )
 
                 return QueuedAction(
                     id=response.id, assignee=response.assignee, params=response.params
                 )
-            except NotInitializedError:
-                raise IntervalError(
-                    "Connection not established. Please be sure to call listen() before enqueueing actions."
-                )
+            except IntervalError as err:
+                raise err
+            except:
+                raise IntervalError("There was a problem dequeueing the action.")
 
     _logger: Logger
     _endpoint: str = "wss://intervalkit.com/websocket"
@@ -125,7 +168,7 @@ class Interval:
 
         self._actions = {}
         self._logger = Logger(log_level)
-        self.actions = Interval.Actions(_send=self._send)
+        self.actions = Interval.Actions(self._api_key, self._endpoint)
 
     def action(self, action_callback: IntervalActionHandler) -> None:
         return self._add_action(action_callback.__name__, action_callback)
