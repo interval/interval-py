@@ -74,25 +74,19 @@ async def spreadsheet_test(io: IO):
 
 @interval.action
 async def table_test(io: IO):
+    data = [
+        {"a": i, "b": 2 * i, "c": 3 * i, "d": [i, i, i], "e": {"i": i}}
+        for i in range(100)
+    ]
+
     await io.display.table(
         "Table",
-        data=[{"a": i, "b": 2 * i, "c": 3 * i} for i in range(100)],
-        columns=[
-            {"label": "A", "render": lambda row: row["a"]},
-            {
-                "label": "B",
-                "render": lambda row: {
-                    "value": row["b"],
-                    "label": f"Item {row['b']}",
-                    "href": f"https://example.com/{row['b']}",
-                },
-            },
-        ],
+        data=data,
     )
 
     selected = await io.select.table(
         "Select table",
-        data=[{"a": i, "b": 2 * i, "c": 3 * i} for i in range(10)],
+        data=data,
         columns=[
             {"label": "A", "render": lambda row: row["a"]},
             {

@@ -256,7 +256,7 @@ class IO:
         def table(
             self,
             label: str,
-            data: list[TableRow],
+            data: list[TR],
             help_text: str | None = None,
             columns: list[TableColumnDef] | None = None,
         ) -> IOPromise[Literal["DISPLAY_TABLE"], None]:

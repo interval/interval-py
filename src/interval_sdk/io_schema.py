@@ -156,7 +156,7 @@ class TableRowValueObject(TypedDict):
     href: NotRequired[str]
 
 
-TableRowValueModelPrimitive = StrictInt | StrictFloat | StrictBool | None | str
+TableRowValueModelPrimitive = StrictInt | StrictFloat | StrictBool | None | str | Any
 
 
 class TableRowValueObjectModel(BaseModel):
@@ -166,7 +166,7 @@ class TableRowValueObjectModel(BaseModel):
 
 
 TableRowValue: TypeAlias = (
-    str | int | float | bool | date | datetime | None | TableRowValueObject
+    str | int | float | bool | date | datetime | None | TableRowValueObject | Any
 )
 TableRow: TypeAlias = dict[str, TableRowValue]
 
@@ -195,7 +195,7 @@ class InternalTableColumn(TypedDict):
 
 
 def serialize_table_row(
-    index: int, row: TableRow, columns: list[TableColumnDef] | None = None
+    index: int, row: TableRow | Any, columns: list[TableColumnDef] | None = None
 ) -> InternalTableRow:
     key = str(index)
     row = cast(TableRow, serialize_dates(row))
