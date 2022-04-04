@@ -30,12 +30,15 @@ async def io_display_heading(io: IO):
 async def add_two_numbers(io: IO):
     n1 = await io.input.number("First number")
     n2 = await io.input.number(
-        "Second number", min=n1, help_text=f"Must be greater than {n1}"
+        "Second number",
+        min=n1,
+        decimals=2,
+        help_text=f"Must be greater than {n1}",
     )
 
     print("sum", n1 + n2)
 
-    return {"sum": n1 + n2, "from": "🐍"}
+    return {"n1": n1, "n2": n2, "sum": n1 + n2, "from": "🐍"}
 
 
 @interval.action_with_slug("io.display.object")

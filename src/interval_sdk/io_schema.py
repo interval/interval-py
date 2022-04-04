@@ -144,10 +144,18 @@ class DeserializableRecordModel(BaseModel):
     __root__: dict[str, DeserializableModel]
 
 
+class SerializableModel(BaseModel):
+    __root__: StrictInt | StrictFloat | StrictBool | None | date | datetime | str
+
+
+class SerializableRecordModel(BaseModel):
+    __root__: dict[str, SerializableModel]
+
+
 class ActionResult(BaseModel):
     schema_version: Literal[0, 1] = 1
     status: Literal["SUCCESS", "FAILURE"]
-    data: SerializableRecord | None
+    data: SerializableRecordModel | None
 
 
 class TableRowValueObject(TypedDict):
@@ -238,11 +246,12 @@ class InputEmailProps(BaseModel):
 
 
 class InputNumberProps(BaseModel):
-    min: Optional[int]
-    max: Optional[int]
+    min: Optional[float | int]
+    max: Optional[float | int]
+    default_value: Optional[float | int]
+    decimals: Optional[int]
     prepend: Optional[str]
     help_text: Optional[str]
-    default_value: Optional[str]
 
 
 class InputBooleanProps(BaseModel):
@@ -365,7 +374,7 @@ io_schema: dict[MethodName, MethodDef] = {
     "INPUT_NUMBER": MethodDef(
         props=InputNumberProps,
         state=None,
-        returns=int,
+        returns=float,
     ),
     "INPUT_BOOLEAN": MethodDef(
         props=InputBooleanProps,

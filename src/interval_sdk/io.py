@@ -5,6 +5,7 @@ from typing import overload, Tuple
 from .io_schema import *
 from .component import (
     IODatePromise,
+    IONumberPromise,
     IOTimePromise,
     IODateTimePromise,
     IOSelectTablePromise,
@@ -71,15 +72,42 @@ class IO:
             )
             return IOPromise(c, renderer=self._renderer)
 
+        @overload
         def number(
             self,
             label: str,
-            min: int | None = None,
-            max: int | None = None,
+            min: float | int | None = None,
+            max: float | int | None = None,
             prepend: str | None = None,
             help_text: str | None = None,
-            default_value: str | None = None,
-        ) -> IOPromise[Literal["INPUT_NUMBER"], int]:
+            default_value: float | int | None = None,
+            decimals: None = None,
+        ) -> IONumberPromise[Literal["INPUT_NUMBER"], int]:
+            ...
+
+        @overload
+        def number(
+            self,
+            label: str,
+            min: float | int | None = None,
+            max: float | int | None = None,
+            prepend: str | None = None,
+            help_text: str | None = None,
+            default_value: float | int | None = None,
+            decimals: int = 0,
+        ) -> IONumberPromise[Literal["INPUT_NUMBER"], float]:
+            ...
+
+        def number(
+            self,
+            label: str,
+            min: float | int | None = None,
+            max: float | int | None = None,
+            prepend: str | None = None,
+            help_text: str | None = None,
+            default_value: float | int | None = None,
+            decimals: int | None = None,
+        ):
             c = Component(
                 method_name="INPUT_NUMBER",
                 label=label,
@@ -89,9 +117,10 @@ class IO:
                     prepend=prepend,
                     help_text=help_text,
                     default_value=default_value,
+                    decimals=decimals,
                 ).dict(),
             )
-            return IOPromise(c, renderer=self._renderer)
+            return IONumberPromise(c, renderer=self._renderer)
 
         def boolean(
             self,

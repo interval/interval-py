@@ -171,6 +171,28 @@ class IOPromise(GroupableIOPromise[MN, Output]):
         return OptionalIOPromise[MN, Output | None](self.component, self.renderer)
 
 
+class OptionalIONumberPromise(GroupableIOPromise[MN, Output]):
+    def _get_value(self, val: Any) -> float | int | None:
+        if val is None:
+            return None
+
+        if "decimals" not in self.component.instance.props:
+            return int(val)
+
+        return val
+
+
+class IONumberPromise(GroupableIOPromise[MN, Output]):
+    def _get_value(self, val: Any) -> float | int:
+        if "decimals" not in self.component.instance.props:
+            return int(val)
+
+        return val
+
+    def optional(self) -> OptionalIOPromise[MN, Output | None]:
+        return OptionalIOPromise[MN, Output | None](self.component, self.renderer)
+
+
 class OptionalIODatePromise(OptionalIOPromise[Literal["INPUT_DATE"], date | None]):
     def _get_value(self, val: Any) -> date | None:
         if val is None:
