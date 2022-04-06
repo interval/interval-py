@@ -190,7 +190,7 @@ class InternalTableRow(TypedDict):
 
 class InternalTableRowModel(BaseModel):
     key: str
-    data: dict[str, TableRowValueModel]
+    data: dict[str, TableRowValueModel | None]
 
 
 class TableColumnDef(TypedDict):

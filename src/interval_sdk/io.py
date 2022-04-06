@@ -293,7 +293,6 @@ class IO:
                 InternalTableRowModel.parse_obj(serialize_table_row(i, row, columns))
                 for (i, row) in enumerate(data)
             ]
-            print(serialized)
             c = Component(
                 method_name="DISPLAY_TABLE",
                 label=label,
