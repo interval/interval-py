@@ -179,6 +179,8 @@ class IO:
             data: list[TR],
             help_text: str | None = None,
             columns: list[TableColumnDef] | None = None,
+            min_selections: int | None = None,
+            max_selections: int | None = None,
         ) -> IOSelectTablePromise[TR]:
             serialized = [
                 InternalTableRowModel.parse_obj(
@@ -195,6 +197,8 @@ class IO:
                     if columns is not None
                     else None,
                     data=serialized,
+                    min_selections=min_selections,
+                    max_selections=max_selections,
                 ).dict(),
             )
             return IOSelectTablePromise(c, renderer=self._renderer, data=data)
@@ -230,6 +234,8 @@ class IO:
             options: list[LabelValue],
             help_text: str | None = None,
             default_value: list[LabelValue] = [],
+            min_selections: int | None = None,
+            max_selections: int | None = None,
         ) -> IOPromise[Literal["SELECT_MULTIPLE"], list[LabelValue]]:
             c = Component(
                 method_name="SELECT_MULTIPLE",
@@ -238,6 +244,8 @@ class IO:
                     options=options,
                     help_text=help_text,
                     default_value=default_value,
+                    min_selections=min_selections,
+                    max_selections=max_selections,
                 ).dict(),
             )
             return IOPromise(c, renderer=self._renderer)

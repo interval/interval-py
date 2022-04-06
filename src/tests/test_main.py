@@ -128,7 +128,11 @@ async def host(event_loop: asyncio.AbstractEventLoop):
         selected = await io.select.multiple("Select zero or more", options=options)
 
         selected = await io.select.multiple(
-            "Optionally modify the selection", options=options, default_value=selected
+            "Optionally modify the selection, selecting between 1 and 2",
+            options=options,
+            default_value=selected,
+            min_selections=1,
+            max_selections=2,
         )
 
         selected_values = [o["value"] for o in selected]
@@ -154,6 +158,8 @@ async def host(event_loop: asyncio.AbstractEventLoop):
                     "favoriteColor": "Orange",
                 },
             ],
+            min_selections=1,
+            max_selections=1,
         )
 
         await io.display.markdown(
@@ -259,9 +265,7 @@ async def test_number(page: Page, transactions: Transaction):
 
     await page.click("text=Enter a second number")
     await page.fill('input[type="number"]', "7")
-    await expect(
-        page.locator('.btn [role="button"]:has-text("Continue")')
-    ).to_have_attribute("aria-disabled", "true")
+    await transactions.expect_cannot_continue()
     await page.fill('input[type="number"]', "13")
 
     await transactions.press_continue()
@@ -321,20 +325,23 @@ async def test_select_multiple(page: Page, transactions: Transaction):
 
     await expect(page.locator("text=Select zero or more")).to_be_visible()
     await page.click('input[type="checkbox"][value="A"]')
+    await page.click('input[type="checkbox"][value="B"]')
     await page.click('input[type="checkbox"][value="C"]')
     await transactions.press_continue()
 
     await expect(page.locator("text=Optionally modify the selection")).to_be_visible()
     await expect(page.locator('input[type="checkbox"][value="A"]')).to_be_checked()
+    await expect(page.locator('input[type="checkbox"][value="B"]')).to_be_checked()
     await expect(page.locator('input[type="checkbox"][value="C"]')).to_be_checked()
-    await page.click('input[type="checkbox"][value="C"]')
+    await transactions.expect_cannot_continue()
+    await page.click('input[type="checkbox"][value="B"]')
     await transactions.press_continue()
 
     await transactions.expect_success(
         {
             "A": "true",
             "B": "false",
-            "C": "false",
+            "C": "true",
         }
     )
 
@@ -344,6 +351,10 @@ async def test_select_table(page: Page, transactions: Transaction):
     await transactions.run("io.select.table")
 
     await expect(page.locator("text=Select some rows")).to_be_visible()
+    await transactions.expect_cannot_continue()
+    await page.locator('td:has-text("Orange")').click()
+    await page.locator('td:has-text("Dan")').click()
+    await transactions.expect_cannot_continue()
     await page.locator('td:has-text("Orange")').click()
     await transactions.press_continue()
     await expect(page.locator("pre code")).to_have_text(
