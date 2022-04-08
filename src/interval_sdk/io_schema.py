@@ -310,6 +310,8 @@ class SelectTableProps(BaseModel):
     data: list[InternalTableRowModel]
     help_text: Optional[str]
     columns: Optional[list[InternalTableColumn]]
+    min_selections: Optional[int]
+    max_selections: Optional[int]
 
 
 class SelectSingleProps(BaseModel):
@@ -327,6 +329,8 @@ class SelectMultipleProps(BaseModel):
     options: list[LabelValue]
     help_text: Optional[str]
     default_value: list[LabelValue] = []
+    min_selections: Optional[int]
+    max_selections: Optional[int]
 
 
 class DisplayObjectProps(BaseModel):
