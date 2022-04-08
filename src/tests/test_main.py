@@ -254,15 +254,15 @@ async def test_number(page: Page, transactions: Transaction):
     await transactions.run("io.input.number")
 
     await page.click("text=Enter a number")
-    await page.fill('input[type="number"]', "12")
+    await page.fill('input[inputmode="numeric"]', "12")
     await transactions.press_continue()
 
     await page.click("text=Enter a second number")
-    await page.fill('input[type="number"]', "7")
+    await page.fill('input[inputmode="numeric"]', "7")
     await expect(
         page.locator('.btn [role="button"]:has-text("Continue")')
     ).to_have_attribute("aria-disabled", "true")
-    await page.fill('input[type="number"]', "13")
+    await page.fill('input[inputmode="numeric"]', "13")
 
     await transactions.press_continue()
     await transactions.expect_success({"sum": "25"})
