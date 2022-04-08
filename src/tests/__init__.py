@@ -62,6 +62,11 @@ class Transaction:
     async def press_continue(self):
         await self.page.locator('button:has-text("Continue")').click()
 
+    async def expect_cannot_continue(self):
+        await expect(
+            self.page.locator('.btn [role="button"]:has-text("Continue")')
+        ).to_have_attribute("aria-disabled", "true")
+
     async def expect_result(self, result: dict[str, str]):
         for key, val in result.items():
             await expect(
