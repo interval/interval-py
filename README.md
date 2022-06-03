@@ -10,7 +10,7 @@ from interval_sdk import Interval, IO
 # Initialize Interval
 interval = Interval(
     "API_KEY",
-    endpoint="wss://interval.com/websocket",
+    endpoint="wss://intervalkit.com/websocket",
     log_level="debug",
 )
 

@@ -148,7 +148,7 @@ class Interval:
                 raise IntervalError("There was a problem dequeueing the action.")
 
     _logger: Logger
-    _endpoint: str = "wss://interval.com/websocket"
+    _endpoint: str = "wss://intervalkit.com/websocket"
     _api_key: str
     _actions: dict[str, IntervalActionHandler]
 
