@@ -4,7 +4,7 @@ from interval_sdk import Interval, IO
 
 interval = Interval(
     "alex_dev_kcLjzxNFxmGLf0aKtLVhuckt6sziQJtxFOdtM19tBrMUp5mj",
-    endpoint="ws://localhost:3002",
+    endpoint="ws://localhost:3000/websocket",
     log_level="debug",
 )
 
