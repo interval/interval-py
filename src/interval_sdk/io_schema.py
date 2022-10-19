@@ -337,19 +337,19 @@ class SelectMultipleProps(BaseModel):
 class DisplayObjectProps(BaseModel):
     data: KeyValueObjectModel
 
+
 class DisplayImageProps(BaseModel):
     url: Optional[str]
-    image: Optional[str]
-    help_text: Optional[str]
     alt: Optional[str]
     height: Optional[str]
     width: Optional[str]
-    size: Optional[str]
+
 
 class DisplayTableProps(BaseModel):
     data: list[InternalTableRowModel]
     help_text: Optional[str]
     columns: Optional[list[InternalTableColumn]]
+
 
 class DisplayProgressStepsSteps(BaseModel):
     completed: int

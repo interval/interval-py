@@ -294,25 +294,25 @@ class IO:
         def image(
             self,
             label: str,
-            url: Union[str, None] = None,
-            bytes: Union[bytes, None] = None,
-            alt: Union[str, None] = None,
-            height: Union[str, None] = None,
-            size: Union[str, None] = None,
-            width: Union[str, None] = None,
+            url: str | None = None,
+            bytes: bytes | None = None,
+            alt: str | None = None,
+            height: str | None = None,
+            size: str | None = None,
+            width: str | None = None,
         ) -> IOPromise[Literal["DISPLAY_IMAGE"], None]:
             if bytes is not None and url is None:
-                data = base64.b64encode(bytes).decode('utf-8')
-                if data[0] == 'i':
-                    mime = 'image/png'
-                elif data[0] == 'R':
-                    mime = 'image/gif'
-                elif data[0] == '/':
-                    mime = 'image/jpeg'
-                elif data[0] == 'U':
-                    mime = 'image/webp'
+                data = base64.b64encode(bytes).decode("utf-8")
+                if data[0] == "i":
+                    mime = "image/png"
+                elif data[0] == "R":
+                    mime = "image/gif"
+                elif data[0] == "/":
+                    mime = "image/jpeg"
+                elif data[0] == "U":
+                    mime = "image/webp"
                 else:
-                    mime = 'image/unknown'
+                    mime = "image/unknown"
                 url = f"data:{mime};base64,{data}"
             c = Component(
                 method_name="DISPLAY_IMAGE",
@@ -320,8 +320,8 @@ class IO:
                 initial_props=DisplayImageProps(
                     url=url,
                     alt=alt,
-                    height=size if size is not None else height,
-                    width=size if size is not None else width,
+                    height=height if height is not None else size,
+                    width=width if width is not None else size,
                 ).dict(),
             )
             return IOPromise(c, renderer=self._renderer)

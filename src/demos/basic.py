@@ -25,12 +25,13 @@ async def echo_message(io: IO):
 async def io_display_heading(io: IO):
     await io.display.heading("io.display.heading result")
 
+
 @interval.action
 async def io_display_image(io: IO):
     await io.display.image(
         "A nice pic",
-        url='https://media.discordapp.net/attachments/1011355905490694355/1030870113324367943/unknown.png',
-        size='large'
+        url="https://media.discordapp.net/attachments/1011355905490694355/1030870113324367943/unknown.png",
+        size="large",
     )
 
 
