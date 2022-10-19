@@ -57,6 +57,7 @@ MethodName = Literal[
     # Intentionally not implementing
     # "SELECT_USER",
     "DISPLAY_HEADING",
+    "DISPLAY_IMAGE",
     "DISPLAY_MARKDOWN",
     "DISPLAY_OBJECT",
     "DISPLAY_TABLE",
@@ -336,12 +337,19 @@ class SelectMultipleProps(BaseModel):
 class DisplayObjectProps(BaseModel):
     data: KeyValueObjectModel
 
+class DisplayImageProps(BaseModel):
+    url: Optional[str]
+    image: Optional[str]
+    help_text: Optional[str]
+    alt: Optional[str]
+    height: Optional[str]
+    width: Optional[str]
+    size: Optional[str]
 
 class DisplayTableProps(BaseModel):
     data: list[InternalTableRowModel]
     help_text: Optional[str]
     columns: Optional[list[InternalTableColumn]]
-
 
 class DisplayProgressStepsSteps(BaseModel):
     completed: int
@@ -438,6 +446,11 @@ io_schema: dict[MethodName, MethodDef] = {
     ),
     "DISPLAY_MARKDOWN": MethodDef(
         props={},
+        state=None,
+        returns=None,
+    ),
+    "DISPLAY_IMAGE": MethodDef(
+        props=DisplayImageProps,
         state=None,
         returns=None,
     ),

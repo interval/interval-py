@@ -1,3 +1,4 @@
+import base64
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from typing import overload, Tuple
@@ -286,6 +287,41 @@ class IO:
                 label=label,
                 initial_props=DisplayObjectProps(
                     data=KeyValueObjectModel.parse_obj(data),
+                ).dict(),
+            )
+            return IOPromise(c, renderer=self._renderer)
+
+        def image(
+            self,
+            label: str,
+            url: Union[str, None] = None,
+            bytes: Union[bytes, None] = None,
+            alt: Union[str, None] = None,
+            height: Union[str, None] = None,
+            size: Union[str, None] = None,
+            width: Union[str, None] = None,
+        ) -> IOPromise[Literal["DISPLAY_IMAGE"], None]:
+            if bytes is not None and url is None:
+                data = base64.b64encode(bytes).decode('utf-8')
+                if data[0] == 'i':
+                    mime = 'image/png'
+                elif data[0] == 'R':
+                    mime = 'image/gif'
+                elif data[0] == '/':
+                    mime = 'image/jpeg'
+                elif data[0] == 'U':
+                    mime = 'image/webp'
+                else:
+                    mime = 'image/unknown'
+                url = f"data:{mime};base64,{data}"
+            c = Component(
+                method_name="DISPLAY_IMAGE",
+                label=label,
+                initial_props=DisplayImageProps(
+                    url=url,
+                    alt=alt,
+                    height=size if size is not None else height,
+                    width=size if size is not None else width,
                 ).dict(),
             )
             return IOPromise(c, renderer=self._renderer)
