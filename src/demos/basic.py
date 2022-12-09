@@ -50,6 +50,15 @@ async def add_two_numbers(io: IO):
     return {"n1": n1, "n2": n2, "sum": n1 + n2, "from": "🐍"}
 
 
+@interval.action_with_slug("input-url")
+async def io_input_url(io: IO):
+    url = await io.input.url("One URL please")
+
+    print("url", url)
+
+    return {"url": url}
+
+
 @interval.action_with_slug("io.display.object")
 async def io_display_object(io: IO):
     await io.group(

@@ -170,6 +170,24 @@ class IO:
             )
             return IOPromise(c, renderer=self._renderer)
 
+        def url(
+            self,
+            label: str,
+            help_text: str | None = None,
+            allowed_protocols: list[str] | None = None,
+            default_value: str | None = None,
+        ) -> IOPromise[Literal["INPUT_URL"], str]:
+            c = Component(
+                method_name="INPUT_URL",
+                label=label,
+                initial_props=InputUrlProps(
+                    help_text=help_text,
+                    allowed_protocols=allowed_protocols,
+                    default_value=default_value,
+                ).dict(),
+            )
+            return IOPromise(c, renderer=self._renderer)
+
     @dataclass
     class Select:
         _renderer: ComponentRenderer

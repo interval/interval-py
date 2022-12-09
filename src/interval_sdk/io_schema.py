@@ -47,6 +47,7 @@ MethodName = Literal[
     "INPUT_BOOLEAN",
     "INPUT_RICH_TEXT",
     "INPUT_SPREADSHEET",
+    "INPUT_URL",
     "INPUT_DATE",
     "INPUT_TIME",
     "INPUT_DATETIME",
@@ -264,6 +265,12 @@ class InputRichTextProps(BaseModel):
     help_text: Optional[str]
 
 
+class InputUrlProps(BaseModel):
+    help_text: Optional[str]
+    default_value: Optional[str]
+    allowed_protocols: Optional[list[str]]
+
+
 class DateModel(BaseModel):
     year: int
     month: int
@@ -395,6 +402,11 @@ io_schema: dict[MethodName, MethodDef] = {
     ),
     "INPUT_RICH_TEXT": MethodDef(
         props=InputRichTextProps,
+        state=None,
+        returns=str,
+    ),
+    "INPUT_URL": MethodDef(
+        props=InputUrlProps,
         state=None,
         returns=str,
     ),
