@@ -315,7 +315,9 @@ class Interval:
 
                         result = ActionResult(
                             status="SUCCESS",
-                            data=serialize_dates(resp),
+                            data=DeserializableRecordModel.parse_obj(
+                                serialize_dates(resp)
+                            ),
                         )
                     except IOError as ioerr:
                         raise ioerr
@@ -324,7 +326,9 @@ class Interval:
                         self._log.print_exception(err)
                         result = ActionResult(
                             status="FAILURE",
-                            data={"message": str(err)},  # FIXME: Proper message?
+                            data=DeserializableRecordModel.parse_obj(
+                                {"message": str(err)}
+                            ),  # FIXME: Proper message?
                         )
                     await self._send(
                         "MARK_TRANSACTION_COMPLETE",

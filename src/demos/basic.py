@@ -15,6 +15,11 @@ async def hello_interval():
 
 
 @interval.action
+async def throw_error():
+    raise Exception("Error!")
+
+
+@interval.action
 async def echo_message(io: IO):
     [message] = await io.group(io.input.text("Hello!", help_text="From python!"))
 

@@ -147,7 +147,7 @@ class DeserializableRecordModel(BaseModel):
 
 
 class SerializableModel(BaseModel):
-    __root__: StrictInt | StrictFloat | StrictBool | None | date | datetime | str
+    __root__: StrictInt | StrictFloat | StrictBool | None | date | time | datetime | str
 
 
 class SerializableRecordModel(BaseModel):
@@ -157,7 +157,7 @@ class SerializableRecordModel(BaseModel):
 class ActionResult(BaseModel):
     schema_version: Literal[0, 1] = 1
     status: Literal["SUCCESS", "FAILURE"]
-    data: SerializableRecordModel | None
+    data: DeserializableRecordModel | None
 
 
 class TableRowValueObject(TypedDict):
@@ -208,7 +208,7 @@ def serialize_table_row(
     index: int, row: TableRow | Any, columns: list[TableColumnDef] | None = None
 ) -> InternalTableRow:
     key = str(index)
-    row = cast(TableRow, serialize_dates(row))
+    row = cast(TableRow, serialize_dates(cast(SerializableRecord, row)))
 
     if columns is None:
         final_row = row
