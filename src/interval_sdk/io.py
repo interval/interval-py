@@ -6,10 +6,6 @@ from urllib.parse import ParseResult, urlparse
 
 from .io_schema import *
 from .component import (
-    IODatePromise,
-    IONumberPromise,
-    IOTimePromise,
-    IODateTimePromise,
     IOSelectTablePromise,
     IOPromise,
     GroupableIOPromise,
@@ -84,7 +80,7 @@ class IO:
             help_text: str | None = None,
             default_value: float | int | None = None,
             decimals: None = None,
-        ) -> IONumberPromise[Literal["INPUT_NUMBER"], int]:
+        ) -> IOPromise[Literal["INPUT_NUMBER"], int]:
             ...
 
         @overload
@@ -97,7 +93,7 @@ class IO:
             help_text: str | None = None,
             default_value: float | int | None = None,
             decimals: int = 0,
-        ) -> IONumberPromise[Literal["INPUT_NUMBER"], float]:
+        ) -> IOPromise[Literal["INPUT_NUMBER"], float]:
             ...
 
         def number(
@@ -122,7 +118,14 @@ class IO:
                     decimals=decimals,
                 ).dict(),
             )
-            return IONumberPromise(c, renderer=self._renderer)
+
+            def get_value(val: Any):
+                if decimals is None:
+                    return int(val)
+
+                return val
+
+            return IOPromise(c, renderer=self._renderer, get_value=get_value)
 
         def boolean(
             self,
@@ -181,7 +184,7 @@ class IO:
             label: str,
             help_text: str | None = None,
             default_value: date | None = None,
-        ) -> IODatePromise:
+        ) -> IOPromise[Literal["INPUT_DATE"], date]:
             model_default = None
             if default_value is not None:
                 model_default = DateModel(
@@ -197,14 +200,20 @@ class IO:
                     default_value=model_default,
                 ).dict(),
             )
-            return IODatePromise(c, renderer=self._renderer)
+
+            def get_value(val: Any) -> date:
+                obj: DateModel = val
+
+                return date(obj.year, obj.month, obj.day)
+
+            return IOPromise(c, renderer=self._renderer, get_value=get_value)
 
         def time(
             self,
             label: str,
             help_text: str | None = None,
             default_value: time | None = None,
-        ) -> IOTimePromise:
+        ) -> IOPromise[Literal["INPUT_TIME"], time]:
             model_default = None
             if default_value is not None:
                 model_default = TimeModel(
@@ -219,14 +228,20 @@ class IO:
                     default_value=model_default,
                 ).dict(),
             )
-            return IOTimePromise(c, renderer=self._renderer)
+
+            def get_value(val: Any) -> time:
+                obj: TimeModel = val
+
+                return time(obj.hour, obj.minute)
+
+            return IOPromise(c, renderer=self._renderer, get_value=get_value)
 
         def datetime(
             self,
             label: str,
             help_text: str | None = None,
             default_value: datetime | None = None,
-        ) -> IODateTimePromise:
+        ) -> IOPromise[Literal["INPUT_DATETIME"], datetime]:
             model_default = None
             if default_value is not None:
                 model_default = DateTimeModel(
@@ -244,7 +259,13 @@ class IO:
                     default_value=model_default,
                 ).dict(),
             )
-            return IODateTimePromise(c, renderer=self._renderer)
+
+            def get_value(val: Any) -> datetime:
+                obj: DateTimeModel = val
+
+                return datetime(obj.year, obj.month, obj.day, obj.hour, obj.minute)
+
+            return IOPromise(c, renderer=self._renderer, get_value=get_value)
 
     @dataclass
     class Select:

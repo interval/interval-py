@@ -139,7 +139,7 @@ Output = TypeVar("Output")
 class BaseIOPromise(Generic[MN, Output]):
     component: Component
     renderer: ComponentRenderer
-    get_value: Callable[[Any], Output] | None
+    get_value: Callable[[Any], Output] | None = None
 
     def __init__(
         self,
@@ -195,90 +195,6 @@ class IOPromise(GroupableIOPromise[MN, Output]):
         return OptionalIOPromise[MN, Output | None](
             self.component, self.renderer, self.get_value
         )
-
-
-class OptionalIONumberPromise(GroupableIOPromise[MN, Output]):
-    def _get_value(self, val: Any) -> float | int | None:
-        if val is None:
-            return None
-
-        if "decimals" not in self.component.instance.props:
-            return int(val)
-
-        return val
-
-
-class IONumberPromise(GroupableIOPromise[MN, Output]):
-    def _get_value(self, val: Any) -> float | int:
-        if "decimals" not in self.component.instance.props:
-            return int(val)
-
-        return val
-
-    def optional(self) -> OptionalIOPromise[MN, Output | None]:
-        return OptionalIOPromise[MN, Output | None](self.component, self.renderer)
-
-
-class OptionalIODatePromise(OptionalIOPromise[Literal["INPUT_DATE"], date | None]):
-    def _get_value(self, val: Any) -> date | None:
-        if val is None:
-            return None
-
-        obj: DateModel = val
-
-        return date(obj.year, obj.month, obj.day)
-
-
-class IODatePromise(IOPromise[Literal["INPUT_DATE"], date]):
-    def _get_value(self, val: Any) -> date:
-        obj: DateModel = val
-
-        return date(obj.year, obj.month, obj.day)
-
-    def optional(self) -> OptionalIODatePromise:
-        return OptionalIODatePromise(self.component, self.renderer)
-
-
-class OptionalIOTimePromise(OptionalIOPromise[Literal["INPUT_TIME"], time | None]):
-    def _get_value(self, val: Any) -> time | None:
-        if val is None:
-            return None
-
-        obj: TimeModel = val
-
-        return time(obj.hour, obj.minute)
-
-
-class IOTimePromise(IOPromise[Literal["INPUT_TIME"], time]):
-    def _get_value(self, val: Any) -> time:
-        obj: TimeModel = val
-
-        return time(obj.hour, obj.minute)
-
-    def optional(self) -> OptionalIOTimePromise:
-        return OptionalIOTimePromise(self.component, self.renderer)
-
-
-class OptionalIODateTimePromise(
-    OptionalIOPromise[Literal["INPUT_DATETIME"], datetime | None]
-):
-    def _get_value(self, val: Any) -> datetime | None:
-        if val is None:
-            return None
-
-        obj: DateTimeModel = val
-
-        return datetime(obj.year, obj.month, obj.day, obj.hour, obj.minute)
-
-
-class IODateTimePromise(IOPromise[Literal["INPUT_DATETIME"], datetime]):
-    def _get_value(self, val: Any) -> datetime:
-        obj: DateTimeModel = val
-
-        return datetime(obj.year, obj.month, obj.day, obj.hour, obj.minute)
-
-    def optional(self) -> OptionalIODatePromise:
-        return OptionalIODatePromise(self.component, self.renderer)
 
 
 TR = TypeVar("TR", bound=Mapping[str, TableRowValue])

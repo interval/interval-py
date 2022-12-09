@@ -152,16 +152,17 @@ async def dates(io: IO):
 
     print(result)
 
-    await io.display.object("Result", data=result)
+    # await io.display.object("Result", data=result)
 
     return result
 
 
 @interval.action
 async def optional_values(io: IO):
-    [name, num, color] = await io.group(
-        io.input.text("Your name"),
+    [name, num, date, color] = await io.group(
+        io.input.text("Your name").optional(),
         io.input.number("Pick a number").optional(),
+        io.input.date("Enter a date", default_value=datetime.now().date()).optional(),
         io.select.single(
             "Your favorite color",
             options=[
@@ -181,11 +182,12 @@ async def optional_values(io: IO):
         ).optional(),
     )
 
-    print(name, num, color)
+    print(name, num, date, color)
 
     return {
-        "Name": name,
+        "Name": name if name is not None else "No name selected",
         "Number": num if num is not None else "No number selected",
+        "Date": date if date is not None else "No date selected",
         "Favorite color": color["label"] if color is not None else "Unknown",
     }
 
