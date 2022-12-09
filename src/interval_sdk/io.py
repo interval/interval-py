@@ -154,23 +154,6 @@ class IO:
             )
             return IOPromise(c, renderer=self._renderer)
 
-        def spreadsheet(
-            self,
-            label: str,
-            columns: dict[str, TypeValue],
-            help_text: str | None = None,
-            # XXX: Don't think better type is possible here?
-        ) -> IOPromise[Literal["INPUT_SPREADSHEET"], list]:
-            c = Component(
-                method_name="INPUT_SPREADSHEET",
-                label=label,
-                initial_props=InputSpreadsheetProps(
-                    help_text=help_text,
-                    columns=columns,
-                ).dict(),
-            )
-            return IOPromise(c, renderer=self._renderer)
-
         def url(
             self,
             label: str,
@@ -192,6 +175,76 @@ class IO:
                 return urlparse(val)
 
             return IOPromise(c, renderer=self._renderer, get_value=get_value)
+
+        def date(
+            self,
+            label: str,
+            help_text: str | None = None,
+            default_value: date | None = None,
+        ) -> IODatePromise:
+            model_default = None
+            if default_value is not None:
+                model_default = DateModel(
+                    year=default_value.year,
+                    month=default_value.month,
+                    day=default_value.day,
+                )
+            c = Component(
+                method_name="INPUT_DATE",
+                label=label,
+                initial_props=InputDateProps(
+                    help_text=help_text,
+                    default_value=model_default,
+                ).dict(),
+            )
+            return IODatePromise(c, renderer=self._renderer)
+
+        def time(
+            self,
+            label: str,
+            help_text: str | None = None,
+            default_value: time | None = None,
+        ) -> IOTimePromise:
+            model_default = None
+            if default_value is not None:
+                model_default = TimeModel(
+                    hour=default_value.hour,
+                    minute=default_value.minute,
+                )
+            c = Component(
+                method_name="INPUT_TIME",
+                label=label,
+                initial_props=InputTimeProps(
+                    help_text=help_text,
+                    default_value=model_default,
+                ).dict(),
+            )
+            return IOTimePromise(c, renderer=self._renderer)
+
+        def datetime(
+            self,
+            label: str,
+            help_text: str | None = None,
+            default_value: datetime | None = None,
+        ) -> IODateTimePromise:
+            model_default = None
+            if default_value is not None:
+                model_default = DateTimeModel(
+                    year=default_value.year,
+                    month=default_value.month,
+                    day=default_value.day,
+                    hour=default_value.hour,
+                    minute=default_value.minute,
+                )
+            c = Component(
+                method_name="INPUT_DATETIME",
+                label=label,
+                initial_props=InputDateTimeProps(
+                    help_text=help_text,
+                    default_value=model_default,
+                ).dict(),
+            )
+            return IODateTimePromise(c, renderer=self._renderer)
 
     @dataclass
     class Select:
@@ -375,129 +428,24 @@ class IO:
 
     @dataclass
     class Experimental:
-        @dataclass
-        class Progress:
-            _renderer: ComponentRenderer
-
-            def progress_steps(
-                self,
-                label: str,
-                steps: DisplayProgressStepsSteps,
-                current_step: int | None = None,
-                subtitle: str | None = None,
-            ) -> IOPromise[Literal["DISPLAY_PROGRESS_STEPS"], None]:
-                c = Component(
-                    method_name="DISPLAY_PROGRESS_STEPS",
-                    label=label,
-                    initial_props=DisplayProgressStepsProps(
-                        steps=steps,
-                        current_step=current_step,
-                        subtitle=subtitle,
-                    ).dict(),
-                )
-                return IOPromise(c, renderer=self._renderer)
-
-            def progress_indeterminate(
-                self,
-                label: str,
-            ) -> IOPromise[Literal["DISPLAY_PROGRESS_INDETERMINATE"], None]:
-                c = Component(
-                    method_name="DISPLAY_PROGRESS_INDETERMINATE",
-                    label=label,
-                    initial_props={},
-                )
-                return IOPromise(c, renderer=self._renderer)
-
-            def progress_through_list(
-                self,
-                label: str,
-                items: list[DisplayProgressthroughListItem],
-            ) -> IOPromise[Literal["DISPLAY_PROGRESS_THROUGH_LIST"], None]:
-                c = Component(
-                    method_name="DISPLAY_PROGRESS_THROUGH_LIST",
-                    label=label,
-                    initial_props=DisplayProgressThroughListProps(
-                        items=items,
-                    ).dict(),
-                )
-                return IOPromise(c, renderer=self._renderer)
-
-        def date(
-            self,
-            label: str,
-            help_text: str | None = None,
-            default_value: date | None = None,
-        ) -> IODatePromise:
-            model_default = None
-            if default_value is not None:
-                model_default = DateModel(
-                    year=default_value.year,
-                    month=default_value.month,
-                    day=default_value.day,
-                )
-            c = Component(
-                method_name="INPUT_DATE",
-                label=label,
-                initial_props=InputDateProps(
-                    help_text=help_text,
-                    default_value=model_default,
-                ).dict(),
-            )
-            return IODatePromise(c, renderer=self._renderer)
-
-        def time(
-            self,
-            label: str,
-            help_text: str | None = None,
-            default_value: time | None = None,
-        ) -> IOTimePromise:
-            model_default = None
-            if default_value is not None:
-                model_default = TimeModel(
-                    hour=default_value.hour,
-                    minute=default_value.minute,
-                )
-            c = Component(
-                method_name="INPUT_TIME",
-                label=label,
-                initial_props=InputTimeProps(
-                    help_text=help_text,
-                    default_value=model_default,
-                ).dict(),
-            )
-            return IOTimePromise(c, renderer=self._renderer)
-
-        def datetime(
-            self,
-            label: str,
-            help_text: str | None = None,
-            default_value: datetime | None = None,
-        ) -> IODateTimePromise:
-            model_default = None
-            if default_value is not None:
-                model_default = DateTimeModel(
-                    year=default_value.year,
-                    month=default_value.month,
-                    day=default_value.day,
-                    hour=default_value.hour,
-                    minute=default_value.minute,
-                )
-            c = Component(
-                method_name="INPUT_DATETIME",
-                label=label,
-                initial_props=InputDateTimeProps(
-                    help_text=help_text,
-                    default_value=model_default,
-                ).dict(),
-            )
-            return IODateTimePromise(c, renderer=self._renderer)
-
         _renderer: ComponentRenderer
-        progress: Progress
 
-        def __init__(self, renderer: ComponentRenderer):
-            self._renderer = renderer
-            self.progress = IO.Experimental.Progress(renderer)
+        def spreadsheet(
+            self,
+            label: str,
+            columns: dict[str, TypeValue],
+            help_text: str | None = None,
+            # XXX: Don't think better type is possible here?
+        ) -> IOPromise[Literal["INPUT_SPREADSHEET"], list]:
+            c = Component(
+                method_name="INPUT_SPREADSHEET",
+                label=label,
+                initial_props=InputSpreadsheetProps(
+                    help_text=help_text,
+                    columns=columns,
+                ).dict(),
+            )
+            return IOPromise(c, renderer=self._renderer)
 
     _renderer: ComponentRenderer
     input: Input

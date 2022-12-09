@@ -85,7 +85,7 @@ async def io_display_object(io: IO):
 
 @interval.action
 async def spreadsheet_test(io: IO):
-    sheet = await io.input.spreadsheet(
+    sheet = await io.experimental.spreadsheet(
         "Add a spreadsheet",
         columns={
             "firstName": "string",
@@ -138,9 +138,9 @@ async def confirm(io: IO):
 async def dates(io: IO):
     now = datetime.now()
     [d, t, dt, _] = await io.group(
-        io.experimental.date("Enter a date", default_value=now.date()),
-        io.experimental.time("Enter a time", default_value=now.time()),
-        io.experimental.datetime("Enter a datetime", default_value=now),
+        io.input.date("Enter a date", default_value=now.date()),
+        io.input.time("Enter a time", default_value=now.time()),
+        io.input.datetime("Enter a datetime", default_value=now),
         io.input.text("Text input"),
     )
 
