@@ -52,11 +52,15 @@ async def add_two_numbers(io: IO):
 
 @interval.action_with_slug("input-url")
 async def io_input_url(io: IO):
-    url = await io.input.url("One URL please")
+    url, opt_url = await io.group(
+        io.input.url("One URL please"),
+        io.input.url("A URL, if you want").optional(),
+    )
 
     print("url", url)
+    print("opt_url", opt_url)
 
-    return {"url": url}
+    return {"url": str(url), "opt_url": str(opt_url)}
 
 
 @interval.action_with_slug("io.display.object")

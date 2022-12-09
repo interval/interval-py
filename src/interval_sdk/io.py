@@ -2,6 +2,7 @@ import base64
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from typing import overload, Tuple
+from urllib.parse import ParseResult, urlparse
 
 from .io_schema import *
 from .component import (
@@ -176,7 +177,7 @@ class IO:
             help_text: str | None = None,
             allowed_protocols: list[str] | None = None,
             default_value: str | None = None,
-        ) -> IOPromise[Literal["INPUT_URL"], str]:
+        ) -> IOPromise[Literal["INPUT_URL"], ParseResult]:
             c = Component(
                 method_name="INPUT_URL",
                 label=label,
@@ -186,7 +187,11 @@ class IO:
                     default_value=default_value,
                 ).dict(),
             )
-            return IOPromise(c, renderer=self._renderer)
+
+            def get_value(val: Any) -> ParseResult:
+                return urlparse(val)
+
+            return IOPromise(c, renderer=self._renderer, get_value=get_value)
 
     @dataclass
     class Select:
