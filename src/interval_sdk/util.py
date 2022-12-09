@@ -118,10 +118,10 @@ def json_dumps_some_snake(
 
 Deserializable: TypeAlias = int | float | bool | None | str
 DeserializableRecord: TypeAlias = Mapping[str, Deserializable]
-Serializable: TypeAlias = bool | int | float | datetime | date | str | None
+Serializable: TypeAlias = bool | int | float | datetime | date | time | str | None
 SerializableRecord: TypeAlias = Mapping[str, Serializable]
 
-ObjectLiteral: TypeAlias = int | float | bool | datetime | date | None | str
+ObjectLiteral: TypeAlias = int | float | bool | datetime | date | time | None | str
 
 KeyValueObject: TypeAlias = (
     ObjectLiteral | list["KeyValueObject"] | dict[str, "KeyValueObject"]

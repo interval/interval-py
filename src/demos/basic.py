@@ -77,7 +77,9 @@ async def io_display_object(io: IO):
                     "name": "Interval",
                 },
                 "longList": [f"Item {i}" for i in range(100)],
-                "date": datetime.now(),
+                "date": datetime.now().date(),
+                "time": datetime.now().time(),
+                "datetime": datetime.now(),
             },
         )
     )

@@ -14,7 +14,7 @@ from typing import (
     Type,
     TypedDict,
 )
-from datetime import date, datetime
+from datetime import date, time, datetime
 from typing_extensions import NotRequired
 from uuid import UUID
 import io, json, sys
@@ -112,7 +112,7 @@ class RichSelectOptionModel(TypedDict, total=False):
 
 
 class ObjectLiteralModel(BaseModel):
-    __root__: StrictInt | StrictFloat | StrictBool | datetime | date | None | str
+    __root__: StrictInt | StrictFloat | StrictBool | datetime | date | time | None | str
 
 
 class KeyValueObjectModel(BaseModel):
