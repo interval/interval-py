@@ -3,7 +3,7 @@ from asyncio import Future
 import traceback
 from typing import Any, Callable, Generic, TypeVar, TypeAlias, Awaitable
 
-from pydantic import parse_obj_as
+from pydantic import ValidationError, parse_obj_as
 
 from .internal_rpc_schema import DuplexMessage, MethodDef
 from .isocket import ISocket
@@ -54,12 +54,30 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
         self._communicator.on_message = self._on_message
 
     async def _on_message(self, data: str):
-        input = DuplexMessage.parse_raw(data)
+        try:
+            input = DuplexMessage.parse_raw(data)
 
-        if input.kind == "RESPONSE":
-            return await self._handle_received_response(input)
-        elif input.kind == "CALL":
-            return await self._handle_received_call(input)
+            if input.kind == "CALL":
+                try:
+                    return await self._handle_received_call(input)
+                except KeyError:
+                    print("[DuplexRPCClient] Received unsupported call:", input)
+                except ValidationError:
+                    print("[DuplexRPCClient] Received invalid call:", input)
+                except:
+                    print("[DuplexRPCClient] Failed handling call:", input)
+            elif input.kind == "RESPONSE":
+                try:
+                    return await self._handle_received_response(input)
+                except KeyError:
+                    print("[DuplexRPCClient] Received unsupported response:", input)
+                except ValidationError:
+                    print("[DuplexRPCClient] Received invalid response:", input)
+                except:
+                    print("[DuplexRPCClient] Failed handling response:", input)
+
+        except ValidationError:
+            pass
 
     async def _handle_received_response(self, parsed: DuplexMessage):
         on_reply_fut = self._pending_calls.pop(parsed.id, None)
