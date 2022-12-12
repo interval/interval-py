@@ -295,16 +295,16 @@ async def test_rich_text(page: Page, transactions: Transaction):
 
     input = page.locator(".ProseMirror")
 
-    await page.select_option('select[title="Heading level"]', "1")
+    await page.select_option('select[aria-label="Heading level"]', "1")
     await input.type("Heading 1")
     await input.press("Enter")
-    await page.click('button[title="Toggle italic"]')
+    await page.click('button[aria-label="Toggle italic"]')
     await input.type("Emphasis")
     await input.press("Enter")
-    await page.click('button[title="Toggle italic"]')
-    await page.click('button[title="Toggle underline"]')
+    await page.click('button[aria-label="Toggle italic"]')
+    await page.click('button[aria-label="Toggle underline"]')
     await input.type("Underline")
-    await page.click('button[title="Toggle underline"]')
+    await page.click('button[aria-label="Toggle underline"]')
 
     await transactions.press_continue()
     await expect(page.locator('h2:has-text("You entered:")')).to_be_visible()
