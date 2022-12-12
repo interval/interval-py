@@ -55,7 +55,32 @@ async def add_two_numbers(io: IO):
     return {"n1": n1, "n2": n2, "sum": n1 + n2, "from": "🐍"}
 
 
-@interval.action_with_slug("input-url")
+@interval.action_with_slug("io.display.code")
+async def io_display_code(io: IO):
+    await io.group(
+        io.display.code(
+            "Some python",
+            code="""from datetime import datetime
+
+print("Hello from python!")
+print(datetime.now())""",
+        ),
+        io.display.code(
+            "Some typescript",
+            code="""const logTime = () => {
+  const time = new Date().toLocaleTimeString()
+  console.log(time)
+}
+
+setInterval(logTime, 1000)""",
+            language="typescript",
+        ),
+    )
+
+    return "All done!"
+
+
+@interval.action_with_slug("io.input.url")
 async def io_input_url(io: IO):
     url, opt_url = await io.group(
         io.input.url("One URL please"),

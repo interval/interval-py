@@ -352,6 +352,22 @@ class IO:
     class Display:
         _renderer: ComponentRenderer
 
+        def code(
+            self,
+            label: str,
+            code: str,
+            language: str | None = None,
+        ) -> IOPromise[Literal["DISPLAY_CODE"], None]:
+            c = Component(
+                method_name="DISPLAY_CODE",
+                label=label,
+                initial_props=DisplayCodeProps(
+                    code=code,
+                    language=language,
+                ).dict(),
+            )
+            return IOPromise(c, renderer=self._renderer)
+
         def heading(
             self,
             label: str,

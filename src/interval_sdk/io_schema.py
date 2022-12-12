@@ -57,6 +57,7 @@ MethodName = Literal[
     "SELECT_MULTIPLE",
     # Intentionally not implementing
     # "SELECT_USER",
+    "DISPLAY_CODE",
     "DISPLAY_HEADING",
     "DISPLAY_IMAGE",
     "DISPLAY_MARKDOWN",
@@ -341,6 +342,11 @@ class SelectMultipleProps(BaseModel):
     max_selections: Optional[int]
 
 
+class DisplayCodeProps(BaseModel):
+    code: str
+    language: Optional[str]
+
+
 class DisplayObjectProps(BaseModel):
     data: KeyValueObjectModel
 
@@ -450,6 +456,11 @@ io_schema: dict[MethodName, MethodDef] = {
         props=SelectMultipleProps,
         state=None,
         returns=list[LabelValue],
+    ),
+    "DISPLAY_CODE": MethodDef(
+        props=DisplayCodeProps,
+        state=None,
+        returns=None,
     ),
     "DISPLAY_HEADING": MethodDef(
         props={},
