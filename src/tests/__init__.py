@@ -62,10 +62,10 @@ class Transaction:
     async def press_continue(self):
         await self.page.locator('button:has-text("Continue")').click()
 
-    async def expect_cannot_continue(self):
+    async def expect_validation_error(self, message: str = "This field is required"):
         await expect(
-            self.page.locator('.btn [role="button"]:has-text("Continue")')
-        ).to_have_attribute("aria-disabled", "true")
+            self.page.locator(f"[data-pw='field-error']:has-text('{message}')")
+        ).to_be_visible()
 
     async def expect_result(self, result: dict[str, str]):
         for key, val in result.items():
@@ -81,13 +81,22 @@ class Transaction:
         if result is not None:
             await self.expect_result(result)
 
-    async def expect_failure(self, result: dict[str, str] | None = None):
+    async def expect_failure(
+        self, message: str | None = None, error: str | None = None
+    ):
         await expect(
             self.page.locator('[data-test-id="result-type"]:has-text("Error")')
         ).to_be_visible()
 
-        if result is not None:
-            await self.expect_result(result)
+        if message is not None:
+            await expect(
+                self.page.locator('[data-test-id="transaction-result"]')
+            ).to_contain_text(message)
+
+        if error is not None:
+            await expect(
+                self.page.locator('[data-test-id="transaction-result"]')
+            ).to_contain_text(error)
 
 
 base_config = Config(

@@ -337,24 +337,40 @@ class IO:
         def multiple(
             self,
             label: str,
-            options: list[LabelValue],
+            options: list[PassthroughLabelValue],
             help_text: str | None = None,
-            default_value: list[LabelValue] = [],
+            default_value: list[PassthroughLabelValue] = [],
             min_selections: int | None = None,
             max_selections: int | None = None,
-        ) -> IOPromise[Literal["SELECT_MULTIPLE"], list[LabelValue]]:
+        ) -> IOPromise[Literal["SELECT_MULTIPLE"], list[PassthroughLabelValue]]:
             c = Component(
                 method_name="SELECT_MULTIPLE",
                 label=label,
                 initial_props=SelectMultipleProps(
-                    options=options,
+                    options=[
+                        PassthroughLabelValueModel[PassthroughLabelValue].parse_obj(
+                            option
+                        )
+                        for option in options
+                    ],
                     help_text=help_text,
-                    default_value=default_value,
+                    default_value=[
+                        PassthroughLabelValueModel[PassthroughLabelValue].parse_obj(val)
+                        for val in default_value
+                    ],
                     min_selections=min_selections,
                     max_selections=max_selections,
                 ).dict(),
             )
-            return IOPromise(c, renderer=self._renderer)
+
+            option_map = {option["value"]: option for option in options}
+
+            def get_value(
+                val: list[PassthroughLabelValue],
+            ) -> list[PassthroughLabelValue]:
+                return [option_map[item["value"]] for item in val]
+
+            return IOPromise(c, renderer=self._renderer, get_value=get_value)
 
     @dataclass
     class Display:

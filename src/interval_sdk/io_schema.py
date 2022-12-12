@@ -30,6 +30,7 @@ from .types import (
     Serializable,
 )
 from .util import (
+    ObjectLiteral,
     snake_to_camel,
     dict_keys_to_camel,
     json_dumps_some_snake,
@@ -94,11 +95,6 @@ TypeValue = Literal[
 ]
 
 
-class LabelValue(TypedDict):
-    label: str
-    value: str
-
-
 class RichSelectOption(TypedDict):
     label: str
     value: str
@@ -114,7 +110,7 @@ class RichSelectOptionModel(TypedDict, total=False):
 
 
 class ObjectLiteralModel(BaseModel):
-    __root__: StrictInt | StrictFloat | StrictBool | datetime | date | time | None | str
+    __root__: StrictBool | StrictInt | StrictFloat | datetime | date | time | None | str
 
 
 class KeyValueObjectModel(BaseModel):
@@ -124,6 +120,19 @@ class KeyValueObjectModel(BaseModel):
 
 
 KeyValueObjectModel.update_forward_refs()
+
+
+class LabelValue(TypedDict):
+    label: ObjectLiteral
+    value: ObjectLiteral
+
+
+PassthroughLabelValue = TypeVar("PassthroughLabelValue", bound=LabelValue)
+
+
+class PassthroughLabelValueModel(BaseModel, Generic[PassthroughLabelValue]):
+    label: ObjectLiteralModel
+    value: ObjectLiteralModel
 
 
 RawActionReturnData: TypeAlias = Mapping[str, Serializable]
@@ -340,9 +349,9 @@ class SelectSingleState(BaseModel):
 
 
 class SelectMultipleProps(BaseModel):
-    options: list[LabelValue]
+    options: list[PassthroughLabelValueModel]
     help_text: Optional[str]
-    default_value: list[LabelValue] = []
+    default_value: list[PassthroughLabelValueModel] = []
     min_selections: Optional[int]
     max_selections: Optional[int]
 
@@ -472,7 +481,7 @@ io_schema: dict[MethodName, MethodDef] = {
     "SELECT_MULTIPLE": MethodDef(
         props=SelectMultipleProps,
         state=None,
-        returns=list[LabelValue],
+        returns=list[PassthroughLabelValue],
     ),
     "DISPLAY_CODE": MethodDef(
         props=DisplayCodeProps,
@@ -555,7 +564,7 @@ def json_dumps_io_render(io_render: dict[str, Any], *args, **kwargs) -> str:
         else:
             obj[snake_to_camel(key)] = val
 
-    print(obj)
+    print(obj, file=sys.stderr)
     return json.dumps(obj, *args, **kwargs)
 
 

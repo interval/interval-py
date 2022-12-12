@@ -2,6 +2,8 @@ import json, re
 from typing import Any, Mapping, Tuple, Callable, TypeAlias, cast
 from datetime import date, time, datetime
 
+from pydantic import StrictBool, StrictFloat, StrictInt
+
 
 def snake_to_camel(s: str) -> str:
     return "".join(
@@ -121,7 +123,9 @@ DeserializableRecord: TypeAlias = Mapping[str, Deserializable]
 Serializable: TypeAlias = bool | int | float | datetime | date | time | str | None
 SerializableRecord: TypeAlias = Mapping[str, Serializable]
 
-ObjectLiteral: TypeAlias = int | float | bool | datetime | date | time | None | str
+ObjectLiteral: TypeAlias = (
+    StrictInt | StrictFloat | StrictBool | datetime | date | time | None | str
+)
 
 KeyValueObject: TypeAlias = (
     ObjectLiteral | list["KeyValueObject"] | dict[str, "KeyValueObject"]
@@ -181,18 +185,9 @@ def serialize_dates(
         return record.isoformat()
 
     if isinstance(record, dict):
-        ret = {}
-
-        for key, val in record.items():
-            if (
-                isinstance(val, datetime)
-                or isinstance(val, date)
-                or isinstance(val, time)
-            ):
-                ret[key] = val.isoformat()
-            else:
-                ret[key] = val
-
-        return ret
+        return cast(
+            DeserializableRecord,
+            {key: serialize_dates(val) for key, val in record.items()},
+        )
 
     return cast(Deserializable, record)

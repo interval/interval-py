@@ -1,6 +1,8 @@
-from datetime import datetime
+from datetime import date, datetime
+from typing_extensions import NotRequired
 
 from interval_sdk import Interval, IO
+from interval_sdk.io_schema import LabelValue
 
 interval = Interval(
     "alex_dev_kcLjzxNFxmGLf0aKtLVhuckt6sziQJtxFOdtM19tBrMUp5mj",
@@ -38,6 +40,52 @@ async def io_display_image(io: IO):
         url="https://media.discordapp.net/attachments/1011355905490694355/1030870113324367943/unknown.png",
         size="large",
     )
+
+
+@interval.action
+async def select_multiple(io: IO):
+    class Option(LabelValue):
+        extraData: NotRequired[bool]
+
+    options: list[Option] = [
+        {
+            "value": date(2022, 6, 20),
+            "label": date(2022, 6, 20),
+            "extraData": True,
+        },
+        {
+            "value": True,
+            "label": True,
+        },
+        {
+            "value": 3,
+            "label": 3,
+        },
+    ]
+
+    selected = await io.select.multiple("Select zero or more", options=options)
+    print(selected)
+
+    selected = await io.select.multiple(
+        "Optionally modify the selection, selecting between 1 and 2",
+        options=options,
+        default_value=selected,
+        min_selections=1,
+        max_selections=2,
+    )
+
+    selected_values = [o["value"] for o in selected]
+
+    ret: dict[str, bool] = {}
+
+    for option in options:
+        ret[str(option["label"])] = option["value"] in selected_values
+
+    return {
+        **ret,
+        # FIXME: Extra data typing?
+        "extraData": selected[1]["extraData"],
+    }
 
 
 @interval.action_with_slug("add-two-numbers")

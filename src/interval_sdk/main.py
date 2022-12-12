@@ -324,13 +324,11 @@ class Interval:
                                 "handler accepts invalid number of arguments"
                             )
 
+                        print(serialize_dates(resp))
+
                         result = ActionResult(
                             status="SUCCESS",
-                            data=IOFunctionReturnModel.parse_obj(
-                                serialize_dates(resp)
-                                if isinstance(resp, dict)
-                                else resp
-                            ),
+                            data=IOFunctionReturnModel.parse_obj(serialize_dates(resp)),
                         )
                     except IOError as ioerr:
                         raise ioerr
@@ -340,8 +338,9 @@ class Interval:
                         result = ActionResult(
                             status="FAILURE",
                             data=IOFunctionReturnModel.parse_obj(
+                                # FIXME: Proper message?
                                 {"message": str(err)}
-                            ),  # FIXME: Proper message?
+                            ),
                         )
                     await self._send(
                         "MARK_TRANSACTION_COMPLETE",

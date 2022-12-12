@@ -1,4 +1,6 @@
 import asyncio, json, re
+from datetime import date
+from typing_extensions import NotRequired
 
 import pytest
 from playwright.async_api import Page, expect
@@ -110,18 +112,22 @@ async def host(event_loop: asyncio.AbstractEventLoop):
 
     @interval.action_with_slug("io.select.multiple")
     async def select_multiple(io: IO):
-        options: list[LabelValue] = [
+        class Option(LabelValue):
+            extraData: NotRequired[bool]
+
+        options: list[Option] = [
             {
-                "value": "A",
-                "label": "A",
+                "value": date(2022, 6, 20),
+                "label": date(2022, 6, 20),
+                "extraData": True,
             },
             {
-                "value": "B",
-                "label": "B",
+                "value": True,
+                "label": True,
             },
             {
-                "value": "C",
-                "label": "C",
+                "value": 3,
+                "label": 3,
             },
         ]
 
@@ -136,13 +142,20 @@ async def host(event_loop: asyncio.AbstractEventLoop):
         )
 
         selected_values = [o["value"] for o in selected]
+        print("***")
+        print(selected, selected_values)
+        print("***")
 
-        ret = {}
+        ret: dict[str, bool] = {}
 
         for option in options:
-            ret[option["label"]] = option["value"] in selected_values
+            ret[str(option["label"])] = option["value"] in selected_values
 
-        return ret
+        return {
+            **ret,
+            # FIXME: Extra data typing?
+            "extraData": selected[0]["extraData"],
+        }
 
     @interval.action_with_slug("io.select.table")
     async def select_table(io: IO):
@@ -265,7 +278,10 @@ async def test_number(page: Page, transactions: Transaction):
 
     await page.click("text=Enter a second number")
     await page.fill('input[inputmode="numeric"]', "7")
-    await transactions.expect_cannot_continue()
+    await transactions.press_continue()
+    await transactions.expect_validation_error(
+        "Please enter a number greater than or equal to 13."
+    )
     await page.fill('input[inputmode="numeric"]', "13")
 
     await transactions.press_continue()
@@ -323,25 +339,39 @@ async def test_select_multiple(page: Page, transactions: Transaction):
     await transactions.console()
     await transactions.run("io.select.multiple")
 
+    date_val = date(2022, 6, 20).isoformat()
+
     await expect(page.locator("text=Select zero or more")).to_be_visible()
-    await page.click('input[type="checkbox"][value="A"]')
-    await page.click('input[type="checkbox"][value="B"]')
-    await page.click('input[type="checkbox"][value="C"]')
+    await page.click(f'input[type="checkbox"][value="{date_val}"]')
+    await page.click('input[type="checkbox"][value="true"]')
+    await page.click('input[type="checkbox"][value="3"]')
     await transactions.press_continue()
 
     await expect(page.locator("text=Optionally modify the selection")).to_be_visible()
-    await expect(page.locator('input[type="checkbox"][value="A"]')).to_be_checked()
-    await expect(page.locator('input[type="checkbox"][value="B"]')).to_be_checked()
-    await expect(page.locator('input[type="checkbox"][value="C"]')).to_be_checked()
-    await transactions.expect_cannot_continue()
-    await page.click('input[type="checkbox"][value="B"]')
+    await expect(
+        page.locator(f'input[type="checkbox"][value="{date_val}"]')
+    ).to_be_checked()
+    await expect(page.locator('input[type="checkbox"][value="true"]')).to_be_checked()
+    await expect(page.locator('input[type="checkbox"][value="3"]')).to_be_checked()
+
+    await transactions.press_continue()
+    await transactions.expect_validation_error("Please make no more than 2 selections.")
+    await page.click(f'input[type="checkbox"][value="{date_val}"]')
+    await page.click('input[type="checkbox"][value="true"]')
+    await page.click('input[type="checkbox"][value="3"]')
+    await transactions.press_continue()
+    await transactions.expect_validation_error("Please make at least 1 selection.")
+
+    await page.click(f'input[type="checkbox"][value="{date_val}"]')
+    await page.click('input[type="checkbox"][value="3"]')
     await transactions.press_continue()
 
     await transactions.expect_success(
         {
-            "A": "true",
-            "B": "false",
-            "C": "true",
+            date_val: "true",
+            "True": "false",
+            "3": "true",
+            "extraData": "true",
         }
     )
 
@@ -351,10 +381,12 @@ async def test_select_table(page: Page, transactions: Transaction):
     await transactions.run("io.select.table")
 
     await expect(page.locator("text=Select some rows")).to_be_visible()
-    await transactions.expect_cannot_continue()
+    await transactions.press_continue()
+    await transactions.expect_validation_error()
     await page.locator('td:has-text("Orange")').click()
     await page.locator('td:has-text("Dan")').click()
-    await transactions.expect_cannot_continue()
+    await transactions.press_continue()
+    await transactions.expect_validation_error()
     await page.locator('td:has-text("Orange")').click()
     await transactions.press_continue()
     await expect(page.locator("pre code")).to_have_text(
@@ -372,4 +404,4 @@ async def test_error(page: Page, transactions: Transaction):
     await page.click("text=First name")
     await page.fill('input[type="text"]', "Interval")
     await transactions.press_continue()
-    await transactions.expect_failure({"message": "Unauthorized"})
+    await transactions.expect_failure(message="Unauthorized")
