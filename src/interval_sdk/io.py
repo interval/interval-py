@@ -474,6 +474,7 @@ class IO:
             self,
             label: str,
             url: str | None = None,
+            alt: str | None = None,
             bytes: bytes | None = None,
             loop: bool = False,
             muted: bool = False,
@@ -503,6 +504,7 @@ class IO:
                 label=label,
                 initial_props=DisplayVideoProps(
                     url=url,
+                    alt=alt,
                     muted=muted,
                     loop=loop,
                     height=height if height is not None else size,

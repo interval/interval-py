@@ -77,7 +77,7 @@ setInterval(logTime, 1000)""",
         ),
     )
 
-    return "All done!"
+    return {"out": "All done!"}
 
 
 @interval.action_with_slug("io.display.video")
@@ -87,7 +87,7 @@ async def io_display_video(io: IO):
         url="https://upload.wikimedia.org/wikipedia/commons/a/ad/The_Kid_scenes.ogv",
         size="large",
     )
-    return "All done!"
+    return {"out": "All done!"}
 
 
 @interval.action_with_slug("io.input.url")
