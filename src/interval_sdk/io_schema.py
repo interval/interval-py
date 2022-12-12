@@ -356,9 +356,7 @@ class DisplayObjectProps(BaseModel):
     data: KeyValueObjectModel
 
 
-ImageSize: TypeAlias = (
-    Literal["thumbnail"] | Literal["small"] | Literal["medium"] | Literal["large"]
-)
+ImageSize: TypeAlias = Literal["thumbnail", "small", "medium", "large"]
 
 
 class DisplayImageProps(BaseModel):
