@@ -7,7 +7,6 @@ from urllib.parse import ParseResult, urlparse
 
 from .io_schema import *
 from .component import (
-    IOSelectTablePromise,
     IOPromise,
     GroupableIOPromise,
     ExclusiveIOPromise,
@@ -282,7 +281,7 @@ class IO:
             columns: list[TableColumnDef] | None = None,
             min_selections: int | None = None,
             max_selections: int | None = None,
-        ) -> IOSelectTablePromise[TR]:
+        ) -> IOPromise[Literal["SELECT_TABLE"], list[TR]]:
             serialized = [
                 InternalTableRowModel.parse_obj(
                     serialize_table_row(i, cast(dict, row), columns)
@@ -302,7 +301,13 @@ class IO:
                     max_selections=max_selections,
                 ).dict(),
             )
-            return IOSelectTablePromise(c, renderer=self._renderer, data=data)
+
+            def get_value(val: Any) -> list[TR]:
+                indices = [int(row.key) for row in val]
+                rows = [row for (i, row) in enumerate(data) if i in indices]
+                return rows
+
+            return IOPromise(c, renderer=self._renderer, get_value=get_value)
 
         def single(
             self,
