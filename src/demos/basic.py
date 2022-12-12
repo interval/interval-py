@@ -23,7 +23,7 @@ async def throw_error():
 async def echo_message(io: IO):
     [message] = await io.group(io.input.text("Hello!", help_text="From python!"))
 
-    return {"message": message}
+    return message
 
 
 @interval.action
@@ -77,7 +77,7 @@ setInterval(logTime, 1000)""",
         ),
     )
 
-    return {"out": "All done!"}
+    return "All done!"
 
 
 @interval.action_with_slug("io.display.video")
@@ -87,7 +87,8 @@ async def io_display_video(io: IO):
         url="https://upload.wikimedia.org/wikipedia/commons/a/ad/The_Kid_scenes.ogv",
         size="large",
     )
-    return {"out": "All done!"}
+
+    return "All done!"
 
 
 @interval.action_with_slug("io.input.url")

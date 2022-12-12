@@ -1,6 +1,6 @@
 import asyncio
 from inspect import signature
-from typing import Optional, TypeAlias, Callable, Awaitable
+from typing import Optional, TypeAlias, Callable, Awaitable, cast
 from urllib.parse import urlparse, urlunparse
 from uuid import uuid4, UUID
 
@@ -9,12 +9,23 @@ import websockets, websockets.client, websockets.exceptions
 from pydantic import parse_raw_as
 
 from .isocket import ISocket
-from .io_schema import ActionResult, IOFunctionReturnType
+from .io_schema import (
+    ActionResult,
+    IOFunctionReturnModel,
+    IOFunctionReturnType,
+    DeserializableRecordModel,
+    SerializableRecord,
+)
 from .io_client import IOClient, Logger, LogLevel, IOError
 from .io import IO, IOResponse, IORender
 from .rpc import DuplexRPCClient
 from .internal_rpc_schema import *
-from .util import ensure_serialized, serialize_dates, deserialize_dates
+from .util import (
+    DeserializableRecord,
+    ensure_serialized,
+    serialize_dates,
+    deserialize_dates,
+)
 
 
 IntervalActionHandler: TypeAlias = (
@@ -75,7 +86,7 @@ class Interval:
             params: SerializableRecord | None = None,
         ) -> QueuedAction:
             try:
-                params = serialize_dates(params)
+                params = cast(DeserializableRecord, serialize_dates(params))
                 if params is not None:
                     try:
                         ensure_serialized(params)
@@ -315,8 +326,10 @@ class Interval:
 
                         result = ActionResult(
                             status="SUCCESS",
-                            data=DeserializableRecordModel.parse_obj(
+                            data=IOFunctionReturnModel.parse_obj(
                                 serialize_dates(resp)
+                                if isinstance(resp, dict)
+                                else resp
                             ),
                         )
                     except IOError as ioerr:
@@ -326,7 +339,7 @@ class Interval:
                         self._log.print_exception(err)
                         result = ActionResult(
                             status="FAILURE",
-                            data=DeserializableRecordModel.parse_obj(
+                            data=IOFunctionReturnModel.parse_obj(
                                 {"message": str(err)}
                             ),  # FIXME: Proper message?
                         )

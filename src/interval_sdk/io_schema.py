@@ -127,7 +127,7 @@ KeyValueObjectModel.update_forward_refs()
 
 
 RawActionReturnData: TypeAlias = Mapping[str, Serializable]
-IOFunctionReturnType: TypeAlias = SerializableRecord | None
+IOFunctionReturnType: TypeAlias = Serializable | SerializableRecord | None
 
 
 class ParsedActionReturnDataLink(BaseModel):
@@ -156,10 +156,14 @@ class SerializableRecordModel(BaseModel):
     __root__: dict[str, SerializableModel]
 
 
+class IOFunctionReturnModel(BaseModel):
+    __root__: DeserializableModel | DeserializableRecordModel | None
+
+
 class ActionResult(BaseModel):
     schema_version: Literal[0, 1] = 1
     status: Literal["SUCCESS", "FAILURE"]
-    data: DeserializableRecordModel | None
+    data: IOFunctionReturnModel
 
 
 class TableRowValueObject(TypedDict):

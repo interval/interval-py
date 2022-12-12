@@ -1,5 +1,5 @@
 import json, re
-from typing import Any, Mapping, Tuple, Callable, TypeAlias
+from typing import Any, Mapping, Tuple, Callable, TypeAlias, cast
 from datetime import date, time, datetime
 
 
@@ -128,16 +128,26 @@ KeyValueObject: TypeAlias = (
 )
 
 
-def ensure_serialized(record: DeserializableRecord):
-    for val in record.values():
-        if (
-            val is not None
-            and not isinstance(val, int)
-            and not isinstance(val, float)
-            and not isinstance(val, bool)
-            and not isinstance(val, str)
-        ):
-            raise ValueError("Invalid value type, must be a primitive.")
+def ensure_serialized(record: DeserializableRecord | Deserializable):
+    if isinstance(record, dict):
+        for val in record.values():
+            if (
+                val is not None
+                and not isinstance(val, int)
+                and not isinstance(val, float)
+                and not isinstance(val, bool)
+                and not isinstance(val, str)
+            ):
+                raise ValueError("Invalid value type, must be a primitive.")
+
+    if (
+        record is not None
+        and not isinstance(record, int)
+        and not isinstance(record, float)
+        and not isinstance(record, bool)
+        and not isinstance(record, str)
+    ):
+        raise ValueError("Invalid value type, must be a primitive.")
 
 
 def deserialize_dates(
@@ -157,16 +167,32 @@ def deserialize_dates(
     return ret
 
 
-def serialize_dates(record: SerializableRecord | None) -> DeserializableRecord | None:
+def serialize_dates(
+    record: SerializableRecord | Serializable | None,
+) -> DeserializableRecord | Deserializable | None:
     if record is None:
         return None
 
-    ret = {}
+    if (
+        isinstance(record, datetime)
+        or isinstance(record, date)
+        or isinstance(record, time)
+    ):
+        return record.isoformat()
 
-    for key, val in record.items():
-        if isinstance(val, datetime) or isinstance(val, date) or isinstance(val, time):
-            ret[key] = val.isoformat()
-        else:
-            ret[key] = val
+    if isinstance(record, dict):
+        ret = {}
 
-    return ret
+        for key, val in record.items():
+            if (
+                isinstance(val, datetime)
+                or isinstance(val, date)
+                or isinstance(val, time)
+            ):
+                ret[key] = val.isoformat()
+            else:
+                ret[key] = val
+
+        return ret
+
+    return cast(Deserializable, record)
