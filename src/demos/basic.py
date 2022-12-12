@@ -80,6 +80,16 @@ setInterval(logTime, 1000)""",
     return "All done!"
 
 
+@interval.action_with_slug("io.display.video")
+async def io_display_video(io: IO):
+    await io.display.video(
+        "Video via url",
+        url="https://upload.wikimedia.org/wikipedia/commons/a/ad/The_Kid_scenes.ogv",
+        size="large",
+    )
+    return "All done!"
+
+
 @interval.action_with_slug("io.input.url")
 async def io_input_url(io: IO):
     url, opt_url = await io.group(

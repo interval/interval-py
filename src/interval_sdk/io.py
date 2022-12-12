@@ -1,4 +1,5 @@
 import base64
+import sys
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from typing import overload, Tuple
@@ -27,6 +28,8 @@ _T7 = TypeVar("_T7")
 _T8 = TypeVar("_T8")
 
 TR = TypeVar("TR", bound=Mapping[str, TableRowValue])
+
+MAX_FILE_SIZE_MB = 50
 
 
 class IO:
@@ -415,6 +418,10 @@ class IO:
             width: str | None = None,
         ) -> IOPromise[Literal["DISPLAY_IMAGE"], None]:
             if bytes is not None and url is None:
+                if sys.getsizeof(bytes) > MAX_FILE_SIZE_MB * 1000 * 1000:
+                    raise ValueError(
+                        f"Image bytes must be less than {MAX_FILE_SIZE_MB}MB"
+                    )
                 data = base64.b64encode(bytes).decode("utf-8")
                 if data[0] == "i":
                     mime = "image/png"
@@ -459,6 +466,47 @@ class IO:
                     if columns is not None
                     else None,
                     data=serialized,
+                ).dict(),
+            )
+            return IOPromise(c, renderer=self._renderer)
+
+        def video(
+            self,
+            label: str,
+            url: str | None = None,
+            bytes: bytes | None = None,
+            loop: bool = False,
+            muted: bool = False,
+            size: str | None = None,
+            height: str | None = None,
+            width: str | None = None,
+        ) -> IOPromise[Literal["DISPLAY_VIDEO"], None]:
+            if bytes is not None and url is None:
+                if sys.getsizeof(bytes) > MAX_FILE_SIZE_MB * 1000 * 1000:
+                    raise ValueError(
+                        f"Video bytes must be less than {MAX_FILE_SIZE_MB}MB"
+                    )
+                data = base64.b64encode(bytes).decode("utf-8")
+                if data[0] == "A":
+                    mime = "video/mp4"
+                elif data[0] == "G":
+                    mime = "video/webm"
+                elif data[0] == "T":
+                    mime = "video/ogg"
+                elif data[0] == "U":
+                    mime = "video/avi"
+                else:
+                    mime = "video/mp4"
+                url = f"data:{mime};base64,{data}"
+            c = Component(
+                method_name="DISPLAY_VIDEO",
+                label=label,
+                initial_props=DisplayVideoProps(
+                    url=url,
+                    muted=muted,
+                    loop=loop,
+                    height=height if height is not None else size,
+                    width=width if width is not None else size,
                 ).dict(),
             )
             return IOPromise(c, renderer=self._renderer)

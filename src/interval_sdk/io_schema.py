@@ -63,6 +63,7 @@ MethodName = Literal[
     "DISPLAY_MARKDOWN",
     "DISPLAY_OBJECT",
     "DISPLAY_TABLE",
+    "DISPLAY_VIDEO",
     "DISPLAY_PROGRESS_STEPS",
     "DISPLAY_PROGRESS_INDETERMINATE",
     "DISPLAY_PROGRESS_THROUGH_LIST",
@@ -364,6 +365,15 @@ class DisplayTableProps(BaseModel):
     columns: Optional[list[InternalTableColumn]]
 
 
+class DisplayVideoProps(BaseModel):
+    url: Optional[str]
+    alt: Optional[str]
+    height: Optional[str]
+    width: Optional[str]
+    loop: bool
+    muted: bool
+
+
 class DisplayProgressStepsSteps(BaseModel):
     completed: int
     total: int
@@ -484,6 +494,11 @@ io_schema: dict[MethodName, MethodDef] = {
     ),
     "DISPLAY_TABLE": MethodDef(
         props=DisplayTableProps,
+        state=None,
+        returns=None,
+    ),
+    "DISPLAY_VIDEO": MethodDef(
+        props=DisplayVideoProps,
         state=None,
         returns=None,
     ),
