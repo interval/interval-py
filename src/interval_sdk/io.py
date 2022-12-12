@@ -413,9 +413,9 @@ class IO:
             url: str | None = None,
             bytes: bytes | None = None,
             alt: str | None = None,
-            height: str | None = None,
-            size: str | None = None,
-            width: str | None = None,
+            height: ImageSize | None = None,
+            size: ImageSize | None = None,
+            width: ImageSize | None = None,
         ) -> IOPromise[Literal["DISPLAY_IMAGE"], None]:
             if bytes is not None and url is None:
                 if sys.getsizeof(bytes) > MAX_FILE_SIZE_MB * 1000 * 1000:
@@ -478,9 +478,9 @@ class IO:
             bytes: bytes | None = None,
             loop: bool = False,
             muted: bool = False,
-            size: str | None = None,
-            height: str | None = None,
-            width: str | None = None,
+            size: ImageSize | None = None,
+            height: ImageSize | None = None,
+            width: ImageSize | None = None,
         ) -> IOPromise[Literal["DISPLAY_VIDEO"], None]:
             if bytes is not None and url is None:
                 if sys.getsizeof(bytes) > MAX_FILE_SIZE_MB * 1000 * 1000:

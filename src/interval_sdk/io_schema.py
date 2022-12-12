@@ -352,11 +352,16 @@ class DisplayObjectProps(BaseModel):
     data: KeyValueObjectModel
 
 
+ImageSize: TypeAlias = (
+    Literal["thumbnail"] | Literal["small"] | Literal["medium"] | Literal["large"]
+)
+
+
 class DisplayImageProps(BaseModel):
     url: Optional[str]
     alt: Optional[str]
-    height: Optional[str]
-    width: Optional[str]
+    height: Optional[ImageSize]
+    width: Optional[ImageSize]
 
 
 class DisplayTableProps(BaseModel):
@@ -368,8 +373,8 @@ class DisplayTableProps(BaseModel):
 class DisplayVideoProps(BaseModel):
     url: Optional[str]
     alt: Optional[str]
-    height: Optional[str]
-    width: Optional[str]
+    height: Optional[ImageSize]
+    width: Optional[ImageSize]
     loop: bool
     muted: bool
 
