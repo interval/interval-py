@@ -191,3 +191,26 @@ def serialize_dates(
         )
 
     return cast(Deserializable, record)
+
+
+def format_datelike(d: date | time | datetime) -> str:
+    if isinstance(d, datetime):
+        return format_datetime(d)
+    elif isinstance(d, date):
+        return format_date(d)
+    elif isinstance(d, time):
+        return format_time(d)
+    else:
+        return str(d)
+
+
+def format_date(d: date) -> str:
+    return d.strftime("%x")
+
+
+def format_time(t: time) -> str:
+    return t.strftime("%X")
+
+
+def format_datetime(d: datetime) -> str:
+    return d.strftime("%c")

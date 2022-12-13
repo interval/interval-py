@@ -35,7 +35,6 @@ from .util import (
     dict_keys_to_camel,
     json_dumps_some_snake,
     json_loads_some_snake,
-    serialize_dates,
 )
 
 # TODO: Try generating most of this with datamode-code-generator
@@ -177,34 +176,39 @@ class ActionResult(BaseModel):
     data: IOFunctionReturnModel
 
 
+TableRowValuePrimitive = (
+    StrictInt | StrictFloat | StrictBool | date | datetime | None | str | Any
+)
+
+
 class TableRowValueObject(TypedDict):
-    label: str
-    value: NotRequired[TableRowValue]
-    href: NotRequired[str]
-
-
-TableRowValueModelPrimitive = StrictInt | StrictFloat | StrictBool | None | str | Any
+    label: NotRequired[TableRowValuePrimitive]
+    value: NotRequired[TableRowValuePrimitive]
+    url: NotRequired[str]
+    route: NotRequired[str]
+    params: NotRequired[SerializableRecord]
 
 
 class TableRowValueObjectModel(BaseModel):
-    label: str
-    value: TableRowValueModelPrimitive | None = None
-    href: str | None = None
+    label: TableRowValuePrimitive | None = None
+    value: TableRowValuePrimitive | None = None
+    url: str | None = None
+    route: str | None = None
+    params: SerializableRecordModel | None = None
 
 
-TableRowValue: TypeAlias = (
-    str | int | float | bool | date | datetime | None | TableRowValueObject | Any
-)
+TableRowValue: TypeAlias = TableRowValueObject | TableRowValuePrimitive
 TableRow: TypeAlias = dict[str, TableRowValue]
 
 
 class TableRowValueModel(BaseModel):
-    __root__: TableRowValueModelPrimitive | TableRowValueObjectModel
+    __root__: TableRowValuePrimitive | TableRowValueObjectModel
 
 
 class InternalTableRow(TypedDict):
     key: str
     data: TableRow
+    filterValue: NotRequired[str]
 
 
 class InternalTableRowModel(BaseModel):
@@ -214,28 +218,18 @@ class InternalTableRowModel(BaseModel):
 
 class TableColumnDef(TypedDict):
     label: str
-    render: Callable[[Any], TableRowValue]
+    renderCell: NotRequired[Callable[[Any], TableRowValue]]
+    accessorKey: NotRequired[str]
 
 
 class InternalTableColumn(TypedDict):
     label: str
+    accessorKey: NotRequired[str]
 
 
-def serialize_table_row(
-    index: int, row: TableRow | Any, columns: list[TableColumnDef] | None = None
-) -> InternalTableRow:
-    key = str(index)
-    row = cast(TableRow, serialize_dates(cast(SerializableRecord, row)))
-
-    if columns is None:
-        final_row = row
-    else:
-        final_row = {}
-
-        for i, col in enumerate(columns):
-            final_row[str(i)] = col["render"](row)
-
-    return {"key": key, "data": final_row}
+class InternalTableColumnModel(BaseModel):
+    label: str
+    accessorKey: Optional[str]
 
 
 PropsType = TypeVar("PropsType", bound=Type)
@@ -334,7 +328,7 @@ class ConfirmProps(BaseModel):
 class SelectTableProps(BaseModel):
     data: list[InternalTableRowModel]
     help_text: Optional[str]
-    columns: Optional[list[InternalTableColumn]]
+    columns: list[InternalTableColumnModel]
     min_selections: Optional[int]
     max_selections: Optional[int]
 
@@ -375,6 +369,7 @@ class DisplayLinkProps(BaseModel):
 
 MetadataLayout: TypeAlias = Literal["card", "list", "grid"]
 
+
 class DisplayMetadataProps(BaseModel):
     data: KeyValueObjectModel
     layout: MetadataLayout
@@ -397,7 +392,7 @@ class DisplayImageProps(BaseModel):
 class DisplayTableProps(BaseModel):
     data: list[InternalTableRowModel]
     help_text: Optional[str]
-    columns: Optional[list[InternalTableColumn]]
+    columns: Optional[list[InternalTableColumnModel]]
 
 
 class DisplayVideoProps(BaseModel):

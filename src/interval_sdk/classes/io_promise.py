@@ -7,9 +7,11 @@ from typing import (
 )
 
 from .component import Component, ComponentRenderer
-from ..io_schema import MN
+from ..io_schema import MethodName
 
 Output = TypeVar("Output")
+
+MN = TypeVar("MN", bound=MethodName)
 
 
 class BaseIOPromise(Generic[MN, Output]):

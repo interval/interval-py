@@ -15,6 +15,7 @@ from .component import (
     Component,
     ComponentRenderer,
 )
+from ..components.table import columns_builder, serialize_table_row
 from ..types import KeyValueObject
 
 from pydantic import parse_obj_as
@@ -28,7 +29,7 @@ _T6 = TypeVar("_T6")
 _T7 = TypeVar("_T7")
 _T8 = TypeVar("_T8")
 
-TR = TypeVar("TR", bound=Mapping[str, TableRowValue])
+TR = TypeVar("TR", bound=Mapping[str, TableRow])
 
 MAX_FILE_SIZE_MB = 50
 
@@ -284,9 +285,12 @@ class IO:
             min_selections: int | None = None,
             max_selections: int | None = None,
         ) -> IOPromise[Literal["SELECT_TABLE"], list[TR]]:
+            columns = cast(
+                list[TableColumnDef], columns_builder(data=data, columns=columns)
+            )
             serialized = [
                 InternalTableRowModel.parse_obj(
-                    serialize_table_row(i, cast(dict, row), columns)
+                    serialize_table_row(key=str(i), row=row, columns=columns)
                 )
                 for (i, row) in enumerate(data)
             ]
@@ -295,9 +299,15 @@ class IO:
                 label=label,
                 initial_props=SelectTableProps(
                     help_text=help_text,
-                    columns=[{"label": col["label"]} for col in columns]
-                    if columns is not None
-                    else None,
+                    columns=[
+                        InternalTableColumnModel(
+                            label=col["label"],
+                            accessorKey=col["accessorKey"]
+                            if "accessorKey" in col
+                            else None,
+                        )
+                        for col in columns
+                    ],
                     data=serialized,
                     min_selections=min_selections,
                     max_selections=max_selections,
@@ -512,8 +522,13 @@ class IO:
             help_text: str | None = None,
             columns: list[TableColumnDef] | None = None,
         ) -> IOPromise[Literal["DISPLAY_TABLE"], None]:
+            columns = cast(
+                list[TableColumnDef], columns_builder(data=data, columns=columns)
+            )
             serialized = [
-                InternalTableRowModel.parse_obj(serialize_table_row(i, row, columns))
+                InternalTableRowModel.parse_obj(
+                    serialize_table_row(key=str(i), row=row, columns=columns)
+                )
                 for (i, row) in enumerate(data)
             ]
             c = Component(
@@ -521,9 +536,15 @@ class IO:
                 label=label,
                 initial_props=DisplayTableProps(
                     help_text=help_text,
-                    columns=[{"label": col["label"]} for col in columns]
-                    if columns is not None
-                    else None,
+                    columns=[
+                        InternalTableColumnModel(
+                            label=col["label"],
+                            accessorKey=col["accessorKey"]
+                            if "accessorKey" in col
+                            else None,
+                        )
+                        for col in columns
+                    ],
                     data=serialized,
                 ).dict(),
             )

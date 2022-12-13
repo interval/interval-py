@@ -230,10 +230,10 @@ async def table_test(io: IO):
         "Select table",
         data=data,
         columns=[
-            {"label": "A", "render": lambda row: row["a"]},
+            {"label": "A", "renderCell": lambda row: row["a"]},
             {
                 "label": "B",
-                "render": lambda row: {
+                "renderCell": lambda row: {
                     "value": row["b"],
                     "label": f"Item {row['b']}",
                     "href": f"https://example.com/{row['b']}",
