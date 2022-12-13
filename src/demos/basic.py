@@ -128,6 +128,17 @@ setInterval(logTime, 1000)""",
     return "All done!"
 
 
+@interval.action_with_slug("io.display.link")
+async def io_display_link(io: IO):
+    await io.display.link(
+        "Code",
+        action="io.display.code",
+        params={"hello": "world"},
+    )
+
+    return "All done!"
+
+
 @interval.action_with_slug("io.display.video")
 async def io_display_video(io: IO):
     await io.display.video(

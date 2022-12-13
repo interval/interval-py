@@ -61,6 +61,7 @@ MethodName = Literal[
     "DISPLAY_CODE",
     "DISPLAY_HEADING",
     "DISPLAY_IMAGE",
+    "DISPLAY_LINK",
     "DISPLAY_MARKDOWN",
     "DISPLAY_METADATA",
     "DISPLAY_OBJECT",
@@ -362,6 +363,16 @@ class DisplayCodeProps(BaseModel):
     language: Optional[str]
 
 
+LinkTheme: TypeAlias = Literal["default", "danger"]
+
+
+class DisplayLinkProps(BaseModel):
+    action: str | None
+    url: str | None
+    params: dict[str, Any] | None
+    theme: LinkTheme | None
+
+
 MetadataLayout: TypeAlias = Literal["card", "list", "grid"]
 
 class DisplayMetadataProps(BaseModel):
@@ -498,6 +509,11 @@ io_schema: dict[MethodName, MethodDef] = {
     ),
     "DISPLAY_HEADING": MethodDef(
         props={},
+        state=None,
+        returns=None,
+    ),
+    "DISPLAY_LINK": MethodDef(
+        props=DisplayLinkProps,
         state=None,
         returns=None,
     ),

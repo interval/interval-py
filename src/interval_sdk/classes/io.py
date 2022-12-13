@@ -405,6 +405,26 @@ class IO:
             )
             return IOPromise(c, renderer=self._renderer)
 
+        def link(
+            self,
+            label: str,
+            action: str | None = None,
+            params: dict[str, Any] | None = None,
+            theme: LinkTheme = "default",
+            url: str | None = None,
+        ) -> IOPromise[Literal["DISPLAY_LINK"], None]:
+            c = Component(
+                method_name="DISPLAY_LINK",
+                label=label,
+                initial_props=DisplayLinkProps(
+                    action=action,
+                    params=params,
+                    theme=theme,
+                    url=url,
+                ).dict(),
+            )
+            return IOPromise(c, renderer=self._renderer)
+
         def markdown(
             self,
             label: str,
@@ -419,8 +439,8 @@ class IO:
         def metadata(
             self,
             label: str,
-            layout: MetadataLayout,
             data: KeyValueObject,
+            layout: MetadataLayout = "grid",
         ) -> IOPromise[Literal["DISPLAY_METADATA"], None]:
             c = Component(
                 method_name="DISPLAY_METADATA",
