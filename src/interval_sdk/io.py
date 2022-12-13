@@ -414,6 +414,33 @@ class IO:
             )
             return IOPromise(c, renderer=self._renderer)
 
+        def markdown(
+            self,
+            label: str,
+        ) -> IOPromise[Literal["DISPLAY_MARKDOWN"], None]:
+            c = Component(
+                method_name="DISPLAY_MARKDOWN",
+                label=label,
+                initial_props={},
+            )
+            return IOPromise(c, renderer=self._renderer)
+
+        def metadata(
+            self,
+            label: str,
+            layout: MetadataLayout,
+            data: KeyValueObject,
+        ) -> IOPromise[Literal["DISPLAY_METADATA"], None]:
+            c = Component(
+                method_name="DISPLAY_METADATA",
+                label=label,
+                initial_props=DisplayMetadataProps(
+                    layout=layout,
+                    data=KeyValueObjectModel.parse_obj(data),
+                ).dict(),
+            )
+            return IOPromise(c, renderer=self._renderer)
+
         def object(
             self,
             label: str,

@@ -62,6 +62,7 @@ MethodName = Literal[
     "DISPLAY_HEADING",
     "DISPLAY_IMAGE",
     "DISPLAY_MARKDOWN",
+    "DISPLAY_METADATA",
     "DISPLAY_OBJECT",
     "DISPLAY_TABLE",
     "DISPLAY_VIDEO",
@@ -361,6 +362,13 @@ class DisplayCodeProps(BaseModel):
     language: Optional[str]
 
 
+MetadataLayout: TypeAlias = Literal["card", "list", "grid"]
+
+class DisplayMetadataProps(BaseModel):
+    data: KeyValueObjectModel
+    layout: MetadataLayout
+
+
 class DisplayObjectProps(BaseModel):
     data: KeyValueObjectModel
 
@@ -495,6 +503,11 @@ io_schema: dict[MethodName, MethodDef] = {
     ),
     "DISPLAY_MARKDOWN": MethodDef(
         props={},
+        state=None,
+        returns=None,
+    ),
+    "DISPLAY_METADATA": MethodDef(
+        props=DisplayMetadataProps,
         state=None,
         returns=None,
     ),

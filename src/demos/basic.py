@@ -139,6 +139,21 @@ async def io_display_video(io: IO):
     return "All done!"
 
 
+@interval.action_with_slug("io.display.metadata")
+async def io_display_metadata(io: IO):
+    await io.display.metadata(
+        "User info",
+        layout="card",
+        data=[
+            {"label": "Name", "value": "Alex"},
+            {"label": "Email", "value": "alex@interval.com"},
+            {"label": "Friends", "value": 24},
+        ],
+    )
+
+    return "All done!"
+
+
 @interval.action_with_slug("io.input.url")
 async def io_input_url(io: IO):
     url, opt_url = await io.group(
