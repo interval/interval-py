@@ -210,10 +210,10 @@ async def table_test(io: IO):
         for i in range(100)
     ]
 
-    # await io.display.table(
-    #     "Table",
-    #     data=data,
-    # )
+    await io.display.table(
+        "Table",
+        data=data,
+    )
 
     selected = await io.select.table(
         "Select table",

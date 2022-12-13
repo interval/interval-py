@@ -1,14 +1,13 @@
 import asyncio
 from asyncio import Future
-import traceback
 from typing import Any, Callable, Generic, TypeVar, TypeAlias, Awaitable
 
 from pydantic import ValidationError, parse_obj_as
 
-from .internal_rpc_schema import DuplexMessage, MethodDef
+from ..internal_rpc_schema import DuplexMessage, MethodDef
 from .isocket import ISocket
-from .types import BaseModel
-from .util import dict_keys_to_camel
+from ..types import BaseModel
+from ..util import dict_keys_to_camel
 
 CallerSchema = TypeVar("CallerSchema", bound=MethodDef)
 ResponderSchema = TypeVar("ResponderSchema", bound=MethodDef)

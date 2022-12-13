@@ -6,7 +6,7 @@ from typing import overload, Tuple
 from urllib.parse import ParseResult, urlparse
 
 from .io_schema import *
-from .component import (
+from .classes.component import (
     IOPromise,
     GroupableIOPromise,
     ExclusiveIOPromise,

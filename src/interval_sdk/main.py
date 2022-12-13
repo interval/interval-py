@@ -1,4 +1,4 @@
-import asyncio
+import asyncio, importlib.metadata
 from inspect import signature
 from typing import Optional, TypeAlias, Callable, Awaitable, cast
 from urllib.parse import urlparse, urlunparse
@@ -8,7 +8,6 @@ import aiohttp
 import websockets, websockets.client, websockets.exceptions
 from pydantic import parse_raw_as
 
-from .isocket import ISocket
 from .io_schema import (
     ActionResult,
     IOFunctionReturnModel,
@@ -16,9 +15,11 @@ from .io_schema import (
     DeserializableRecordModel,
     SerializableRecord,
 )
-from .io_client import IOClient, Logger, LogLevel, IOError
+from .classes.isocket import ISocket
+from .classes.logger import Logger, LogLevel
+from .classes.io_client import IOClient, IOError
 from .io import IO, IOResponse, IORender
-from .rpc import DuplexRPCClient
+from .classes.rpc import DuplexRPCClient
 from .internal_rpc_schema import *
 from .util import (
     DeserializableRecord,
@@ -49,6 +50,15 @@ class NotInitializedError(Exception):
 
 
 class IntervalError(Exception):
+    pass
+
+
+sdk_name = "interval-py"
+sdk_version = "???"
+
+try:
+    sdk_version = importlib.metadata.version(__package__)
+except:
     pass
 
 
@@ -394,8 +404,8 @@ class Interval:
                 InitializeHostInputs(
                     api_key=self._api_key,
                     callable_action_names=slugs,
-                    sdk_name="interval-py",
-                    sdk_version="dev",
+                    sdk_name=sdk_name,
+                    sdk_version=sdk_version,
                 ),
             )
         except Exception as err:

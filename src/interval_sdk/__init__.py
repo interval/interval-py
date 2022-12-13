@@ -1,3 +1,3 @@
 from .main import *
 from .io import IO
-from .io_client import IOError
+from .classes.io_error import IOError
