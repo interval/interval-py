@@ -5,15 +5,17 @@ from datetime import date, datetime, time
 from typing import overload, Tuple
 from urllib.parse import ParseResult, urlparse
 
-from .io_schema import *
-from .classes.component import (
+from ..io_schema import *
+from .io_promise import (
     IOPromise,
     GroupableIOPromise,
     ExclusiveIOPromise,
+)
+from .component import (
     Component,
     ComponentRenderer,
 )
-from .types import KeyValueObject
+from ..types import KeyValueObject
 
 from pydantic import parse_obj_as
 

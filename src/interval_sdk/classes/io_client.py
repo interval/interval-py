@@ -5,7 +5,7 @@ from uuid import uuid4
 from ..io_schema import *
 from .component import Component
 from .io_error import IOError
-from ..io import IO
+from .io import IO
 from .logger import Logger
 
 

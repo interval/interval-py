@@ -18,7 +18,7 @@ from .io_schema import (
 from .classes.isocket import ISocket
 from .classes.logger import Logger, LogLevel
 from .classes.io_client import IOClient, IOError
-from .io import IO, IOResponse, IORender
+from .classes.io import IO, IOResponse, IORender
 from .classes.rpc import DuplexRPCClient
 from .internal_rpc_schema import *
 from .util import (
