@@ -11,7 +11,7 @@ from ..io_schema import MethodName
 
 Output = TypeVar("Output")
 
-MN = TypeVar("MN", bound=MethodName)
+MN = TypeVar("MN", bound=MethodName, covariant=True)
 
 
 class BaseIOPromise(Generic[MN, Output]):
