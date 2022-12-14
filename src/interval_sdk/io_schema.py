@@ -100,25 +100,26 @@ TypeValue = Literal[
 
 
 class RichSelectOption(TypedDict):
-    label: str
-    value: str
+    label: ObjectLiteral
+    value: ObjectLiteral
     description: NotRequired[str]
     imageUrl: NotRequired[str]
 
 
-class RichSelectOptionModel(TypedDict, total=False):
-    label: str | None
-    value: str | None
+PassthroughRichSelectOption = TypeVar(
+    "PassthroughRichSelectOption", bound=RichSelectOption, covariant=True
+)
+
+
+class RichSelectOptionModel(TypedDict):
+    label: ObjectLiteral
+    value: ObjectLiteral
     description: str | None
     imageUrl: str | None
 
 
-class ObjectLiteralModel(BaseModel):
-    __root__: StrictBool | StrictInt | StrictFloat | datetime | date | time | None | str
-
-
 class KeyValueObjectModel(BaseModel):
-    __root__: ObjectLiteralModel | list[KeyValueObjectModel | None] | dict[
+    __root__: ObjectLiteral | list[KeyValueObjectModel | None] | dict[
         str, KeyValueObjectModel | None
     ]
 
@@ -134,9 +135,9 @@ class LabelValue(TypedDict):
 PassthroughLabelValue = TypeVar("PassthroughLabelValue", bound=LabelValue)
 
 
-class PassthroughLabelValueModel(BaseModel, Generic[PassthroughLabelValue]):
-    label: ObjectLiteralModel
-    value: ObjectLiteralModel
+class LabelValueModel(BaseModel):
+    label: ObjectLiteral
+    value: ObjectLiteral
 
 
 RawActionReturnData: TypeAlias = Mapping[str, Serializable]
@@ -348,9 +349,9 @@ class SelectSingleState(BaseModel):
 
 
 class SelectMultipleProps(BaseModel):
-    options: list[PassthroughLabelValueModel]
+    options: list[LabelValueModel]
     help_text: Optional[str]
-    default_value: list[PassthroughLabelValueModel] = []
+    default_value: list[LabelValueModel] = []
     min_selections: Optional[int]
     max_selections: Optional[int]
 
@@ -498,7 +499,7 @@ input_schema: dict[InputMethodName, MethodDef] = {
     "SELECT_MULTIPLE": MethodDef(
         props=SelectMultipleProps,
         state=None,
-        returns=list[PassthroughLabelValue],
+        returns=list[LabelValueModel],
     ),
 }
 

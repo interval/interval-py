@@ -9,7 +9,7 @@ from typing import (
 from .component import Component, ComponentRenderer
 from ..io_schema import MethodName
 
-Output = TypeVar("Output")
+Output = TypeVar("Output", covariant=True)
 
 MN = TypeVar("MN", bound=MethodName, covariant=True)
 

@@ -1,8 +1,9 @@
 from datetime import date, datetime
+from typing import Iterable, cast
 from typing_extensions import NotRequired
 
 from interval_sdk import Interval, IO
-from interval_sdk.io_schema import LabelValue
+from interval_sdk.io_schema import LabelValue, RichSelectOption
 
 interval = Interval(
     "alex_dev_kcLjzxNFxmGLf0aKtLVhuckt6sziQJtxFOdtM19tBrMUp5mj",
@@ -43,8 +44,43 @@ async def io_display_image(io: IO):
 
 
 @interval.action
+async def select_single(io: IO):
+    class Option(RichSelectOption):
+        extraData: NotRequired[bool]
+
+    selected = await io.select.single(
+        "Your favorite color",
+        options=(
+            [
+                cast(
+                    Option,
+                    {
+                        "label": "Red",
+                        "value": "red",
+                    },
+                ),
+                cast(
+                    Option,
+                    {
+                        "label": "Blue",
+                        "value": "blue",
+                    },
+                ),
+                cast(
+                    Option,
+                    {
+                        "label": "Orange",
+                        "value": "orange",
+                    },
+                ),
+            ]
+        ),
+    )
+
+
+@interval.action
 async def select_multiple(io: IO):
-    class Option(LabelValue):
+    class Option(RichSelectOption):
         extraData: NotRequired[bool]
 
     options: list[Option] = [
@@ -83,8 +119,7 @@ async def select_multiple(io: IO):
 
     return {
         **ret,
-        # FIXME: Extra data typing?
-        "extraData": selected[1]["extraData"],
+        "extraData": selected[1]["extraData"] if "extraData" in selected[1] else None,
     }
 
 

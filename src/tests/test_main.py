@@ -153,8 +153,9 @@ async def host(event_loop: asyncio.AbstractEventLoop):
 
         return {
             **ret,
-            # FIXME: Extra data typing?
-            "extraData": selected[0]["extraData"],
+            "extraData": selected[0]["extraData"]
+            if "extraData" in selected[0]
+            else None,
         }
 
     @interval.action_with_slug("io.select.table")

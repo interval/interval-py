@@ -2,7 +2,7 @@ import base64
 import sys
 from dataclasses import dataclass
 from datetime import date, datetime, time
-from typing import overload, Tuple
+from typing import Iterable, overload, Tuple
 from urllib.parse import ParseResult, urlparse
 
 from ..io_schema import *
@@ -321,14 +321,36 @@ class IO:
 
             return IOPromise(c, renderer=self._renderer, get_value=get_value)
 
+        @overload
         def single(
             self,
             label: str,
-            options: list[RichSelectOption],
+            options: Iterable[PassthroughRichSelectOption],
+            help_text: str | None = None,
+            default_value: RichSelectOption | None = None,
+            searchable: bool | None = None,
+        ) -> IOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption]:
+            ...
+
+        @overload
+        def single(
+            self,
+            label: str,
+            options: Iterable[RichSelectOption],
             help_text: str | None = None,
             default_value: RichSelectOption | None = None,
             searchable: bool | None = None,
         ) -> IOPromise[Literal["SELECT_SINGLE"], RichSelectOption]:
+            ...
+
+        def single(
+            self,
+            label: str,
+            options: Iterable[PassthroughRichSelectOption],
+            help_text: str | None = None,
+            default_value: RichSelectOption | None = None,
+            searchable: bool | None = None,
+        ) -> IOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption]:
             c = Component(
                 method_name="SELECT_SINGLE",
                 label=label,
@@ -344,14 +366,45 @@ class IO:
                     searchable=searchable,
                 ).dict(),
             )
-            return IOPromise(c, renderer=self._renderer)
+            option_map = {option["value"]: option for option in options}
+
+            def get_value(
+                item: RichSelectOptionModel,
+            ) -> PassthroughRichSelectOption:
+                return option_map[item["value"]]
+
+            return IOPromise(c, renderer=self._renderer, get_value=get_value)
+
+        @overload
+        def multiple(
+            self,
+            label: str,
+            options: Iterable[PassthroughLabelValue],
+            help_text: str | None = None,
+            default_value: Iterable[LabelValue] = [],
+            min_selections: int | None = None,
+            max_selections: int | None = None,
+        ) -> IOPromise[Literal["SELECT_MULTIPLE"], list[PassthroughLabelValue]]:
+            ...
+
+        @overload
+        def multiple(
+            self,
+            label: str,
+            options: Iterable[LabelValue],
+            help_text: str | None = None,
+            default_value: Iterable[LabelValue] = [],
+            min_selections: int | None = None,
+            max_selections: int | None = None,
+        ) -> IOPromise[Literal["SELECT_MULTIPLE"], list[LabelValue]]:
+            ...
 
         def multiple(
             self,
             label: str,
-            options: list[PassthroughLabelValue],
+            options: Iterable[PassthroughLabelValue],
             help_text: str | None = None,
-            default_value: list[PassthroughLabelValue] = [],
+            default_value: Iterable[LabelValue] = [],
             min_selections: int | None = None,
             max_selections: int | None = None,
         ) -> IOPromise[Literal["SELECT_MULTIPLE"], list[PassthroughLabelValue]]:
@@ -359,16 +412,10 @@ class IO:
                 method_name="SELECT_MULTIPLE",
                 label=label,
                 initial_props=SelectMultipleProps(
-                    options=[
-                        PassthroughLabelValueModel[PassthroughLabelValue].parse_obj(
-                            option
-                        )
-                        for option in options
-                    ],
+                    options=[LabelValueModel.parse_obj(option) for option in options],
                     help_text=help_text,
                     default_value=[
-                        PassthroughLabelValueModel[PassthroughLabelValue].parse_obj(val)
-                        for val in default_value
+                        LabelValueModel.parse_obj(val) for val in default_value
                     ],
                     min_selections=min_selections,
                     max_selections=max_selections,
@@ -378,9 +425,9 @@ class IO:
             option_map = {option["value"]: option for option in options}
 
             def get_value(
-                val: list[PassthroughLabelValue],
+                val: list[LabelValueModel],
             ) -> list[PassthroughLabelValue]:
-                return [option_map[item["value"]] for item in val]
+                return [option_map[item.value] for item in val]
 
             return IOPromise(c, renderer=self._renderer, get_value=get_value)
 
