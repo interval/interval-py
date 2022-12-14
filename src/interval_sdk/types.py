@@ -3,10 +3,10 @@ from typing_extensions import override
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic.generics import GenericModel as PydanticGenericModel
 
+from .util import json_loads_camel, json_dumps_snake
+
 if TYPE_CHECKING:
     from pydantic.typing import AbstractSetIntStr, MappingIntStrAny
-
-from .util import *
 
 
 class BaseModel(PydanticBaseModel):

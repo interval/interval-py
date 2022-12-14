@@ -2,10 +2,53 @@ import base64
 import sys
 from dataclasses import dataclass
 from datetime import date, datetime, time
-from typing import Iterable, overload, Tuple
+from typing import Iterable, overload, Tuple, TypeVar, Literal, Any, cast
 from urllib.parse import ParseResult, urlparse
 
-from ..io_schema import *
+from pydantic import parse_obj_as
+
+from ..io_schema import (
+    InputTextProps,
+    TableRow,
+    InputEmailProps,
+    InputNumberProps,
+    InputBooleanProps,
+    InputRichTextProps,
+    InputUrlProps,
+    DateModel,
+    TimeModel,
+    DateTimeModel,
+    InputDateProps,
+    InputTimeProps,
+    InputDateTimeProps,
+    TableColumnDef,
+    InternalTableRowModel,
+    InternalTableColumnModel,
+    SelectTableProps,
+    PassthroughRichSelectOption_co,
+    RichSelectOption,
+    SelectSingleProps,
+    RichSelectOptionModel,
+    SelectMultipleProps,
+    PassthroughLabelValue,
+    LabelValue,
+    LabelValueModel,
+    DisplayCodeProps,
+    DisplayLinkProps,
+    LinkTheme,
+    MetadataLayout,
+    DisplayMetadataProps,
+    KeyValueObjectModel,
+    DisplayObjectProps,
+    ImageSize,
+    DisplayImageProps,
+    DisplayTableProps,
+    DisplayVideoProps,
+    TypeValue,
+    InputSpreadsheetProps,
+    ConfirmProps,
+    MethodName,
+)
 from .io_promise import (
     IOPromise,
     GroupableIOPromise,
@@ -16,9 +59,8 @@ from .component import (
     ComponentRenderer,
 )
 from ..components.table import columns_builder, serialize_table_row
-from ..types import KeyValueObject
+from ..util import KeyValueObject
 
-from pydantic import parse_obj_as
 
 _T1 = TypeVar("_T1")
 _T2 = TypeVar("_T2")
@@ -319,11 +361,11 @@ class IO:
         def single(
             self,
             label: str,
-            options: Iterable[PassthroughRichSelectOption],
+            options: Iterable[PassthroughRichSelectOption_co],
             help_text: str | None = None,
             default_value: RichSelectOption | None = None,
             searchable: bool | None = None,
-        ) -> IOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption]:
+        ) -> IOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption_co]:
             ...
 
         @overload
@@ -340,11 +382,11 @@ class IO:
         def single(
             self,
             label: str,
-            options: Iterable[PassthroughRichSelectOption],
+            options: Iterable[PassthroughRichSelectOption_co],
             help_text: str | None = None,
             default_value: RichSelectOption | None = None,
             searchable: bool | None = None,
-        ) -> IOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption]:
+        ) -> IOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption_co]:
             c = Component(
                 method_name="SELECT_SINGLE",
                 label=label,
@@ -364,7 +406,7 @@ class IO:
 
             def get_value(
                 item: RichSelectOptionModel,
-            ) -> PassthroughRichSelectOption:
+            ) -> PassthroughRichSelectOption_co:
                 return option_map[item["value"]]
 
             return IOPromise(c, renderer=self._renderer, get_value=get_value)
@@ -375,7 +417,7 @@ class IO:
             label: str,
             options: Iterable[PassthroughLabelValue],
             help_text: str | None = None,
-            default_value: Iterable[LabelValue] = [],
+            default_value: Iterable[LabelValue] | None = None,
             min_selections: int | None = None,
             max_selections: int | None = None,
         ) -> IOPromise[Literal["SELECT_MULTIPLE"], list[PassthroughLabelValue]]:
@@ -387,7 +429,7 @@ class IO:
             label: str,
             options: Iterable[LabelValue],
             help_text: str | None = None,
-            default_value: Iterable[LabelValue] = [],
+            default_value: Iterable[LabelValue] | None = None,
             min_selections: int | None = None,
             max_selections: int | None = None,
         ) -> IOPromise[Literal["SELECT_MULTIPLE"], list[LabelValue]]:
@@ -398,7 +440,7 @@ class IO:
             label: str,
             options: Iterable[PassthroughLabelValue],
             help_text: str | None = None,
-            default_value: Iterable[LabelValue] = [],
+            default_value: Iterable[LabelValue] | None = None,
             min_selections: int | None = None,
             max_selections: int | None = None,
         ) -> IOPromise[Literal["SELECT_MULTIPLE"], list[PassthroughLabelValue]]:
@@ -410,7 +452,9 @@ class IO:
                     help_text=help_text,
                     default_value=[
                         LabelValueModel.parse_obj(val) for val in default_value
-                    ],
+                    ]
+                    if default_value is not None
+                    else [],
                     min_selections=min_selections,
                     max_selections=max_selections,
                 ).dict(),
@@ -687,7 +731,6 @@ class IO:
         Actually returns a list, claims to return a tuple because lists do not support
         variadic types.
         """
-        ...
 
     @overload
     async def group(
@@ -762,5 +805,5 @@ class IO:
         ...
 
     async def group(self, *io_promises: GroupableIOPromise[MethodName, Any]):  # type: ignore
-        raw_values = await self._renderer([p.component for p in io_promises])
-        return [io_promises[i]._get_value(val) for (i, val) in enumerate(raw_values)]
+        raw_values = await self._renderer([p._component for p in io_promises])
+        return [io_promises[i].__get_value(val) for (i, val) in enumerate(raw_values)]

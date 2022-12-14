@@ -1,9 +1,9 @@
 from datetime import date, datetime
-from typing import Iterable, cast
+from typing import cast
 from typing_extensions import NotRequired
 
 from interval_sdk import Interval, IO
-from interval_sdk.io_schema import LabelValue, RichSelectOption
+from interval_sdk.io_schema import RichSelectOption
 
 interval = Interval(
     "alex_dev_kcLjzxNFxmGLf0aKtLVhuckt6sziQJtxFOdtM19tBrMUp5mj",
@@ -76,6 +76,8 @@ async def select_single(io: IO):
             ]
         ),
     )
+
+    print(selected)
 
 
 @interval.action
@@ -311,7 +313,7 @@ async def dates(io: IO):
 
 @interval.action
 async def optional_values(io: IO):
-    [name, num, date, color] = await io.group(
+    [name, num, d, color] = await io.group(
         io.input.text("Your name").optional(),
         io.input.number("Pick a number").optional(),
         io.input.date("Enter a date", default_value=datetime.now().date()).optional(),
@@ -334,12 +336,12 @@ async def optional_values(io: IO):
         ).optional(),
     )
 
-    print(name, num, date, color)
+    print(name, num, d, color)
 
     return {
         "Name": name if name is not None else "No name selected",
         "Number": num if num is not None else "No number selected",
-        "Date": date if date is not None else "No date selected",
+        "Date": d if d is not None else "No date selected",
         "Favorite color": color["label"] if color is not None else "Unknown",
     }
 

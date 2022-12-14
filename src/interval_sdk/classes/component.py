@@ -59,7 +59,7 @@ class Component(Generic[MN]):
             label=label,
             props=dict_keys_to_camel(dict_strip_none(initial_props)),
             state=None,
-            is_stateful=True if handle_state_change is not None else False,
+            is_stateful=handle_state_change is not None,
             is_optional=is_optional,
         )
         self._handle_state_change = handle_state_change
@@ -97,7 +97,9 @@ class Component(Generic[MN]):
                     file=sys.stderr,
                 )
 
-            if self.on_state_change:
+            if self.on_state_change is not None:
+                # This is definitely callable?
+                # pylint: disable-next=not-callable
                 await self.on_state_change()
         except ValidationError as err:
             print("Received invalid state:", err, file=sys.stderr)

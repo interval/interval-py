@@ -15,9 +15,9 @@ from typing import (
     TypedDict,
 )
 from datetime import date, time, datetime
-from typing_extensions import NotRequired
 from uuid import UUID
 import io, json, sys
+from typing_extensions import NotRequired
 
 from pydantic import BaseModel as PydanticBaseModel, StrictBool, StrictInt, StrictFloat
 from pydantic.fields import ModelField
@@ -26,16 +26,15 @@ from pydantic.fields import ModelField
 from .types import (
     BaseModel,
     GenericModel,
-    SerializableRecord,
-    Serializable,
 )
 from .util import (
     ObjectLiteral,
-    json_dumps_strip_none,
     snake_to_camel,
     dict_keys_to_camel,
     json_dumps_some_snake,
     json_loads_some_snake,
+    Serializable,
+    SerializableRecord,
 )
 
 # TODO: Try generating most of this with datamode-code-generator
@@ -107,8 +106,8 @@ class RichSelectOption(TypedDict):
     imageUrl: NotRequired[str]
 
 
-PassthroughRichSelectOption = TypeVar(
-    "PassthroughRichSelectOption", bound=RichSelectOption, covariant=True
+PassthroughRichSelectOption_co = TypeVar(
+    "PassthroughRichSelectOption_co", bound=RichSelectOption, covariant=True
 )
 
 
@@ -689,7 +688,7 @@ def dump_method(method_name: MethodName) -> str:
         print("            ).dict(),", file=contents)
 
     print(
-        f"""\
+        """\
         )
         return IOPromise(c, renderer=self._renderer)
         """,

@@ -2,7 +2,7 @@ import asyncio
 from typing import cast, Awaitable, TypeAlias, Callable, TypeVar, Any
 from uuid import uuid4
 
-from ..io_schema import *
+from ..io_schema import MethodName, IORender, IOResponse
 from .component import Component
 from .io_error import IOError
 from .io import IO
@@ -16,7 +16,7 @@ class IOClient:
     Sender: TypeAlias = Callable[[IORender], Awaitable[None]]
     _logger: Logger
     _send: Sender
-    _on_response_handler: Callable[[IOResponse], Awaitable[None]]
+    _on_response_handler: Callable[[IOResponse], Awaitable[None]] | None = None
 
     _is_canceled = False
 
@@ -31,7 +31,7 @@ class IOClient:
         return self._is_canceled
 
     async def on_response(self, response: IOResponse):
-        if self._on_response_handler:
+        if self._on_response_handler is not None:
             try:
                 await self._on_response_handler(response)
             except Exception as err:
@@ -71,7 +71,7 @@ class IOClient:
                     components[i].set_return_value(value)
                 return
 
-            elif response.kind == "SET_STATE":
+            if response.kind == "SET_STATE":
                 for index, new_state in enumerate(response.values):
                     prev_state = components[index].instance.state
 
@@ -82,8 +82,7 @@ class IOClient:
         self._on_response_handler = on_response_handler
 
         for c in components:
-            if c.on_state_change:
-                c.on_state_change = render
+            c.on_state_change = render
 
         # initial render
         asyncio.create_task(render())

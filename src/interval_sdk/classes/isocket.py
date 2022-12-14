@@ -118,7 +118,7 @@ class ISocket:
             except websockets.exceptions.ConnectionClosed as e:
                 if self.on_close:
                     await self.on_close(e.code, e.reason)
-            except asyncio.exceptions.TimeoutError as e:
+            except asyncio.exceptions.TimeoutError:
                 # No need to put back in queue, we'll try resending again
                 pass
             except Exception as e:

@@ -101,8 +101,6 @@ def dict_strip_none(
 
 
 def json_dumps_strip_none(obj: Any, *args, **kwargs) -> str:
-    print("json_dumps_strip_none")
-
     if isinstance(obj, dict):
         obj = dict_strip_none(obj)
 
@@ -198,11 +196,7 @@ def serialize_dates(
     if record is None:
         return None
 
-    if (
-        isinstance(record, datetime)
-        or isinstance(record, date)
-        or isinstance(record, time)
-    ):
+    if isinstance(record, (datetime, date, time)):
         return record.isoformat()
 
     if isinstance(record, dict):
@@ -217,12 +211,12 @@ def serialize_dates(
 def format_datelike(d: date | time | datetime) -> str:
     if isinstance(d, datetime):
         return format_datetime(d)
-    elif isinstance(d, date):
+    if isinstance(d, date):
         return format_date(d)
-    elif isinstance(d, time):
+    if isinstance(d, time):
         return format_time(d)
-    else:
-        return str(d)
+
+    return str(d)
 
 
 def format_date(d: date) -> str:

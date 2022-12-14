@@ -1,7 +1,6 @@
 from datetime import date, datetime, time
 from typing import Callable, Iterable, cast, Any
 
-from ..classes.logger import Logger
 from ..io_schema import (
     InternalTableColumn,
     TableRow,
@@ -9,8 +8,13 @@ from ..io_schema import (
     InternalTableRow,
     TableRowValueObject,
 )
-from ..util import format_date, format_datetime, format_time, serialize_dates
-from ..types import SerializableRecord
+from ..util import (
+    format_date,
+    format_datetime,
+    format_time,
+    serialize_dates,
+    SerializableRecord,
+)
 
 
 def serialize_table_row(
@@ -23,7 +27,7 @@ def serialize_table_row(
     filter_values: list[str] = []
 
     for i, col in enumerate(columns):
-        key = col["accessorKey"] if "accessorKey" in col else str(i)
+        accessor_key = col["accessorKey"] if "accessorKey" in col else str(i)
         val = (
             col["renderCell"](row)
             if "renderCell" in col
@@ -55,7 +59,7 @@ def serialize_table_row(
             else:
                 filter_values.append(str(val))
 
-        rendered_row[key] = val
+        rendered_row[accessor_key] = val
 
     return {
         "key": key,
@@ -70,8 +74,9 @@ def columns_builder(
     columns: Iterable[TableColumnDef | str] | None = None,
     log_missing_column: Callable[[str], None] | None = None,
 ) -> list[TableColumnDef]:
-    data_columns: set[str] = set(
-        [col for row in data for col in row.keys()] if data is not None else []
+    # using a dict instead of a set because dicts are ordered and sets aren't
+    data_columns: dict[str, None] = (
+        {col: None for row in data for col in row.keys()} if data is not None else {}
     )
 
     if columns:
@@ -87,17 +92,17 @@ def columns_builder(
                     "label": col,
                     "accessorKey": col,
                 }
-            else:
-                col = cast(TableColumnDef, col)
 
-                if (
-                    log_missing_column is not None
-                    and "accessorKey" in col
-                    and col["accessorKey"] not in data_columns
-                ):
-                    log_missing_column(col["accessorKey"])
+            col = cast(TableColumnDef, col)
 
-                return col
+            if (
+                log_missing_column is not None
+                and "accessorKey" in col
+                and col["accessorKey"] not in data_columns
+            ):
+                log_missing_column(col["accessorKey"])
+
+            return col
 
         return list(map(normalize_col, columns))
 

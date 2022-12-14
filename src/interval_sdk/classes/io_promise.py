@@ -5,71 +5,70 @@ from typing import (
     Any,
     Generator,
 )
+from typing_extensions import override
 
 from .component import Component, ComponentRenderer
 from ..io_schema import MethodName
 
-Output = TypeVar("Output", covariant=True)
+Output_co = TypeVar("Output_co", covariant=True)
 
-MN = TypeVar("MN", bound=MethodName, covariant=True)
+MN_co = TypeVar("MN_co", bound=MethodName, covariant=True)
 
 
-class BaseIOPromise(Generic[MN, Output]):
-    component: Component
-    renderer: ComponentRenderer
-    get_value: Callable[[Any], Output] | None = None
+class BaseIOPromise(Generic[MN_co, Output_co]):
+    _component: Component
+    _renderer: ComponentRenderer
+    _get_value: Callable[[Any], Output_co] | None = None
 
     def __init__(
         self,
         component: Component,
         renderer: ComponentRenderer,
-        get_value: Callable[[Any], Output] | None = None,
+        get_value: Callable[[Any], Output_co] | None = None,
     ):
-        self.component = component
-        self.renderer = renderer
-        self.get_value = get_value
+        self._component = component
+        self._renderer = renderer
+        self._get_value = get_value
 
-    def __await__(self) -> Generator[Any, None, Output]:
-        res = yield from self.renderer([self.component]).__await__()
-        return self._get_value(res[0])
+    def __await__(self) -> Generator[Any, None, Output_co]:
+        res = yield from self._renderer([self._component]).__await__()
+        return self.__get_value(res[0])
 
-    def _get_value(self, val: Any) -> Output:
-        if self.get_value:
-            return self.get_value(val)
+    def __get_value(self, val: Any) -> Output_co:
+        if self._get_value is not None:
+            return self._get_value(val)
 
         return val
 
 
-class ExclusiveIOPromise(BaseIOPromise[MN, Output]):
+class ExclusiveIOPromise(BaseIOPromise[MN_co, Output_co]):
     pass
 
 
-class GroupableIOPromise(BaseIOPromise[MN, Output]):
+class GroupableIOPromise(BaseIOPromise[MN_co, Output_co]):
     pass
 
 
-class OptionalIOPromise(GroupableIOPromise[MN, Output]):
+class OptionalIOPromise(GroupableIOPromise[MN_co, Output_co]):
     def __init__(
         self,
         component: Component,
         renderer: ComponentRenderer,
-        get_value: Callable[[Any], Output] | None = None,
+        get_value: Callable[[Any], Output_co] | None = None,
     ):
         component.instance.is_optional = True
         super().__init__(component, renderer, get_value)
 
-    def _get_value(self, val: Any) -> Output | None:
-        if val is None:
+    @override
+    def __await__(self) -> Generator[Any, None, Output_co | None]:
+        res = yield from self._renderer([self._component]).__await__()
+        if res[0] is None:
             return None
-
-        if self.get_value:
-            return self.get_value(val)
-
-        return val
+        return self.__get_value(res[0])
 
 
-class IOPromise(GroupableIOPromise[MN, Output]):
-    def optional(self) -> OptionalIOPromise[MN, Output | None]:
-        return OptionalIOPromise[MN, Output | None](
-            self.component, self.renderer, self.get_value
+class IOPromise(GroupableIOPromise[MN_co, Output_co]):
+    def optional(self) -> OptionalIOPromise[MN_co, Output_co | None]:
+        return OptionalIOPromise[MN_co, Output_co | None](
+            self._component, self._renderer, self._get_value
         )

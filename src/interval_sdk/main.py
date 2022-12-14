@@ -1,4 +1,5 @@
 import asyncio, importlib.metadata
+from dataclasses import dataclass
 from inspect import signature
 from typing import Optional, TypeAlias, Callable, Awaitable, cast
 from urllib.parse import urlparse, urlunparse
@@ -12,21 +13,37 @@ from .io_schema import (
     ActionResult,
     IOFunctionReturnModel,
     IOFunctionReturnType,
-    DeserializableRecordModel,
     SerializableRecord,
 )
 from .classes.isocket import ISocket
 from .classes.logger import Logger, LogLevel
-from .classes.io_client import IOClient, IOError
-from .classes.io import IO, IOResponse, IORender
+from .classes.io_client import IOClient, IOError, IORender, IOResponse
+from .classes.io import IO
 from .classes.rpc import DuplexRPCClient
-from .internal_rpc_schema import *
+from .internal_rpc_schema import (
+    ActionContext,
+    EnqueueActionInputs,
+    EnqueueActionReturns,
+    DequeueActionInputs,
+    DequeueActionReturns,
+    WSServerSchema,
+    HostSchema,
+    StartTransactionInputs,
+    SendIOCallInputs,
+    MarkTransactionCompleteInputs,
+    IOResponseInputs,
+    ws_server_schema,
+    host_schema,
+    InitializeHostInputs,
+    InitializeHostReturns,
+)
 from .util import (
     DeserializableRecord,
     ensure_serialized,
     serialize_dates,
     deserialize_dates,
 )
+from .types import BaseModel
 
 
 IntervalActionHandler: TypeAlias = (
@@ -100,10 +117,10 @@ class Interval:
                 if params is not None:
                     try:
                         ensure_serialized(params)
-                    except ValueError:
+                    except ValueError as e:
                         raise IntervalError(
                             "Invalid params, please pass an object of primitives."
-                        )
+                        ) from e
 
                 try:
                     data = EnqueueActionInputs(
@@ -111,8 +128,8 @@ class Interval:
                         assignee=assignee_email,
                         params=params,
                     ).json()
-                except ValueError:
-                    raise IntervalError("Invalid input.")
+                except ValueError as e:
+                    raise IntervalError("Invalid input.") from e
 
                 async with aiohttp.ClientSession(headers=self._headers) as session:
                     async with session.post(
@@ -121,8 +138,8 @@ class Interval:
                         try:
                             text = await resp.text()
                             response = parse_raw_as(EnqueueActionReturns, text)
-                        except:
-                            raise IntervalError("Received invalid API response.")
+                        except Exception as e:
+                            raise IntervalError("Received invalid API response.") from e
 
                 if response.type == "error":
                     raise IntervalError(
@@ -134,15 +151,17 @@ class Interval:
                 )
             except IntervalError as err:
                 raise err
-            except:
-                raise IntervalError("There was a problem enqueueing the action.")
+            except Exception as err:
+                raise IntervalError(
+                    "There was a problem enqueueing the action."
+                ) from err
 
         async def dequeue(self, id: str) -> QueuedAction:
             try:
                 try:
                     data = DequeueActionInputs(id=id).json()
-                except ValueError:
-                    raise IntervalError("Invalid input.")
+                except ValueError as err:
+                    raise IntervalError("Invalid input.") from err
 
                 async with aiohttp.ClientSession(headers=self._headers) as session:
                     async with session.post(
@@ -152,8 +171,10 @@ class Interval:
                             response = parse_raw_as(
                                 DequeueActionReturns, await resp.text()
                             )
-                        except:
-                            raise IntervalError("Received invalid API response.")
+                        except Exception as err:
+                            raise IntervalError(
+                                "Received invalid API response."
+                            ) from err
 
                 if response.type == "error":
                     raise IntervalError(
@@ -165,8 +186,10 @@ class Interval:
                 )
             except IntervalError as err:
                 raise err
-            except:
-                raise IntervalError("There was a problem dequeueing the action.")
+            except Exception as err:
+                raise IntervalError(
+                    "There was a problem dequeueing the action."
+                ) from err
 
     _logger: Logger
     _endpoint: str = "wss://interval.com/websocket"
@@ -334,8 +357,6 @@ class Interval:
                             raise Exception(
                                 "handler accepts invalid number of arguments"
                             )
-
-                        print(serialize_dates(resp))
 
                         result = ActionResult(
                             status="SUCCESS",

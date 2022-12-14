@@ -4,7 +4,7 @@ from typing import Any, Optional, Type, TypeAlias, Literal
 from pydantic import Field
 from typing_extensions import Annotated
 
-from .io_schema import SerializableRecord
+from .util import SerializableRecord
 from .types import BaseModel
 
 

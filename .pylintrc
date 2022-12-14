@@ -1,0 +1,25 @@
+[MAIN]
+
+extension-pkg-allow-list =
+    pydantic,
+    playwright,
+    playwright.async_api
+
+[MESSAGES CONTROL]
+
+disable =
+    duplicate-code,
+    invalid-name,
+    fixme,
+    missing-docstring,
+    too-few-public-methods,
+    too-many-arguments,
+    too-many-instance-attributes,
+    too-many-statements,
+    logging-fstring-interpolation,
+    multiple-imports,
+    protected-access,
+    bare-except,
+    broad-except,
+    line-too-long,
+    redefined-builtin,

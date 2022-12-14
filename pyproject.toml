@@ -8,6 +8,7 @@ authors = ["Interval"]
 demo = { script = 'demos:main' }
 test = "pytest"
 check = "pyright"
+lint = "pylint src/"
 format = "black src/"
 dump_schema = { script = 'interval_sdk.io_schema:dump_all_methods' }
 

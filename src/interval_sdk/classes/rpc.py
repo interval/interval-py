@@ -16,7 +16,7 @@ id_count = 0
 
 
 def generate_id():
-    global id_count
+    global id_count  # pylint: disable=global-statement
     id_count += 1
     return str(id_count)
 
