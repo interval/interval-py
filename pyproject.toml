@@ -7,6 +7,7 @@ authors = ["Interval"]
 [tool.poe.tasks]
 demo = { script = 'demos:main' }
 test = "pytest"
+check = "pyright"
 format = "black src/"
 dump_schema = { script = 'interval_sdk.io_schema:dump_all_methods' }
 
