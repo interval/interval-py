@@ -201,7 +201,7 @@ class TableRowValueObjectModel(BaseModel):
 
 
 TableRowValue: TypeAlias = TableRowValueObject | TableRowValuePrimitive
-TableRow: TypeAlias = dict[str, TableRowValue]
+TableRow: TypeAlias = Mapping[str, TableRowValue]
 
 
 class TableRowValueModel(BaseModel):

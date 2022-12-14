@@ -29,7 +29,7 @@ _T6 = TypeVar("_T6")
 _T7 = TypeVar("_T7")
 _T8 = TypeVar("_T8")
 
-TR = TypeVar("TR", bound=Mapping[str, TableRow])
+TR = TypeVar("TR", bound=TableRow)
 
 MAX_FILE_SIZE_MB = 50
 
