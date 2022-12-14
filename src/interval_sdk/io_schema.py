@@ -31,6 +31,7 @@ from .types import (
 )
 from .util import (
     ObjectLiteral,
+    json_dumps_strip_none,
     snake_to_camel,
     dict_keys_to_camel,
     json_dumps_some_snake,
@@ -233,7 +234,7 @@ class InternalTableColumn(TypedDict):
 
 class InternalTableColumnModel(BaseModel):
     label: str
-    accessorKey: Optional[str]
+    accessorKey: Optional[str] = None
 
 
 PropsType = TypeVar("PropsType", bound=Type)
@@ -396,7 +397,7 @@ class DisplayImageProps(BaseModel):
 class DisplayTableProps(BaseModel):
     data: list[InternalTableRowModel]
     help_text: Optional[str]
-    columns: Optional[list[InternalTableColumnModel]]
+    columns: list[InternalTableColumnModel]
 
 
 class DisplayVideoProps(BaseModel):
@@ -603,6 +604,7 @@ def json_dumps_io_render(io_render: dict[str, Any], *args, **kwargs) -> str:
         else:
             obj[snake_to_camel(key)] = val
 
+    # FIXME: Remove this
     print(obj, file=sys.stderr)
     return json.dumps(obj, *args, **kwargs)
 

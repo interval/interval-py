@@ -303,7 +303,8 @@ class Interval:
                 await self._send(
                     "SEND_IO_CALL",
                     SendIOCallInputs(
-                        transaction_id=inputs.transaction_id, io_call=instruction.json()
+                        transaction_id=inputs.transaction_id,
+                        io_call=instruction.json(exclude_unset=True),
                     ),
                 )
 

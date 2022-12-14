@@ -107,7 +107,7 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
 
         message = DuplexMessage(
             id=id,
-            data=dict_keys_to_camel(inputs.dict()),
+            data=dict_keys_to_camel(inputs.dict(exclude_unset=True)),
             method_name=method_name,
             kind="CALL",
         )

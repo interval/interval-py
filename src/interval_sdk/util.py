@@ -1,5 +1,5 @@
 import json, re
-from typing import Any, Mapping, Tuple, Callable, TypeAlias, cast
+from typing import Any, Iterable, Mapping, Tuple, Callable, TypeAlias, cast
 from datetime import date, time, datetime
 
 from pydantic import StrictBool, StrictFloat, StrictInt
@@ -87,15 +87,36 @@ def dump_snake_obj(obj: Any) -> Any:
     return obj
 
 
-def dict_strip_none(d: dict[str, Any]) -> dict[str, Any]:
+def dict_strip_none(
+    d: dict[str, Any], keys_to_consider: Iterable[str] | None = None
+) -> dict[str, Any]:
     ret = {}
 
     for key, val in d.items():
-        if val is None:
+        if (keys_to_consider is None or key in keys_to_consider) and val is None:
             continue
         ret[key] = val
 
     return ret
+
+
+def json_dumps_strip_none(obj: Any, *args, **kwargs) -> str:
+    print("json_dumps_strip_none")
+
+    if isinstance(obj, dict):
+        obj = dict_strip_none(obj)
+
+    return json.dumps(obj, *args, **kwargs)
+
+
+def json_dumps_strip_some_none(*keys_to_include: str):
+    def json_dumps(obj: Mapping[str, Any], *args, **kwargs) -> str:
+        if isinstance(obj, dict):
+            obj = dict_strip_none(obj, keys_to_consider=keys_to_include)
+
+        return json.dumps(obj, *args, **kwargs)
+
+    return json_dumps
 
 
 def json_dumps_snake(obj: Any, *args, **kwargs) -> str:

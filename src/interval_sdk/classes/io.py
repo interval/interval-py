@@ -300,13 +300,7 @@ class IO:
                 initial_props=SelectTableProps(
                     help_text=help_text,
                     columns=[
-                        InternalTableColumnModel(
-                            label=col["label"],
-                            accessorKey=col["accessorKey"]
-                            if "accessorKey" in col
-                            else None,
-                        )
-                        for col in columns
+                        InternalTableColumnModel.parse_obj(col) for col in columns
                     ],
                     data=serialized,
                     min_selections=min_selections,
@@ -584,13 +578,7 @@ class IO:
                 initial_props=DisplayTableProps(
                     help_text=help_text,
                     columns=[
-                        InternalTableColumnModel(
-                            label=col["label"],
-                            accessorKey=col["accessorKey"]
-                            if "accessorKey" in col
-                            else None,
-                        )
-                        for col in columns
+                        InternalTableColumnModel.parse_obj(col) for col in columns
                     ],
                     data=serialized,
                 ).dict(),
