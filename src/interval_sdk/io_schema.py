@@ -40,7 +40,7 @@ from .util import (
 # TODO: Try generating most of this with datamode-code-generator
 # https://github.com/koxudaxi/datamodel-code-generator/
 
-MethodName = Literal[
+InputMethodName = Literal[
     "INPUT_TEXT",
     "INPUT_EMAIL",
     "INPUT_NUMBER",
@@ -55,8 +55,9 @@ MethodName = Literal[
     "SELECT_TABLE",
     "SELECT_SINGLE",
     "SELECT_MULTIPLE",
-    # Intentionally not implementing
-    # "SELECT_USER",
+]
+
+DisplayMethodName = Literal[
     "DISPLAY_CODE",
     "DISPLAY_HEADING",
     "DISPLAY_IMAGE",
@@ -70,6 +71,8 @@ MethodName = Literal[
     "DISPLAY_PROGRESS_INDETERMINATE",
     "DISPLAY_PROGRESS_THROUGH_LIST",
 ]
+
+MethodName = InputMethodName | DisplayMethodName
 
 MN = TypeVar("MN", bound=MethodName)
 
@@ -425,7 +428,7 @@ class DisplayProgressThroughListProps(BaseModel):
     items: list[DisplayProgressthroughListItem]
 
 
-io_schema: dict[MethodName, MethodDef] = {
+input_schema: dict[InputMethodName, MethodDef] = {
     "INPUT_TEXT": MethodDef(
         props=InputTextProps,
         state=None,
@@ -497,6 +500,9 @@ io_schema: dict[MethodName, MethodDef] = {
         state=None,
         returns=list[PassthroughLabelValue],
     ),
+}
+
+display_schema: dict[DisplayMethodName, MethodDef] = {
     "DISPLAY_CODE": MethodDef(
         props=DisplayCodeProps,
         state=None,
@@ -560,6 +566,14 @@ io_schema: dict[MethodName, MethodDef] = {
         returns=None,
     ),
 }
+
+io_schema: dict[MethodName, MethodDef] = cast(
+    dict[MethodName, MethodDef],
+    {
+        **input_schema,
+        **display_schema,
+    },
+)
 
 
 class IOSchema(Generic[MN]):
