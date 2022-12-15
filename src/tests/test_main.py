@@ -178,7 +178,7 @@ async def host(
                 },
             ],
             min_selections=1,
-            max_selections=1,
+            max_selections=2,
         )
 
         await io.display.markdown(
@@ -262,14 +262,20 @@ async def test_table(page: Page, transactions: Transaction):
     await transactions.console()
     await transactions.run("io.display.table")
     await expect(page.locator("text=io.display.table result")).to_be_visible()
-    await expect(page.locator('th:has-text("string")')).to_be_visible()
-    await expect(page.locator('td:has-text("string")')).to_be_visible()
-    await expect(page.locator('th:has-text("number")')).to_be_visible()
-    await expect(page.locator('td:has-text("15")')).to_be_visible()
-    await expect(page.locator('th:has-text("boolean")')).to_be_visible()
-    await expect(page.locator('td:has-text("true")')).to_be_visible()
-    await expect(page.locator('th:has-text("none")')).to_be_visible()
-    await expect(page.locator('td:has-text("-")')).to_be_visible()
+    await expect(
+        page.locator('[role="columnheader"]:has-text("string")')
+    ).to_be_visible()
+    await expect(page.locator('[role="cell"]:has-text("string")')).to_be_visible()
+    await expect(
+        page.locator('[role="columnheader"]:has-text("number")')
+    ).to_be_visible()
+    await expect(page.locator('[role="cell"]:has-text("15")')).to_be_visible()
+    await expect(
+        page.locator('[role="columnheader"]:has-text("boolean")')
+    ).to_be_visible()
+    await expect(page.locator('[role="cell"]:has-text("true")')).to_be_visible()
+    await expect(page.locator('[role="columnheader"]:has-text("none")')).to_be_visible()
+    await expect(page.locator('[role="cell"]:has-text("-")')).to_be_visible()
     await transactions.press_continue()
     await transactions.expect_success()
 
@@ -398,12 +404,13 @@ async def test_select_table(page: Page, transactions: Transaction):
 
     await expect(page.locator("text=Select some rows")).to_be_visible()
     await transactions.press_continue()
-    await transactions.expect_validation_error()
-    await page.locator('td:has-text("Orange")').click()
-    await page.locator('td:has-text("Dan")').click()
+    await transactions.expect_validation_error("Please make at least 1 selection.")
+    await page.locator('[role="cell"]:has-text("Orange")').click()
+    await page.locator('[role="cell"]:has-text("Dan")').click()
+    await page.locator('[role="cell"]:has-text("Ryan")').click()
     await transactions.press_continue()
-    await transactions.expect_validation_error()
-    await page.locator('td:has-text("Orange")').click()
+    await transactions.expect_validation_error("Please make no more than 2 selections.")
+    await page.locator('[role="cell"]:has-text("Dan")').click()
     await transactions.press_continue()
     await expect(page.locator("pre code")).to_have_text(
         re.compile(
