@@ -407,7 +407,7 @@ class IO:
             def get_value(
                 item: RichSelectOptionModel,
             ) -> PassthroughRichSelectOption_co:
-                return option_map[item["value"]]
+                return option_map[item.value]
 
             return IOPromise(c, renderer=self._renderer, get_value=get_value)
 

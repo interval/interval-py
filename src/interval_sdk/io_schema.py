@@ -111,11 +111,11 @@ PassthroughRichSelectOption_co = TypeVar(
 )
 
 
-class RichSelectOptionModel(TypedDict):
+class RichSelectOptionModel(BaseModel):
     label: ObjectLiteral
     value: ObjectLiteral
-    description: str | None
-    imageUrl: str | None
+    description: str | None = None
+    imageUrl: str | None = None
 
 
 class KeyValueObjectModel(BaseModel):
