@@ -1,8 +1,9 @@
-import asyncio, json, re
+import asyncio, json, re, os.path
 from datetime import date
 from typing_extensions import NotRequired
 
 import pytest
+from filelock import FileLock
 from playwright.async_api import Page, expect
 
 from interval_sdk import Interval, IO, ActionContext
@@ -12,7 +13,11 @@ from . import base_config, Transaction
 
 
 @pytest.fixture(scope="session", autouse=True)
-async def host(event_loop: asyncio.AbstractEventLoop):
+async def host(
+    event_loop: asyncio.AbstractEventLoop,
+    tmp_path_factory: pytest.TempPathFactory,
+    worker_id: str,
+):
     interval = Interval(
         api_key=base_config.api_key,
         endpoint=base_config.endpoint_url,
@@ -191,7 +196,17 @@ async def host(event_loop: asyncio.AbstractEventLoop):
         await io.input.text("First name")
         raise Exception("Unauthorized")
 
-    event_loop.create_task(interval.listen_async())
+    if worker_id == "master":
+        event_loop.create_task(interval.listen_async())
+    else:
+        root_tmp_dir = tmp_path_factory.getbasetemp().parent
+        lockfile = root_tmp_dir / "host"
+
+        with FileLock(str(lockfile) + ".lock"):
+            if not os.path.exists(lockfile):
+                with open(lockfile, "w"):
+                    pass
+                event_loop.create_task(interval.listen_async())
 
     yield interval
 
