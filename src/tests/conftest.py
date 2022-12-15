@@ -30,6 +30,7 @@ async def playwright() -> AsyncIterator[Playwright]:
 
 @pytest.fixture(scope="session")
 async def context(
+    config: Config,
     playwright: Playwright,
     browser_name: str,
     browser_type_launch_args: dict,
@@ -46,18 +47,17 @@ async def context(
         }
     )
     context = await browser.new_context()
+    await config.log_in(context)
     yield context
     await context.close()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def page(
-    config: Config,
     context: BrowserContext,
 ) -> AsyncIterator[Page]:
-    page = await config.log_in(context)
+    page = await context.new_page()
     yield page
-    await context.close()
 
 
 @pytest.fixture
