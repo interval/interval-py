@@ -806,4 +806,4 @@ class IO:
 
     async def group(self, *io_promises: GroupableIOPromise[MethodName, Any]):  # type: ignore
         raw_values = await self._renderer([p._component for p in io_promises])
-        return [io_promises[i].__get_value(val) for (i, val) in enumerate(raw_values)]
+        return [io_promises[i]._get_value(val) for (i, val) in enumerate(raw_values)]

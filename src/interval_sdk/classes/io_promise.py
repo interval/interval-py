@@ -18,7 +18,7 @@ MN_co = TypeVar("MN_co", bound=MethodName, covariant=True)
 class BaseIOPromise(Generic[MN_co, Output_co]):
     _component: Component
     _renderer: ComponentRenderer
-    _get_value: Callable[[Any], Output_co] | None = None
+    _value_getter: Callable[[Any], Output_co] | None = None
 
     def __init__(
         self,
@@ -28,15 +28,15 @@ class BaseIOPromise(Generic[MN_co, Output_co]):
     ):
         self._component = component
         self._renderer = renderer
-        self._get_value = get_value
+        self._value_getter = get_value
 
     def __await__(self) -> Generator[Any, None, Output_co]:
         res = yield from self._renderer([self._component]).__await__()
-        return self.__get_value(res[0])
+        return self._get_value(res[0])
 
-    def __get_value(self, val: Any) -> Output_co:
-        if self._get_value is not None:
-            return self._get_value(val)
+    def _get_value(self, val: Any) -> Output_co:
+        if self._value_getter is not None:
+            return self._value_getter(val)
 
         return val
 
@@ -64,11 +64,11 @@ class OptionalIOPromise(GroupableIOPromise[MN_co, Output_co]):
         res = yield from self._renderer([self._component]).__await__()
         if res[0] is None:
             return None
-        return self.__get_value(res[0])
+        return self._get_value(res[0])
 
 
 class IOPromise(GroupableIOPromise[MN_co, Output_co]):
     def optional(self) -> OptionalIOPromise[MN_co, Output_co | None]:
         return OptionalIOPromise[MN_co, Output_co | None](
-            self._component, self._renderer, self._get_value
+            self._component, self._renderer, self._value_getter
         )
