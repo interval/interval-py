@@ -1,7 +1,6 @@
-import os
 from dataclasses import dataclass
 
-from playwright.async_api import Playwright, Page, expect
+from playwright.async_api import BrowserContext, Page, expect
 
 
 @dataclass
@@ -31,9 +30,7 @@ class Config:
 
         return self.app_url(f"/dashboard/{org_slug}/{path}")
 
-    async def log_in(self, playwright: Playwright):
-        browser = await playwright.chromium.launch(headless=(not os.getenv("HEADED")))
-        context = await browser.new_context()
+    async def log_in(self, context: BrowserContext):
         page = await context.new_page()
 
         print("Logging in...")

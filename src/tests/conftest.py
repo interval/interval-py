@@ -1,10 +1,10 @@
 # pylint: disable=redefined-outer-name
 
-import asyncio
+import asyncio, os.path
 from typing import AsyncIterator
 
 import pytest
-from playwright.async_api import Page, async_playwright
+from playwright.async_api import BrowserType, Page, async_playwright
 
 from interval_sdk import Interval
 
@@ -17,10 +17,28 @@ def config() -> Config:
 
 
 @pytest.fixture(scope="session")
-async def page(config: Config) -> AsyncIterator[Page]:
-    async with async_playwright() as p:
-        page = await config.log_in(p)
+async def page(
+    config: Config,
+    browser_name: str,
+    browser_type_launch_args: dict,
+) -> AsyncIterator[Page]:
+    async with async_playwright() as playwright:
+        # tests_dir = os.path.dirname(os.path.realpath(__file__))
+        browser_context_args: dict = {}
+
+        browser_type: BrowserType = getattr(playwright, browser_name)
+        browser = await browser_type.launch(
+            # tests_dir + "/.session.json",
+            **{
+                **browser_type_launch_args,
+                **browser_context_args,
+            }
+        )
+        context = await browser.new_context()
+
+        page = await config.log_in(context)
         yield page
+        await context.close()
 
 
 @pytest.fixture
