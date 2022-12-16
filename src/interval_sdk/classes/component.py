@@ -6,10 +6,11 @@ from typing import (
     Generic,
     TypeAlias,
     Awaitable,
+    TypeVar,
 )
 
 
-from pydantic import parse_obj_as, ValidationError
+from pydantic import parse_obj_as, ValidationError, BaseModel as PydanticBaseModel
 
 from ..io_schema import (
     MethodDef,
@@ -18,7 +19,7 @@ from ..io_schema import (
     ComponentRenderInfo,
 )
 from ..types import GenericModel
-from ..util import dict_strip_none, dict_keys_to_camel
+from ..util import dict_keys_to_snake, dict_strip_none, dict_keys_to_camel
 
 
 class ComponentInstance(GenericModel, Generic[MN]):
@@ -31,9 +32,15 @@ class ComponentInstance(GenericModel, Generic[MN]):
     is_optional: bool = False
 
 
+StateModel_co = TypeVar("StateModel_co", bound=PydanticBaseModel, covariant=True)
+PropsModel_co = TypeVar("PropsModel_co", bound=PydanticBaseModel, covariant=True)
+
+
 class Component(Generic[MN]):
     # TODO: Try typing this
-    StateChangeHandler: TypeAlias = Callable[[Any], Awaitable[Any]]
+    StateChangeHandler: TypeAlias = Callable[
+        [StateModel_co, PropsModel_co], Awaitable[PydanticBaseModel]
+    ]
 
     _handle_state_change: StateChangeHandler | None = None
     _fut: Future[Any]
@@ -78,19 +85,27 @@ class Component(Generic[MN]):
                     raise ValueError("Received invalid None return value")
                 parsed = None
             else:
-                parsed = parse_obj_as(return_schema, value)
+                parsed = parse_obj_as(return_schema, dict_keys_to_snake(value))
             self._fut.set_result(parsed)
         except ValueError as err:
             print("Received invalid return value:", err, file=sys.stderr)
             self._fut.set_exception(err)
 
     async def set_state(self, value: Any):
-        state_schema = self.schema.state
-
         try:
-            parsed = parse_obj_as(state_schema, value)
+            parsed = parse_obj_as(self.schema.state, dict_keys_to_snake(value))
             if self._handle_state_change:
-                self.instance.props.update(await self._handle_state_change(parsed))
+                self.instance.props = dict_keys_to_camel(
+                    (
+                        await self._handle_state_change(
+                            parsed,
+                            parse_obj_as(
+                                self.schema.props,
+                                dict_keys_to_snake(self.instance.props),
+                            ),
+                        )
+                    ).dict()
+                )
             elif parsed is not None:
                 print(
                     "Received state, but no method was defined to handle.",
@@ -102,7 +117,7 @@ class Component(Generic[MN]):
                 # pylint: disable-next=not-callable
                 await self.on_state_change()
         except ValidationError as err:
-            print("Received invalid state:", err, file=sys.stderr)
+            print("Received invalid state:", value, err, file=sys.stderr)
 
     def set_optional(self, optional: bool):
         self.instance.is_optional = optional

@@ -994,6 +994,21 @@ dotenv = ["python-dotenv (>=0.10.4)"]
 email = ["email-validator (>=1.0.3)"]
 
 [[package]]
+name = "pydantic-partial"
+version = "0.3.3"
+description = "Create partial models from your pydantic models. Partial models may allow None for certain or all fields."
+category = "main"
+optional = false
+python-versions = ">=3.9,<4.0"
+files = [
+    {file = "pydantic-partial-0.3.3.tar.gz", hash = "sha256:716b3e84b9c1ae392a1e9c6e8605e054b5d17f1a39dbe48ea3952d03098bb010"},
+    {file = "pydantic_partial-0.3.3-py3-none-any.whl", hash = "sha256:7b5a685082ccfa38c6c1935ad9cebd3d2a79411aa4876de4b8e485f3c548ff17"},
+]
+
+[package.dependencies]
+pydantic = ">=1.9.0,<2.0.0"
+
+[[package]]
 name = "pyee"
 version = "9.0.4"
 description = "A port of node.js's EventEmitter to python."
@@ -1481,4 +1496,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "b981c61e1dc8f7e6971d8d214e8740bca64553a94031bb94ef7ab4361fe9e4ab"
+content-hash = "78aa61470309924ab4163903a2373d55456e177d2b2e64057cf5f2b8fcb1d567"

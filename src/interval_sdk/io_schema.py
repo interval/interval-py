@@ -21,7 +21,6 @@ from typing_extensions import NotRequired
 
 from pydantic import (
     BaseModel as PydanticBaseModel,
-    Field,
     StrictBool,
     StrictInt,
     StrictFloat,
@@ -442,9 +441,20 @@ class DisplayImageProps(BaseModel):
 
 
 class DisplayTableProps(BaseModel):
+    help_text: Optional[str] = None
     data: list[InternalTableRowModel]
-    help_text: Optional[str]
     columns: list[InternalTableColumnModel]
+    default_page_size: int | None = None
+    total_records: int
+    is_async: bool = False
+
+
+class DisplayTableState(BaseModel):
+    query_term: Optional[str] = None
+    sort_column: Optional[str] = None
+    sort_direction: Optional[Literal["asc", "desc"]] = None
+    offset: int = 0
+    page_size: int
 
 
 class DisplayVideoProps(BaseModel):
@@ -483,7 +493,7 @@ class SearchProps(BaseModel):
 
 
 class SearchState(BaseModel):
-    query_term: str = Field(None, alias="queryTerm")
+    query_term: str
 
 
 input_schema: dict[InputMethodName, MethodDef] = {
@@ -603,7 +613,7 @@ display_schema: dict[DisplayMethodName, MethodDef] = {
     ),
     "DISPLAY_TABLE": MethodDef(
         props=DisplayTableProps,
-        state=None,
+        state=DisplayTableState,
         returns=None,
     ),
     "DISPLAY_VIDEO": MethodDef(

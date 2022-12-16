@@ -16,7 +16,9 @@ from typing import (
 from urllib.parse import ParseResult, urlparse
 
 from ..io_schema import (
+    DisplayTableState,
     InputTextProps,
+    InternalTableRow,
     TableRow,
     InputEmailProps,
     InputNumberProps,
@@ -71,7 +73,13 @@ from .component import (
     Component,
     ComponentRenderer,
 )
-from ..components.table import columns_builder, serialize_table_row
+from ..components.table import (
+    TABLE_DATA_BUFFER_SIZE,
+    columns_builder,
+    filter_rows,
+    serialize_table_row,
+    sort_rows,
+)
 from ..util import KeyValueObject
 
 
@@ -618,12 +626,30 @@ class IO:
             columns: list[TableColumnDef] | None = None,
         ) -> IOPromise[Literal["DISPLAY_TABLE"], None]:
             columns = columns_builder(data=data, columns=columns)
-            serialized = [
-                InternalTableRowModel.parse_obj(
-                    serialize_table_row(key=str(i), row=row, columns=columns)
-                )
+            serialized_rows = [
+                serialize_table_row(key=str(i), row=row, columns=columns)
                 for (i, row) in enumerate(data)
             ]
+
+            async def handle_state_change(
+                state: DisplayTableState,
+                props: DisplayTableProps,
+            ) -> DisplayTableProps:
+                new_sorted: list[InternalTableRow] = sort_rows(
+                    filter_rows(serialized_rows, state.query_term),
+                    state.sort_column,
+                    state.sort_direction,
+                )
+                props.data = [
+                    InternalTableRowModel.parse_obj(row)
+                    for row in new_sorted[
+                        state.offset : state.offset
+                        + min(state.page_size * 3, TABLE_DATA_BUFFER_SIZE)
+                    ]
+                ]
+
+                return props
+
             c = Component(
                 method_name="DISPLAY_TABLE",
                 label=label,
@@ -632,8 +658,13 @@ class IO:
                     columns=[
                         InternalTableColumnModel.parse_obj(col) for col in columns
                     ],
-                    data=serialized,
+                    data=[
+                        InternalTableRowModel.parse_obj(row)
+                        for row in serialized_rows[:TABLE_DATA_BUFFER_SIZE]
+                    ],
+                    total_records=len(serialized_rows),
                 ).dict(),
+                handle_state_change=handle_state_change,
             )
             return IOPromise(c, renderer=self._renderer)
 
@@ -856,14 +887,13 @@ class IO:
             return [render_result_wrapper(r, i) for i, r in enumerate(results)]
 
         async def handle_state_change(
-            state: SearchState,
-        ):
+            state: SearchState, props: SearchProps
+        ) -> SearchProps:
             results = await on_search(state.query_term)
             result_map.append(results)
 
-            return {
-                "results": render_results(results),
-            }
+            props.results = render_results(results)
+            return props
 
         c = Component(
             method_name="SEARCH",

@@ -22,14 +22,23 @@ def camel_to_snake(name: str) -> str:
 
 
 def dict_keys_to_camel(d: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(d, dict):
+        return d
+
     return {snake_to_camel(key): val for (key, val) in d.items()}
 
 
 def dict_keys_to_snake(d: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(d, dict):
+        return d
+
     return {camel_to_snake(key): val for (key, val) in d.items()}
 
 
 def load_snake_pairs(pairs: list[Tuple[str, Any]]) -> dict[str, Any]:
+    if not isinstance(pairs, list):
+        return pairs
+
     return {camel_to_snake(key): val for (key, val) in pairs}
 
 

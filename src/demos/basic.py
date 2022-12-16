@@ -286,6 +286,19 @@ async def table_test(io: IO):
 
 
 @interval.action
+async def big_table(io: IO):
+    data = [
+        {"a": i, "b": 2 * i, "c": 3 * i, "d": [i, i, i], "e": {"i": i}}
+        for i in range(100_000)
+    ]
+
+    await io.display.table(
+        "Table",
+        data=data,
+    )
+
+
+@interval.action
 async def confirm(io: IO):
     confirmed = await io.confirm("Does this work?", help_text="I hope so...")
     return {"confirmed": confirmed}
