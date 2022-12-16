@@ -4,8 +4,8 @@ from typing_extensions import NotRequired
 
 from interval_sdk import Interval, IO
 from interval_sdk.io_schema import (
-    RenderableSearchResult,
     RichSelectOption,
+    RenderableSearchResult,
 )
 
 interval = Interval(
@@ -407,18 +407,18 @@ async def io_search(io: IO):
     async def on_search(query: str):
         return [state for state in states if query.lower() in str(state).lower()]
 
+    def render_result(state: str) -> RenderableSearchResult:
+        return {
+            "label": state,
+            "image": {
+                "url": f"https://geology.com/state-map/maps/{str(state).lower()}-county-map.gif",
+            },
+        }
+
     state = await io.search(
         "Search for state",
         on_search=on_search,
-        render_result=lambda state: cast(
-            RenderableSearchResult,
-            {
-                "label": state,
-                "image": {
-                    "url": f"https://geology.com/state-map/maps/{str(state).lower()}-county-map.gif",
-                },
-            },
-        ),
+        render_result=render_result,
         initial_results=states,
     )
 

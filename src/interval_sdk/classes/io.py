@@ -831,7 +831,7 @@ class IO:
         ],
         render_result: Callable[
             [PassthroughSearchResultValue],
-            PassthroughRenderableSearchResult,
+            RenderableSearchResult,
         ],
         help_text: str | None = None,
         initial_results: Iterable[PassthroughSearchResultValue] | None = None,
