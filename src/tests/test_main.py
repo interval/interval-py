@@ -204,7 +204,7 @@ async def host(
 
         with FileLock(str(lockfile) + ".lock"):
             if not os.path.exists(lockfile):
-                with open(lockfile, "w"):
+                with open(lockfile, "w", encoding="utf-8"):
                     pass
                 event_loop.create_task(interval.listen_async())
 

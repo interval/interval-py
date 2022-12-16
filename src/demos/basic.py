@@ -4,9 +4,8 @@ from typing_extensions import NotRequired
 
 from interval_sdk import Interval, IO
 from interval_sdk.io_schema import (
-    RichSelectOption,
     RenderableSearchResult,
-    SearchResultValue,
+    RichSelectOption,
 )
 
 interval = Interval(
@@ -352,7 +351,7 @@ async def optional_values(io: IO):
 
 @interval.action_with_slug("io.search")
 async def io_search(io: IO):
-    states: list[SearchResultValue] = [
+    states = [
         "Alabama",
         "Alaska",
         "Arizona",
@@ -408,9 +407,10 @@ async def io_search(io: IO):
     async def on_search(query: str):
         return [state for state in states if query.lower() in str(state).lower()]
 
-    # TODO unsure how to avoid annotating with RenderableSearchResult here
-    def render_result(state: SearchResultValue) -> RenderableSearchResult:
-        return cast(
+    state = await io.search(
+        "Search for state",
+        on_search=on_search,
+        render_result=lambda state: cast(
             RenderableSearchResult,
             {
                 "label": state,
@@ -418,17 +418,11 @@ async def io_search(io: IO):
                     "url": f"https://geology.com/state-map/maps/{str(state).lower()}-county-map.gif",
                 },
             },
-        )
-
-    state = await io.search(
-        "Search for state",
-        on_search=on_search,
-        render_result=render_result,
+        ),
         initial_results=states,
     )
 
-    # TODO returning raw state leads to IntervalActionHandler type error
-    return {"selected_state": str(state)}
+    return {"selected_state": state}
 
 
 interval.listen()

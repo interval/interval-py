@@ -9,7 +9,7 @@ from typing import (
 )
 
 
-from pydantic import parse_obj_as, parse_raw_as, ValidationError
+from pydantic import parse_obj_as, ValidationError
 
 from ..io_schema import (
     MethodDef,

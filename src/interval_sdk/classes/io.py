@@ -1,23 +1,20 @@
 import base64
 import sys
 from dataclasses import dataclass
-from collections.abc import Mapping, Iterable
 from datetime import date, datetime, time
 from typing import (
     Iterable,
+    Mapping,
     overload,
     Tuple,
     TypeVar,
     Literal,
     Any,
     cast,
-    Union,
     Callable,
     Awaitable,
 )
 from urllib.parse import ParseResult, urlparse
-
-from pydantic import parse_obj_as
 
 from ..io_schema import (
     InputTextProps,
@@ -62,9 +59,10 @@ from ..io_schema import (
     MethodName,
     SearchProps,
     SearchState,
-    SearchResultValue,
+    PassthroughSearchResultValue,
     RenderableSearchResult,
-    InnerRenderableSearchResult,
+    InnerRenderableSearchResultModel,
+    PassthroughRenderableSearchResult,
 )
 from .io_promise import (
     IOPromise,
@@ -409,11 +407,10 @@ class IO:
                 label=label,
                 initial_props=SelectSingleProps(
                     options=[
-                        parse_obj_as(RichSelectOptionModel, option)
-                        for option in options
+                        RichSelectOptionModel.parse_obj(option) for option in options
                     ],
                     help_text=help_text,
-                    default_value=parse_obj_as(RichSelectOptionModel, default_value)
+                    default_value=RichSelectOptionModel.parse_obj(default_value)
                     if default_value is not None
                     else None,
                     searchable=searchable,
@@ -830,56 +827,52 @@ class IO:
         label: str,
         on_search: Callable[
             [str],
-            Awaitable[list[SearchResultValue]],
+            Awaitable[list[PassthroughSearchResultValue]],
         ],
         render_result: Callable[
-            [SearchResultValue],
-            RenderableSearchResult,
+            [PassthroughSearchResultValue],
+            PassthroughRenderableSearchResult,
         ],
         help_text: str | None = None,
-        initial_results: list[SearchResultValue] | None = None,
-    ) -> IOPromise[
-        Literal["SEARCH"],
-        Union[int, float, bool, str, Mapping[str, int | float | bool | str]],
-    ]:
+        initial_results: Iterable[PassthroughSearchResultValue] | None = None,
+    ) -> IOPromise[Literal["SEARCH"], PassthroughSearchResultValue]:
 
-        result_batch_index = 0
-        result_map = {0: initial_results or []}
+        result_map: list[list[PassthroughSearchResultValue]] = [
+            cast(list[PassthroughSearchResultValue], initial_results or [])
+        ]
 
         def render_result_wrapper(
-            result: SearchResultValue,
+            result: PassthroughSearchResultValue,
             index: int,
-        ) -> InnerRenderableSearchResult:
+        ) -> InnerRenderableSearchResultModel:
             r: RenderableSearchResult = render_result(result)
-            value = f"{result_batch_index}:{index}"
+            value = f"{len(result_map) - 1}:{index}"
 
             if isinstance(r, Mapping):
                 return cast(
-                    InnerRenderableSearchResult,
+                    InnerRenderableSearchResultModel,
                     {
                         **r,
                         "value": value,
                     },
                 )
-            else:
-                return cast(
-                    InnerRenderableSearchResult,
-                    {
-                        "value": value,
-                        "label": str(r),
-                    },
-                )
 
-        def render_results(results: list[SearchResultValue]):
+            return cast(
+                InnerRenderableSearchResultModel,
+                {
+                    "value": value,
+                    "label": str(r),
+                },
+            )
+
+        def render_results(results: list[PassthroughSearchResultValue]):
             return [render_result_wrapper(r, i) for i, r in enumerate(results)]
 
         async def handle_state_change(
             state: SearchState,
         ):
             results = await on_search(state.query_term)
-            nonlocal result_batch_index
-            result_batch_index += +1
-            result_map[result_batch_index] = results
+            result_map.append(results)
 
             return {
                 "results": render_results(results),
@@ -890,17 +883,22 @@ class IO:
             label=label,
             initial_props=SearchProps(
                 help_text=help_text,
-                results=render_results(initial_results or []),
+                results=render_results(
+                    cast(list[PassthroughSearchResultValue], initial_results or [])
+                ),
             ).dict(),
             handle_state_change=handle_state_change,
         )
 
         def get_value(val: Any):
             batch_index, index = val.split(":")
-            batch = result_map[int(batch_index)]
-            if not batch:
-                raise ValueError("BAD_RESPONSE")
 
-            return batch[int(index)]
+            print(val, result_map)
+
+            try:
+                batch = result_map[int(batch_index)]
+                return batch[int(index)]
+            except KeyError as err:
+                raise ValueError("BAD_RESPONSE") from err
 
         return IOPromise(c, renderer=self._renderer, get_value=get_value)

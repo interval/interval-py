@@ -5,8 +5,6 @@ from typing import (
     cast,
     Any,
     Callable,
-    Awaitable,
-    Iterable,
     Optional,
     Literal,
     TypeAlias,
@@ -133,20 +131,36 @@ class KeyValueObjectModel(BaseModel):
     ]
 
 
-class ImageModel(TypedDict):
-    url: Optional[str]
-    alt: Optional[str]
-    size: Optional[ImageSize]
+class ImageSchema(TypedDict):
+    url: NotRequired[str]
+    alt: NotRequired[str]
+    size: NotRequired[ImageSize]
+
+
+class ImageModel(BaseModel):
+    url: Optional[str] = None
+    alt: Optional[str] = None
+    size: Optional[ImageSize] = None
 
 
 class RenderableSearchResult(TypedDict):
     label: ObjectLiteral
-    # TODO add these too, currently hitting runtime pydantic errors
-    # description: Optional[str]
-    # image: Optional[ImageModel]
+    description: NotRequired[str]
+    image: NotRequired[ImageSchema]
 
 
-class InnerRenderableSearchResult(RenderableSearchResult):
+class RenderableSearchResultModel(BaseModel):
+    label: ObjectLiteral
+    description: Optional[str] = None
+    image: Optional[ImageModel] = None
+
+
+PassthroughRenderableSearchResult = TypeVar(
+    "PassthroughRenderableSearchResult", bound=RenderableSearchResult
+)
+
+
+class InnerRenderableSearchResultModel(RenderableSearchResultModel):
     value: str
 
 
@@ -210,9 +224,13 @@ TableRowValuePrimitive = (
     StrictInt | StrictFloat | StrictBool | date | datetime | None | str | Any
 )
 
-SearchResultValuePrimitive = int | float | bool | str
+SearchResultValuePrimitive = StrictInt | StrictFloat | StrictBool | str
 
 SearchResultValue = SearchResultValuePrimitive | dict[str, SearchResultValuePrimitive]
+
+PassthroughSearchResultValue = TypeVar(
+    "PassthroughSearchResultValue", bound=SearchResultValue
+)
 
 
 class TableRowValueObject(TypedDict):
@@ -461,7 +479,7 @@ class DisplayProgressThroughListProps(BaseModel):
 
 class SearchProps(BaseModel):
     help_text: Optional[str]
-    results: list[InnerRenderableSearchResult]
+    results: list[InnerRenderableSearchResultModel]
 
 
 class SearchState(BaseModel):
