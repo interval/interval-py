@@ -10,7 +10,6 @@ from typing import (
     TypeVar,
     Literal,
     Any,
-    cast,
     Callable,
     Awaitable,
 )
@@ -62,7 +61,6 @@ from ..io_schema import (
     PassthroughSearchResultValue,
     RenderableSearchResult,
     InnerRenderableSearchResultModel,
-    PassthroughRenderableSearchResult,
 )
 from .io_promise import (
     IOPromise,
@@ -342,9 +340,7 @@ class IO:
             min_selections: int | None = None,
             max_selections: int | None = None,
         ) -> IOPromise[Literal["SELECT_TABLE"], list[TR]]:
-            columns = cast(
-                list[TableColumnDef], columns_builder(data=data, columns=columns)
-            )
+            columns = columns_builder(data=data, columns=columns)
             serialized = [
                 InternalTableRowModel.parse_obj(
                     serialize_table_row(key=str(i), row=row, columns=columns)
@@ -621,9 +617,7 @@ class IO:
             help_text: str | None = None,
             columns: list[TableColumnDef] | None = None,
         ) -> IOPromise[Literal["DISPLAY_TABLE"], None]:
-            columns = cast(
-                list[TableColumnDef], columns_builder(data=data, columns=columns)
-            )
+            columns = columns_builder(data=data, columns=columns)
             serialized = [
                 InternalTableRowModel.parse_obj(
                     serialize_table_row(key=str(i), row=row, columns=columns)
@@ -836,10 +830,10 @@ class IO:
         help_text: str | None = None,
         initial_results: Iterable[PassthroughSearchResultValue] | None = None,
     ) -> IOPromise[Literal["SEARCH"], PassthroughSearchResultValue]:
+        if initial_results is None:
+            initial_results = []
 
-        result_map: list[list[PassthroughSearchResultValue]] = [
-            cast(list[PassthroughSearchResultValue], initial_results or [])
-        ]
+        result_map: list[list[PassthroughSearchResultValue]] = [list(initial_results)]
 
         def render_result_wrapper(
             result: PassthroughSearchResultValue,
@@ -849,23 +843,16 @@ class IO:
             value = f"{len(result_map) - 1}:{index}"
 
             if isinstance(r, Mapping):
-                return cast(
-                    InnerRenderableSearchResultModel,
+                return InnerRenderableSearchResultModel.parse_obj(
                     {
                         **r,
                         "value": value,
-                    },
+                    }
                 )
 
-            return cast(
-                InnerRenderableSearchResultModel,
-                {
-                    "value": value,
-                    "label": str(r),
-                },
-            )
+            return InnerRenderableSearchResultModel(value=value, label=str(r))
 
-        def render_results(results: list[PassthroughSearchResultValue]):
+        def render_results(results: Iterable[PassthroughSearchResultValue]):
             return [render_result_wrapper(r, i) for i, r in enumerate(results)]
 
         async def handle_state_change(
@@ -883,9 +870,7 @@ class IO:
             label=label,
             initial_props=SearchProps(
                 help_text=help_text,
-                results=render_results(
-                    cast(list[PassthroughSearchResultValue], initial_results or [])
-                ),
+                results=render_results(initial_results),
             ).dict(),
             handle_state_change=handle_state_change,
         )
