@@ -877,8 +877,9 @@ class IO:
             state: SearchState,
         ):
             results = await on_search(state.query_term)
-            rest_batch_index = result_batch_index + 1
-            result_map[rest_batch_index] = results
+            nonlocal result_batch_index
+            result_batch_index += +1
+            result_map[result_batch_index] = results
 
             return {
                 "results": render_results(results),
