@@ -3,7 +3,11 @@ from typing import cast
 from typing_extensions import NotRequired
 
 from interval_sdk import Interval, IO
-from interval_sdk.io_schema import RichSelectOption
+from interval_sdk.io_schema import (
+    RichSelectOption,
+    RenderableSearchResult,
+    SearchResultValue,
+)
 
 interval = Interval(
     "alex_dev_kcLjzxNFxmGLf0aKtLVhuckt6sziQJtxFOdtM19tBrMUp5mj",
@@ -344,6 +348,87 @@ async def optional_values(io: IO):
         "Date": d if d is not None else "No date selected",
         "Favorite color": color["label"] if color is not None else "Unknown",
     }
+
+
+@interval.action_with_slug("io.search")
+async def io_search(io: IO):
+    states: list[SearchResultValue] = [
+        "Alabama",
+        "Alaska",
+        "Arizona",
+        "Arkansas",
+        "California",
+        "Colorado",
+        "Connecticut",
+        "Delaware",
+        "Florida",
+        "Georgia",
+        "Hawaii",
+        "Idaho",
+        "Illinois",
+        "Indiana",
+        "Iowa",
+        "Kansas",
+        "Kentucky",
+        "Louisiana",
+        "Maine",
+        "Maryland",
+        "Massachusetts",
+        "Michigan",
+        "Minnesota",
+        "Mississippi",
+        "Missouri",
+        "Montana",
+        "Nebraska",
+        "Nevada",
+        "New Hampshire",
+        "New Jersey",
+        "New Mexico",
+        "New York",
+        "North Carolina",
+        "North Dakota",
+        "Ohio",
+        "Oklahoma",
+        "Oregon",
+        "Pennsylvania",
+        "Rhode Island",
+        "South Carolina",
+        "South Dakota",
+        "Tennessee",
+        "Texas",
+        "Utah",
+        "Vermont",
+        "Virginia",
+        "Washington",
+        "West Virginia",
+        "Wisconsin",
+        "Wyoming",
+    ]
+
+    async def on_search(query: str):
+        return [state for state in states if query.lower() in str(state).lower()]
+
+    # TODO unsure how to avoid annotating with RenderableSearchResult here
+    def render_result(state: SearchResultValue) -> RenderableSearchResult:
+        return cast(
+            RenderableSearchResult,
+            {
+                "label": state,
+                "image": {
+                    "url": f"https://geology.com/state-map/maps/{str(state).lower()}-county-map.gif",
+                },
+            },
+        )
+
+    state = await io.search(
+        "Search for state",
+        on_search=on_search,
+        render_result=render_result,
+        initial_results=states,
+    )
+
+    # TODO returning raw state leads to IntervalActionHandler type error
+    return {"selected_state": str(state)}
 
 
 interval.listen()

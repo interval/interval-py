@@ -1,8 +1,20 @@
 import base64
 import sys
 from dataclasses import dataclass
+from collections.abc import Mapping, Iterable
 from datetime import date, datetime, time
-from typing import Iterable, overload, Tuple, TypeVar, Literal, Any, cast
+from typing import (
+    Iterable,
+    overload,
+    Tuple,
+    TypeVar,
+    Literal,
+    Any,
+    cast,
+    Union,
+    Callable,
+    Awaitable,
+)
 from urllib.parse import ParseResult, urlparse
 
 from pydantic import parse_obj_as
@@ -48,6 +60,11 @@ from ..io_schema import (
     InputSpreadsheetProps,
     ConfirmProps,
     MethodName,
+    SearchProps,
+    SearchState,
+    SearchResultValue,
+    RenderableSearchResult,
+    InnerRenderableSearchResult,
 )
 from .io_promise import (
     IOPromise,
@@ -807,3 +824,82 @@ class IO:
     async def group(self, *io_promises: GroupableIOPromise[MethodName, Any]):  # type: ignore
         raw_values = await self._renderer([p._component for p in io_promises])
         return [io_promises[i]._get_value(val) for (i, val) in enumerate(raw_values)]
+
+    def search(
+        self,
+        label: str,
+        on_search: Callable[
+            [str],
+            Awaitable[list[SearchResultValue]],
+        ],
+        render_result: Callable[
+            [SearchResultValue],
+            RenderableSearchResult,
+        ],
+        help_text: str | None = None,
+        initial_results: list[SearchResultValue] | None = None,
+    ) -> IOPromise[
+        Literal["SEARCH"],
+        Union[int, float, bool, str, Mapping[str, int | float | bool | str]],
+    ]:
+
+        result_batch_index = 0
+        result_map = {0: initial_results or []}
+
+        def render_result_wrapper(
+            result: SearchResultValue,
+            index: int,
+        ) -> InnerRenderableSearchResult:
+            r: RenderableSearchResult = render_result(result)
+            value = f"{result_batch_index}:{index}"
+
+            if isinstance(r, Mapping):
+                return cast(
+                    InnerRenderableSearchResult,
+                    {
+                        **r,
+                        "value": value,
+                    },
+                )
+            else:
+                return cast(
+                    InnerRenderableSearchResult,
+                    {
+                        "value": value,
+                        "label": str(r),
+                    },
+                )
+
+        def render_results(results: list[SearchResultValue]):
+            return [render_result_wrapper(r, i) for i, r in enumerate(results)]
+
+        async def handle_state_change(
+            state: SearchState,
+        ):
+            results = await on_search(state.query_term)
+            rest_batch_index = result_batch_index + 1
+            result_map[rest_batch_index] = results
+
+            return {
+                "results": render_results(results),
+            }
+
+        c = Component(
+            method_name="SEARCH",
+            label=label,
+            initial_props=SearchProps(
+                help_text=help_text,
+                results=render_results(initial_results or []),
+            ).dict(),
+            handle_state_change=handle_state_change,
+        )
+
+        def get_value(val: Any):
+            batch_index, index = val.split(":")
+            batch = result_map[int(batch_index)]
+            if not batch:
+                raise ValueError("BAD_RESPONSE")
+
+            return batch[int(index)]
+
+        return IOPromise(c, renderer=self._renderer, get_value=get_value)

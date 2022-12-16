@@ -88,7 +88,7 @@ class Component(Generic[MN]):
         state_schema = self.schema.state
 
         try:
-            parsed = parse_raw_as(state_schema, value)
+            parsed = parse_obj_as(state_schema, value)
             if self._handle_state_change:
                 self.instance.props.update(await self._handle_state_change(parsed))
             elif parsed is not None:

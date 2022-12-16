@@ -5,6 +5,8 @@ from typing import (
     cast,
     Any,
     Callable,
+    Awaitable,
+    Iterable,
     Optional,
     Literal,
     TypeAlias,
@@ -19,7 +21,13 @@ from uuid import UUID
 import io, json, sys
 from typing_extensions import NotRequired
 
-from pydantic import BaseModel as PydanticBaseModel, StrictBool, StrictInt, StrictFloat
+from pydantic import (
+    BaseModel as PydanticBaseModel,
+    Field,
+    StrictBool,
+    StrictInt,
+    StrictFloat,
+)
 from pydantic.fields import ModelField
 
 
@@ -55,6 +63,7 @@ InputMethodName = Literal[
     "SELECT_TABLE",
     "SELECT_SINGLE",
     "SELECT_MULTIPLE",
+    "SEARCH",
 ]
 
 DisplayMethodName = Literal[
@@ -124,6 +133,23 @@ class KeyValueObjectModel(BaseModel):
     ]
 
 
+class ImageModel(TypedDict):
+    url: Optional[str]
+    alt: Optional[str]
+    size: Optional[ImageSize]
+
+
+class RenderableSearchResult(TypedDict):
+    label: ObjectLiteral
+    # TODO add these too, currently hitting runtime pydantic errors
+    # description: Optional[str]
+    # image: Optional[ImageModel]
+
+
+class InnerRenderableSearchResult(RenderableSearchResult):
+    value: str
+
+
 KeyValueObjectModel.update_forward_refs()
 
 
@@ -183,6 +209,10 @@ class ActionResult(BaseModel):
 TableRowValuePrimitive = (
     StrictInt | StrictFloat | StrictBool | date | datetime | None | str | Any
 )
+
+SearchResultValuePrimitive = int | float | bool | str
+
+SearchResultValue = SearchResultValuePrimitive | dict[str, SearchResultValuePrimitive]
 
 
 class TableRowValueObject(TypedDict):
@@ -429,6 +459,15 @@ class DisplayProgressThroughListProps(BaseModel):
     items: list[DisplayProgressthroughListItem]
 
 
+class SearchProps(BaseModel):
+    help_text: Optional[str]
+    results: list[InnerRenderableSearchResult]
+
+
+class SearchState(BaseModel):
+    query_term: str = Field(None, alias="queryTerm")
+
+
 input_schema: dict[InputMethodName, MethodDef] = {
     "INPUT_TEXT": MethodDef(
         props=InputTextProps,
@@ -500,6 +539,11 @@ input_schema: dict[InputMethodName, MethodDef] = {
         props=SelectMultipleProps,
         state=None,
         returns=list[LabelValueModel],
+    ),
+    "SEARCH": MethodDef(
+        props=SearchProps,
+        state=SearchState,
+        returns=SearchResultValue,
     ),
 }
 
