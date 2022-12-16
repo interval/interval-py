@@ -19,6 +19,8 @@ from ..io_schema import (
     DisplayTableState,
     InputTextProps,
     InternalTableRow,
+    SelectTableReturnModel,
+    SelectTableState,
     TableRow,
     InputEmailProps,
     InputNumberProps,
@@ -349,12 +351,38 @@ class IO:
             max_selections: int | None = None,
         ) -> IOPromise[Literal["SELECT_TABLE"], list[TR]]:
             columns = columns_builder(data=data, columns=columns)
-            serialized = [
-                InternalTableRowModel.parse_obj(
-                    serialize_table_row(key=str(i), row=row, columns=columns)
-                )
+            serialized_rows = [
+                serialize_table_row(key=str(i), row=row, columns=columns)
                 for (i, row) in enumerate(data)
             ]
+
+            async def handle_state_change(
+                state: SelectTableState,
+                props: SelectTableProps,
+            ) -> SelectTableProps:
+                new_sorted: list[InternalTableRow] = sort_rows(
+                    filter_rows(serialized_rows, state.query_term),
+                    state.sort_column,
+                    state.sort_direction,
+                )
+
+                selected_keys = []
+
+                if state.is_select_all:
+                    selected_keys = [row["key"] for row in new_sorted]
+
+                props.data = [
+                    InternalTableRowModel.parse_obj(row)
+                    for row in new_sorted[
+                        state.offset : state.offset
+                        + min(state.page_size * 3, TABLE_DATA_BUFFER_SIZE)
+                    ]
+                ]
+                props.selected_keys = selected_keys
+                props.total_records = len(new_sorted)
+
+                return props
+
             c = Component(
                 method_name="SELECT_TABLE",
                 label=label,
@@ -363,13 +391,18 @@ class IO:
                     columns=[
                         InternalTableColumnModel.parse_obj(col) for col in columns
                     ],
-                    data=serialized,
+                    data=[
+                        InternalTableRowModel.parse_obj(row)
+                        for row in serialized_rows[:TABLE_DATA_BUFFER_SIZE]
+                    ],
                     min_selections=min_selections,
                     max_selections=max_selections,
+                    total_records=len(serialized_rows),
                 ).dict(),
+                handle_state_change=handle_state_change,
             )
 
-            def get_value(val: Any) -> list[TR]:
+            def get_value(val: list[SelectTableReturnModel]) -> list[TR]:
                 indices = [int(row.key) for row in val]
                 rows = [row for (i, row) in enumerate(data) if i in indices]
                 return rows

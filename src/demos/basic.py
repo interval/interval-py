@@ -299,6 +299,23 @@ async def big_table(io: IO):
 
 
 @interval.action
+async def big_select_table(io: IO):
+    data = [
+        {"a": i, "b": 2 * i, "c": 3 * i, "d": [i, i, i], "e": {"i": i}}
+        for i in range(100_000)
+    ]
+
+    selected = await io.select.table(
+        "Table",
+        data=data,
+    )
+
+    print(selected)
+
+    return {row["a"]: True for row in selected}
+
+
+@interval.action
 async def confirm(io: IO):
     confirmed = await io.confirm("Does this work?", help_text="I hope so...")
     return {"confirmed": confirmed}

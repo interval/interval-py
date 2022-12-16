@@ -267,6 +267,10 @@ class InternalTableRowModel(BaseModel):
     data: dict[str, TableRowValueModel | None]
 
 
+class SelectTableReturnModel(BaseModel):
+    key: str
+
+
 class TableColumnDef(TypedDict):
     label: str
     renderCell: NotRequired[Callable[[Any], TableRowValue]]
@@ -382,6 +386,8 @@ class SelectTableProps(BaseModel):
     columns: list[InternalTableColumnModel]
     min_selections: Optional[int]
     max_selections: Optional[int]
+    total_records: int
+    selected_keys: list[str] | None = None
 
 
 class SelectSingleProps(BaseModel):
@@ -455,6 +461,15 @@ class DisplayTableState(BaseModel):
     sort_direction: Optional[Literal["asc", "desc"]] = None
     offset: int = 0
     page_size: int
+
+
+class SelectTableState(BaseModel):
+    query_term: Optional[str] = None
+    sort_column: Optional[str] = None
+    sort_direction: Optional[Literal["asc", "desc"]] = None
+    offset: int = 0
+    page_size: int
+    is_select_all: bool = False
 
 
 class DisplayVideoProps(BaseModel):
@@ -555,8 +570,8 @@ input_schema: dict[InputMethodName, MethodDef] = {
     ),
     "SELECT_TABLE": MethodDef(
         props=SelectTableProps,
-        state=None,
-        returns=list[InternalTableRowModel],
+        state=SelectTableState,
+        returns=list[SelectTableReturnModel],
     ),
     "SELECT_SINGLE": MethodDef(
         props=SelectSingleProps,
