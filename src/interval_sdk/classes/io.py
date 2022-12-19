@@ -189,7 +189,7 @@ class IO:
                 ).dict(),
             )
 
-            def get_value(val: Any):
+            def get_value(val: float):
                 if decimals is None:
                     return int(val)
 
@@ -271,10 +271,8 @@ class IO:
                 ).dict(),
             )
 
-            def get_value(val: Any) -> date:
-                obj: DateModel = val
-
-                return date(obj.year, obj.month, obj.day)
+            def get_value(val: DateModel) -> date:
+                return date(val.year, val.month, val.day)
 
             return IOPromise(c, renderer=self._renderer, get_value=get_value)
 
@@ -299,10 +297,8 @@ class IO:
                 ).dict(),
             )
 
-            def get_value(val: Any) -> time:
-                obj: TimeModel = val
-
-                return time(obj.hour, obj.minute)
+            def get_value(val: TimeModel) -> time:
+                return time(val.hour, val.minute)
 
             return IOPromise(c, renderer=self._renderer, get_value=get_value)
 
@@ -330,10 +326,8 @@ class IO:
                 ).dict(),
             )
 
-            def get_value(val: Any) -> datetime:
-                obj: DateTimeModel = val
-
-                return datetime(obj.year, obj.month, obj.day, obj.hour, obj.minute)
+            def get_value(val: DateTimeModel) -> datetime:
+                return datetime(val.year, val.month, val.day, val.hour, val.minute)
 
             return IOPromise(c, renderer=self._renderer, get_value=get_value)
 
@@ -938,10 +932,8 @@ class IO:
             handle_state_change=handle_state_change,
         )
 
-        def get_value(val: Any):
+        def get_value(val: str):
             batch_index, index = val.split(":")
-
-            print(val, result_map)
 
             try:
                 batch = result_map[int(batch_index)]
