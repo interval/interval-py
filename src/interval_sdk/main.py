@@ -70,7 +70,9 @@ class IntervalError(Exception):
     pass
 
 
-sdk_name = "interval-py"
+# Intentionally different from the pypi package name,
+# `-py` suffix is superfluous there but important to us.
+SDK_NAME = "interval-py"
 sdk_version = "???"
 
 try:
@@ -426,7 +428,7 @@ class Interval:
                 InitializeHostInputs(
                     api_key=self._api_key,
                     callable_action_names=slugs,
-                    sdk_name=sdk_name,
+                    sdk_name=SDK_NAME,
                     sdk_version=sdk_version,
                 ),
             )
