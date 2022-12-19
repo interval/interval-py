@@ -137,4 +137,9 @@ class Component(Generic[MN]):
         )
 
 
-ComponentRenderer: TypeAlias = Callable[[list[Component]], Awaitable[list[Any]]]
+Output_co = TypeVar("Output_co", covariant=True)
+
+IOPromiseValidator: TypeAlias = Callable[[Output_co], Awaitable[str | None]]
+ComponentRenderer: TypeAlias = Callable[
+    [list[Component], IOPromiseValidator | None], Awaitable[list[Any]]
+]

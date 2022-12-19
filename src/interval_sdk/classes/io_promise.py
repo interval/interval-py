@@ -8,10 +8,8 @@ from typing import (
 )
 from typing_extensions import override
 
-from .component import Component, ComponentRenderer
+from .component import Component, ComponentRenderer, Output_co, IOPromiseValidator
 from ..io_schema import MethodName
-
-Output_co = TypeVar("Output_co", covariant=True)
 
 MN_co = TypeVar("MN_co", bound=MethodName, covariant=True)
 
@@ -20,6 +18,7 @@ class BaseIOPromise(Generic[MN_co, Output_co]):
     _component: Component
     _renderer: ComponentRenderer
     _value_getter: Callable[[Any], Output_co] | None = None
+    _validator: IOPromiseValidator[Output_co]
 
     def __init__(
         self,
@@ -32,7 +31,7 @@ class BaseIOPromise(Generic[MN_co, Output_co]):
         self._value_getter = get_value
 
     def __await__(self) -> Generator[Any, None, Output_co]:
-        res = yield from self._renderer([self._component]).__await__()
+        res = yield from self._renderer([self._component], self._validator).__await__()
         return self._get_value(res[0])
 
     def _get_value(self, val: Any) -> Output_co:
@@ -62,7 +61,7 @@ class OptionalIOPromise(GroupableIOPromise[MN_co, Output_co]):
 
     @override
     def __await__(self) -> Generator[Any, None, Output_co | None]:
-        res = yield from self._renderer([self._component]).__await__()
+        res = yield from self._renderer([self._component], self._validator).__await__()
         return self._get_value(res[0])
 
     def _get_value(self, val: Any) -> Output_co | None:
@@ -79,9 +78,13 @@ class IOPromise(GroupableIOPromise[MN_co, Output_co]):
         )
 
 
+IOGroupPromiseSelf = TypeVar("IOGroupPromiseSelf", bound="IOGroupPromise")
+
+
 class IOGroupPromise(Generic[Output_co]):
     _io_promises: tuple[GroupableIOPromise[MethodName, Any], ...]
     _renderer: ComponentRenderer
+    _validator: IOPromiseValidator[Output_co] | None = None
 
     def __init__(
         self,
@@ -93,9 +96,25 @@ class IOGroupPromise(Generic[Output_co]):
 
     def __await__(self) -> Generator[Any, None, Output_co]:
         res = yield from self._renderer(
-            [p._component for p in self._io_promises]
+            [p._component for p in self._io_promises], self._validator
         ).__await__()
         return cast(
             Output_co,
             [self._io_promises[i]._get_value(val) for (i, val) in enumerate(res)],
         )
+
+    def validate(
+        self: IOGroupPromiseSelf, validator: IOPromiseValidator[Output_co] | None
+    ) -> IOGroupPromiseSelf:
+        self._validator = validator
+        return self
+
+    async def _handle_validation(self, return_values: list[Any]) -> str | None:
+        if self._validator is None:
+            return None
+
+        io_promises = self._io_promises
+        values = [
+            io_promises[index]._get_value(v) for index, v in enumerate(return_values)
+        ]
+        return await self._validator(cast(Output_co, values))

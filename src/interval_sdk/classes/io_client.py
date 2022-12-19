@@ -3,7 +3,7 @@ from typing import cast, Awaitable, TypeAlias, Callable, TypeVar, Any
 from uuid import uuid4
 
 from ..io_schema import MethodName, IORender, IOResponse
-from .component import Component
+from .component import Component, IOPromiseValidator
 from .io_error import IOError
 from .io import IO
 from .logger import Logger
@@ -38,11 +38,18 @@ class IOClient:
                 self._logger.error("Error in on_response_handler:", err)
                 self._logger.print_exception(err)
 
-    async def render_components(self, components: list[Component]) -> list[Any]:
+    async def render_components(
+        self,
+        components: list[Component],
+        group_validator: IOPromiseValidator | None = None,
+    ) -> list[Any]:
         if self._is_canceled:
             raise IOError("TRANSACTION_CLOSED")
 
+        validation_error_message: str | None = None
+
         input_group_key = uuid4()
+        is_returned = False
 
         async def render():
             packed = IORender(
@@ -50,6 +57,7 @@ class IOClient:
                 input_group_key=input_group_key,
                 to_render=[inst.render_info for inst in components],
                 kind="RENDER",
+                validation_error_message=validation_error_message,
             )
 
             await self._send(packed)
@@ -58,6 +66,15 @@ class IOClient:
         fut = loop.create_future()
 
         async def on_response_handler(response: IOResponse):
+            nonlocal validation_error_message, is_returned
+            if response.input_group_key != str(input_group_key):
+                self._logger.debug("Received response for other input group")
+                return
+
+            if self._is_canceled or is_returned:
+                self._logger.debug("Received response after IO call complete")
+                return
+
             if response.kind == "CANCELED":
                 self._is_canceled = True
                 fut.set_exception(IOError("CANCELED"))
@@ -67,6 +84,17 @@ class IOClient:
                 raise Exception("Mismatch in return array length")
 
             if response.kind == "RETURN":
+                validation_error_message = None
+
+                if group_validator is not None:
+                    validation_error_message = await group_validator(response.values)
+
+                    if validation_error_message is not None:
+                        asyncio.create_task(render())
+                        return
+
+                is_returned = True
+
                 for i, value in enumerate(response.values):
                     components[i].set_return_value(value)
                 return

@@ -687,11 +687,14 @@ def json_dumps_io_render(io_render: dict[str, Any], *args, **kwargs) -> str:
     for key, val in io_render.items():
         if key == "to_render":
             obj[snake_to_camel(key)] = [dict_keys_to_camel(info) for info in val]
+        elif key == "validation_error_message" and val is None:
+            pass
         else:
             obj[snake_to_camel(key)] = val
 
     # FIXME: Remove this
     print(obj, file=sys.stderr)
+
     return json.dumps(obj, *args, **kwargs)
 
 
@@ -700,6 +703,7 @@ class IORender(BaseModel):
     input_group_key: UUID
     to_render: list[ComponentRenderInfo]
     kind: Literal["RENDER"]
+    validation_error_message: str | None = None
 
     class Config:
         json_dumps = json_dumps_io_render
@@ -707,13 +711,14 @@ class IORender(BaseModel):
 
 class IOResponse(PydanticBaseModel):
     id: UUID
+    input_group_key: str | None = None
     transaction_id: str
     kind: Literal["RETURN", "SET_STATE"]
     values: list[Any]
 
     class Config:
-        json_loads = json_loads_some_snake("transaction_id")
-        json_dumps = json_dumps_some_snake("transaction_id")
+        json_loads = json_loads_some_snake("transaction_id", "input_group_key")
+        json_dumps = json_dumps_some_snake("transaction_id", "input_group_key")
 
 
 def dump_method(method_name: MethodName) -> str:

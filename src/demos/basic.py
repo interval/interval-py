@@ -1,3 +1,4 @@
+import asyncio
 from datetime import date, datetime
 from typing import cast
 from typing_extensions import NotRequired
@@ -453,6 +454,22 @@ async def io_search(io: IO):
     )
 
     return {"selected_state": state}
+
+
+@interval.action
+async def validity_tester(io: IO):
+    async def validate(responses: tuple[str, str, int | None, bool]):
+        [_, _, age, include_drink_tickets] = responses
+        await asyncio.sleep(0.1)
+        if (age is None or age < 21) and include_drink_tickets:
+            return "Attendees must be 21 years or older to receive drink tickets."
+
+    await io.group(
+        io.input.text("Name"),
+        io.input.email("Email"),
+        io.input.number("Age").optional(),
+        io.input.boolean("Include drink tickets?"),
+    ).validate(validate)
 
 
 interval.listen()
