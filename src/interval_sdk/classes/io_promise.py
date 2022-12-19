@@ -63,9 +63,13 @@ class OptionalIOPromise(GroupableIOPromise[MN_co, Output_co]):
     @override
     def __await__(self) -> Generator[Any, None, Output_co | None]:
         res = yield from self._renderer([self._component]).__await__()
-        if res[0] is None:
-            return None
         return self._get_value(res[0])
+
+    def _get_value(self, val: Any) -> Output_co | None:
+        if val is None:
+            return None
+
+        return super()._get_value(val)
 
 
 class IOPromise(GroupableIOPromise[MN_co, Output_co]):
