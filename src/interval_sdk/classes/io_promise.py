@@ -4,6 +4,7 @@ from typing import (
     Callable,
     Any,
     Generator,
+    cast,
 )
 from typing_extensions import override
 
@@ -71,4 +72,26 @@ class IOPromise(GroupableIOPromise[MN_co, Output_co]):
     def optional(self) -> OptionalIOPromise[MN_co, Output_co | None]:
         return OptionalIOPromise[MN_co, Output_co | None](
             self._component, self._renderer, self._value_getter
+        )
+
+
+class IOGroupPromise(Generic[Output_co]):
+    _io_promises: tuple[GroupableIOPromise[MethodName, Any], ...]
+    _renderer: ComponentRenderer
+
+    def __init__(
+        self,
+        io_promises: tuple[GroupableIOPromise[MethodName, Any], ...],
+        renderer: ComponentRenderer,
+    ):
+        self._io_promises = io_promises
+        self._renderer = renderer
+
+    def __await__(self) -> Generator[Any, None, Output_co]:
+        res = yield from self._renderer(
+            [p._component for p in self._io_promises]
+        ).__await__()
+        return cast(
+            Output_co,
+            [self._io_promises[i]._get_value(val) for (i, val) in enumerate(res)],
         )
