@@ -35,6 +35,9 @@ from .types import (
 )
 from .util import (
     ObjectLiteral,
+    dict_strip_none,
+    json_dumps_snake_strip_none,
+    json_loads_snake_strip_none,
     snake_to_camel,
     dict_keys_to_camel,
     json_dumps_some_snake,
@@ -93,10 +96,11 @@ class ComponentRenderInfo(GenericModel, Generic[MN]):
     props: Any
     is_stateful: bool
     is_optional: bool
+    validation_error_message: str | None = None
 
     class Config:
-        json_loads = json_loads_some_snake("method_name", "is_stateful", "is_optional")
-        json_dumps = json_dumps_some_snake("method_name", "is_stateful", "is_optional")
+        json_loads = json_loads_snake_strip_none
+        json_dumps = json_dumps_snake_strip_none
 
 
 TypeValue = Literal[
@@ -746,7 +750,9 @@ def json_dumps_io_render(io_render: dict[str, Any], *args, **kwargs) -> str:
     obj = {}
     for key, val in io_render.items():
         if key == "to_render":
-            obj[snake_to_camel(key)] = [dict_keys_to_camel(info) for info in val]
+            obj[snake_to_camel(key)] = [
+                dict_keys_to_camel(dict_strip_none(info)) for info in val
+            ]
         elif key == "validation_error_message" and val is None:
             pass
         else:

@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 from typing import cast, Awaitable, TypeAlias, Callable, TypeVar, Any
 from uuid import uuid4
 
@@ -84,10 +85,33 @@ class IOClient:
                 raise Exception("Mismatch in return array length")
 
             if response.kind == "RETURN":
+
+                async def check_invalidity(index: int, value: Any) -> bool:
+                    """Returns True if invalid, False if valid"""
+                    component = components[index]
+                    if component.validator is not None:
+                        resp = await component.handle_validation(value)
+                        return resp is not None
+                    return False
+
+                invalidities: list[bool] = await asyncio.gather(
+                    *(
+                        check_invalidity(i, value)
+                        for i, value in enumerate(response.values)
+                    )
+                )
+
                 validation_error_message = None
 
+                if any(invalidities):
+                    asyncio.create_task(render())
+                    return
+
                 if group_validator is not None:
-                    validation_error_message = await group_validator(response.values)
+                    resp = group_validator(response.values)
+                    validation_error_message = cast(
+                        str | None, await resp if inspect.isawaitable(resp) else resp
+                    )
 
                     if validation_error_message is not None:
                         asyncio.create_task(render())

@@ -1,4 +1,5 @@
 import asyncio, sys
+import inspect
 from asyncio.futures import Future
 from typing import (
     Any,
@@ -7,6 +8,7 @@ from typing import (
     TypeAlias,
     Awaitable,
     TypeVar,
+    cast,
 )
 
 
@@ -21,6 +23,12 @@ from ..io_schema import (
 from ..types import GenericModel
 from ..util import dict_keys_to_snake, dict_strip_none, dict_keys_to_camel
 
+Output_co = TypeVar("Output_co", covariant=True)
+
+IOPromiseValidator: TypeAlias = Callable[
+    [Output_co], Awaitable[str | None] | str | None
+]
+
 
 class ComponentInstance(GenericModel, Generic[MN]):
     method_name: MN
@@ -30,6 +38,7 @@ class ComponentInstance(GenericModel, Generic[MN]):
     state: dict[str, Any] | None = None
     is_stateful: bool = False
     is_optional: bool = False
+    validation_error_message: str | None = None
 
 
 StateModel_co = TypeVar("StateModel_co", bound=PydanticBaseModel, covariant=True)
@@ -48,6 +57,7 @@ class Component(Generic[MN]):
     schema: MethodDef
     instance: ComponentInstance
     on_state_change: Callable[[], Awaitable[None]] | None = None
+    validator: IOPromiseValidator | None = None
 
     def __init__(
         self,
@@ -56,6 +66,7 @@ class Component(Generic[MN]):
         initial_props: dict[str, Any] | None,
         handle_state_change: StateChangeHandler | None = None,
         is_optional: bool = False,
+        validator: IOPromiseValidator | None = None,
     ):
         if initial_props is None:
             initial_props = {}
@@ -70,9 +81,19 @@ class Component(Generic[MN]):
             is_optional=is_optional,
         )
         self._handle_state_change = handle_state_change
+        self.validator = validator
 
         loop = asyncio.get_running_loop()
         self._fut = loop.create_future()
+
+    async def handle_validation(self, return_value: Any) -> str | None:
+        if self.validator is not None:
+            resp = self.validator(return_value)
+            message = cast(
+                str | None, await resp if inspect.isawaitable(resp) else resp
+            )
+            self.instance.validation_error_message = message
+            return message
 
     def set_return_value(self, value: Any):
         return_schema = self.schema.returns
@@ -134,12 +155,10 @@ class Component(Generic[MN]):
             props=dict_keys_to_camel(self.instance.props),
             is_stateful=self.instance.is_stateful,
             is_optional=self.instance.is_optional,
+            validation_error_message=self.instance.validation_error_message,
         )
 
 
-Output_co = TypeVar("Output_co", covariant=True)
-
-IOPromiseValidator: TypeAlias = Callable[[Output_co], Awaitable[str | None]]
 ComponentRenderer: TypeAlias = Callable[
     [list[Component], IOPromiseValidator | None], Awaitable[list[Any]]
 ]

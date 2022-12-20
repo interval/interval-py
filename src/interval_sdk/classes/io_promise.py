@@ -1,3 +1,4 @@
+import inspect
 from typing import (
     Generic,
     TypeVar,
@@ -55,11 +56,21 @@ class DisplayIOPromise(GroupableIOPromise[Display_MN_co, Output_co]):
     pass
 
 
+InputIOPromiseSelf = TypeVar("InputIOPromiseSelf", bound="InputIOPromise")
+
+
 class InputIOPromise(GroupableIOPromise[Input_MN_co, Output_co]):
     def optional(self) -> "OptionalIOPromise[Input_MN_co, Output_co | None]":
         return OptionalIOPromise[Input_MN_co, Output_co | None](
             self._component, self._renderer, self._value_getter
         )
+
+    def validate(
+        self: InputIOPromiseSelf, validator: IOPromiseValidator[Output_co] | None
+    ) -> InputIOPromiseSelf:
+        self._validator = validator
+        self._component.validator = validator
+        return self
 
 
 class OptionalIOPromise(InputIOPromise[Input_MN_co, Output_co]):
@@ -123,4 +134,5 @@ class IOGroupPromise(Generic[Output_co]):
         values = [
             io_promises[index]._get_value(v) for index, v in enumerate(return_values)
         ]
-        return await self._validator(cast(Output_co, values))
+        ret = self._validator(cast(Output_co, values))
+        return cast(str | None, await ret if inspect.isawaitable(ret) else ret)

@@ -146,6 +146,15 @@ def json_dumps_some_snake(
     return json_dumps
 
 
+def json_dumps_snake_strip_none(obj: Any, *args, **kwargs) -> str:
+    return json.dumps(dict_keys_to_snake(dict_strip_none(obj)), *args, **kwargs)
+
+
+def json_loads_snake_strip_none(*args, **kwargs) -> Any:
+    obj = json.loads(*args, **kwargs)
+    return dict_keys_to_snake(dict_strip_none(obj))
+
+
 Deserializable: TypeAlias = int | float | bool | None | str
 DeserializableRecord: TypeAlias = Mapping[str, Deserializable]
 Serializable: TypeAlias = bool | int | float | datetime | date | time | str | None

@@ -466,7 +466,11 @@ async def validity_tester(io: IO):
 
     await io.group(
         io.input.text("Name"),
-        io.input.email("Email"),
+        io.input.email("Email").validate(
+            lambda s: "Must be an Interval employee"
+            if not s.endswith("@interval.com")
+            else None
+        ),
         io.input.number("Age").optional(),
         io.input.boolean("Include drink tickets?"),
     ).validate(validate)
