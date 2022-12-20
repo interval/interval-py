@@ -9,12 +9,14 @@ from typing import (
 from typing_extensions import override
 
 from .component import Component, ComponentRenderer, Output_co, IOPromiseValidator
-from ..io_schema import MethodName
+from ..io_schema import DisplayMethodName, InputMethodName, MethodName
 
 MN_co = TypeVar("MN_co", bound=MethodName, covariant=True)
+Display_MN_co = TypeVar("Display_MN_co", bound=DisplayMethodName, covariant=True)
+Input_MN_co = TypeVar("Input_MN_co", bound=InputMethodName, covariant=True)
 
 
-class BaseIOPromise(Generic[MN_co, Output_co]):
+class IOPromise(Generic[MN_co, Output_co]):
     _component: Component
     _renderer: ComponentRenderer
     _value_getter: Callable[[Any], Output_co] | None = None
@@ -41,15 +43,26 @@ class BaseIOPromise(Generic[MN_co, Output_co]):
         return val
 
 
-class ExclusiveIOPromise(BaseIOPromise[MN_co, Output_co]):
+class ExclusiveIOPromise(IOPromise[MN_co, Output_co]):
     pass
 
 
-class GroupableIOPromise(BaseIOPromise[MN_co, Output_co]):
+class GroupableIOPromise(IOPromise[MN_co, Output_co]):
     pass
 
 
-class OptionalIOPromise(GroupableIOPromise[MN_co, Output_co]):
+class DisplayIOPromise(GroupableIOPromise[Display_MN_co, Output_co]):
+    pass
+
+
+class InputIOPromise(GroupableIOPromise[Input_MN_co, Output_co]):
+    def optional(self) -> "OptionalIOPromise[Input_MN_co, Output_co | None]":
+        return OptionalIOPromise[Input_MN_co, Output_co | None](
+            self._component, self._renderer, self._value_getter
+        )
+
+
+class OptionalIOPromise(InputIOPromise[Input_MN_co, Output_co]):
     def __init__(
         self,
         component: Component,
@@ -69,13 +82,6 @@ class OptionalIOPromise(GroupableIOPromise[MN_co, Output_co]):
             return None
 
         return super()._get_value(val)
-
-
-class IOPromise(GroupableIOPromise[MN_co, Output_co]):
-    def optional(self) -> OptionalIOPromise[MN_co, Output_co | None]:
-        return OptionalIOPromise[MN_co, Output_co | None](
-            self._component, self._renderer, self._value_getter
-        )
 
 
 IOGroupPromiseSelf = TypeVar("IOGroupPromiseSelf", bound="IOGroupPromise")

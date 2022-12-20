@@ -72,10 +72,11 @@ from ..io_schema import (
     InnerFileModel,
 )
 from .io_promise import (
+    DisplayIOPromise,
     IOGroupPromise,
-    IOPromise,
     GroupableIOPromise,
     ExclusiveIOPromise,
+    InputIOPromise,
 )
 from .component import (
     Component,
@@ -117,7 +118,7 @@ class IO:
             default_value: str | None = None,
             multiline: bool | None = None,
             lines: int | None = None,
-        ) -> IOPromise[Literal["INPUT_TEXT"], str]:
+        ) -> InputIOPromise[Literal["INPUT_TEXT"], str]:
             c = Component(
                 method_name="INPUT_TEXT",
                 label=label,
@@ -128,14 +129,14 @@ class IO:
                     lines=lines,
                 ).dict(),
             )
-            return IOPromise(c, renderer=self._renderer)
+            return InputIOPromise(c, renderer=self._renderer)
 
         def email(
             self,
             label: str,
             help_text: str | None = None,
             default_value: str | None = None,
-        ) -> IOPromise[Literal["INPUT_EMAIL"], str]:
+        ) -> InputIOPromise[Literal["INPUT_EMAIL"], str]:
             c = Component(
                 method_name="INPUT_EMAIL",
                 label=label,
@@ -144,7 +145,7 @@ class IO:
                     default_value=default_value,
                 ).dict(),
             )
-            return IOPromise(c, renderer=self._renderer)
+            return InputIOPromise(c, renderer=self._renderer)
 
         @overload
         def number(
@@ -156,7 +157,7 @@ class IO:
             help_text: str | None = None,
             default_value: float | int | None = None,
             decimals: None = None,
-        ) -> IOPromise[Literal["INPUT_NUMBER"], int]:
+        ) -> InputIOPromise[Literal["INPUT_NUMBER"], int]:
             ...
 
         @overload
@@ -169,7 +170,7 @@ class IO:
             help_text: str | None = None,
             default_value: float | int | None = None,
             decimals: int = 0,
-        ) -> IOPromise[Literal["INPUT_NUMBER"], float]:
+        ) -> InputIOPromise[Literal["INPUT_NUMBER"], float]:
             ...
 
         def number(
@@ -201,14 +202,14 @@ class IO:
 
                 return val
 
-            return IOPromise(c, renderer=self._renderer, get_value=get_value)
+            return InputIOPromise(c, renderer=self._renderer, get_value=get_value)
 
         def boolean(
             self,
             label: str,
             help_text: str | None = None,
             default_value: str | None = None,
-        ) -> IOPromise[Literal["INPUT_BOOLEAN"], bool]:
+        ) -> InputIOPromise[Literal["INPUT_BOOLEAN"], bool]:
             c = Component(
                 method_name="INPUT_BOOLEAN",
                 label=label,
@@ -217,13 +218,13 @@ class IO:
                     default_value=default_value,
                 ).dict(),
             )
-            return IOPromise(c, renderer=self._renderer)
+            return InputIOPromise(c, renderer=self._renderer)
 
         def rich_text(
             self,
             label: str,
             help_text: str | None = None,
-        ) -> IOPromise[Literal["INPUT_RICH_TEXT"], str]:
+        ) -> InputIOPromise[Literal["INPUT_RICH_TEXT"], str]:
             c = Component(
                 method_name="INPUT_RICH_TEXT",
                 label=label,
@@ -231,7 +232,7 @@ class IO:
                     help_text=help_text,
                 ).dict(),
             )
-            return IOPromise(c, renderer=self._renderer)
+            return InputIOPromise(c, renderer=self._renderer)
 
         def url(
             self,
@@ -239,7 +240,7 @@ class IO:
             help_text: str | None = None,
             allowed_protocols: list[str] | None = None,
             default_value: str | None = None,
-        ) -> IOPromise[Literal["INPUT_URL"], ParseResult]:
+        ) -> InputIOPromise[Literal["INPUT_URL"], ParseResult]:
             c = Component(
                 method_name="INPUT_URL",
                 label=label,
@@ -253,14 +254,14 @@ class IO:
             def get_value(val: Any) -> ParseResult:
                 return urlparse(val)
 
-            return IOPromise(c, renderer=self._renderer, get_value=get_value)
+            return InputIOPromise(c, renderer=self._renderer, get_value=get_value)
 
         def date(
             self,
             label: str,
             help_text: str | None = None,
             default_value: date | None = None,
-        ) -> IOPromise[Literal["INPUT_DATE"], date]:
+        ) -> InputIOPromise[Literal["INPUT_DATE"], date]:
             model_default = None
             if default_value is not None:
                 model_default = DateModel(
@@ -280,14 +281,14 @@ class IO:
             def get_value(val: DateModel) -> date:
                 return date(val.year, val.month, val.day)
 
-            return IOPromise(c, renderer=self._renderer, get_value=get_value)
+            return InputIOPromise(c, renderer=self._renderer, get_value=get_value)
 
         def time(
             self,
             label: str,
             help_text: str | None = None,
             default_value: time | None = None,
-        ) -> IOPromise[Literal["INPUT_TIME"], time]:
+        ) -> InputIOPromise[Literal["INPUT_TIME"], time]:
             model_default = None
             if default_value is not None:
                 model_default = TimeModel(
@@ -306,14 +307,14 @@ class IO:
             def get_value(val: TimeModel) -> time:
                 return time(val.hour, val.minute)
 
-            return IOPromise(c, renderer=self._renderer, get_value=get_value)
+            return InputIOPromise(c, renderer=self._renderer, get_value=get_value)
 
         def datetime(
             self,
             label: str,
             help_text: str | None = None,
             default_value: datetime | None = None,
-        ) -> IOPromise[Literal["INPUT_DATETIME"], datetime]:
+        ) -> InputIOPromise[Literal["INPUT_DATETIME"], datetime]:
             model_default = None
             if default_value is not None:
                 model_default = DateTimeModel(
@@ -335,7 +336,7 @@ class IO:
             def get_value(val: DateTimeModel) -> datetime:
                 return datetime(val.year, val.month, val.day, val.hour, val.minute)
 
-            return IOPromise(c, renderer=self._renderer, get_value=get_value)
+            return InputIOPromise(c, renderer=self._renderer, get_value=get_value)
 
         def file(
             self,
@@ -347,7 +348,7 @@ class IO:
                 Awaitable[FileUploadProps],
             ]
             | None = None,
-        ) -> IOPromise[Literal["UPLOAD_FILE"], FileModel]:
+        ) -> InputIOPromise[Literal["UPLOAD_FILE"], FileModel]:
             async def handle_state_change(
                 state: FileUploadState, props: FileUploadProps
             ) -> FileUploadProps:
@@ -390,7 +391,7 @@ class IO:
                     private_url=val.url,
                 )
 
-            return IOPromise(c, renderer=self._renderer, get_value=get_value)
+            return InputIOPromise(c, renderer=self._renderer, get_value=get_value)
 
     @dataclass
     class Select:
@@ -404,7 +405,7 @@ class IO:
             columns: list[TableColumnDef] | None = None,
             min_selections: int | None = None,
             max_selections: int | None = None,
-        ) -> IOPromise[Literal["SELECT_TABLE"], list[TR]]:
+        ) -> InputIOPromise[Literal["SELECT_TABLE"], list[TR]]:
             columns = columns_builder(data=data, columns=columns)
             serialized_rows = [
                 serialize_table_row(key=str(i), row=row, columns=columns)
@@ -462,7 +463,7 @@ class IO:
                 rows = [row for (i, row) in enumerate(data) if i in indices]
                 return rows
 
-            return IOPromise(c, renderer=self._renderer, get_value=get_value)
+            return InputIOPromise(c, renderer=self._renderer, get_value=get_value)
 
         @overload
         def single(
@@ -472,7 +473,7 @@ class IO:
             help_text: str | None = None,
             default_value: RichSelectOption | None = None,
             searchable: bool | None = None,
-        ) -> IOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption_co]:
+        ) -> InputIOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption_co]:
             ...
 
         @overload
@@ -483,7 +484,7 @@ class IO:
             help_text: str | None = None,
             default_value: RichSelectOption | None = None,
             searchable: bool | None = None,
-        ) -> IOPromise[Literal["SELECT_SINGLE"], RichSelectOption]:
+        ) -> InputIOPromise[Literal["SELECT_SINGLE"], RichSelectOption]:
             ...
 
         def single(
@@ -493,7 +494,7 @@ class IO:
             help_text: str | None = None,
             default_value: RichSelectOption | None = None,
             searchable: bool | None = None,
-        ) -> IOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption_co]:
+        ) -> InputIOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption_co]:
             c = Component(
                 method_name="SELECT_SINGLE",
                 label=label,
@@ -515,7 +516,7 @@ class IO:
             ) -> PassthroughRichSelectOption_co:
                 return option_map[item.value]
 
-            return IOPromise(c, renderer=self._renderer, get_value=get_value)
+            return InputIOPromise(c, renderer=self._renderer, get_value=get_value)
 
         @overload
         def multiple(
@@ -526,7 +527,7 @@ class IO:
             default_value: Iterable[LabelValue] | None = None,
             min_selections: int | None = None,
             max_selections: int | None = None,
-        ) -> IOPromise[Literal["SELECT_MULTIPLE"], list[PassthroughLabelValue]]:
+        ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[PassthroughLabelValue]]:
             ...
 
         @overload
@@ -538,7 +539,7 @@ class IO:
             default_value: Iterable[LabelValue] | None = None,
             min_selections: int | None = None,
             max_selections: int | None = None,
-        ) -> IOPromise[Literal["SELECT_MULTIPLE"], list[LabelValue]]:
+        ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[LabelValue]]:
             ...
 
         def multiple(
@@ -549,7 +550,7 @@ class IO:
             default_value: Iterable[LabelValue] | None = None,
             min_selections: int | None = None,
             max_selections: int | None = None,
-        ) -> IOPromise[Literal["SELECT_MULTIPLE"], list[PassthroughLabelValue]]:
+        ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[PassthroughLabelValue]]:
             c = Component(
                 method_name="SELECT_MULTIPLE",
                 label=label,
@@ -573,7 +574,7 @@ class IO:
             ) -> list[PassthroughLabelValue]:
                 return [option_map[item.value] for item in val]
 
-            return IOPromise(c, renderer=self._renderer, get_value=get_value)
+            return InputIOPromise(c, renderer=self._renderer, get_value=get_value)
 
     @dataclass
     class Display:
@@ -584,7 +585,7 @@ class IO:
             label: str,
             code: str,
             language: str | None = None,
-        ) -> IOPromise[Literal["DISPLAY_CODE"], None]:
+        ) -> DisplayIOPromise[Literal["DISPLAY_CODE"], None]:
             c = Component(
                 method_name="DISPLAY_CODE",
                 label=label,
@@ -593,18 +594,18 @@ class IO:
                     language=language,
                 ).dict(),
             )
-            return IOPromise(c, renderer=self._renderer)
+            return DisplayIOPromise(c, renderer=self._renderer)
 
         def heading(
             self,
             label: str,
-        ) -> IOPromise[Literal["DISPLAY_HEADING"], None]:
+        ) -> DisplayIOPromise[Literal["DISPLAY_HEADING"], None]:
             c = Component(
                 method_name="DISPLAY_HEADING",
                 label=label,
                 initial_props={},
             )
-            return IOPromise(c, renderer=self._renderer)
+            return DisplayIOPromise(c, renderer=self._renderer)
 
         def link(
             self,
@@ -613,7 +614,7 @@ class IO:
             params: dict[str, Any] | None = None,
             theme: LinkTheme = "default",
             url: str | None = None,
-        ) -> IOPromise[Literal["DISPLAY_LINK"], None]:
+        ) -> DisplayIOPromise[Literal["DISPLAY_LINK"], None]:
             c = Component(
                 method_name="DISPLAY_LINK",
                 label=label,
@@ -624,25 +625,25 @@ class IO:
                     url=url,
                 ).dict(),
             )
-            return IOPromise(c, renderer=self._renderer)
+            return DisplayIOPromise(c, renderer=self._renderer)
 
         def markdown(
             self,
             label: str,
-        ) -> IOPromise[Literal["DISPLAY_MARKDOWN"], None]:
+        ) -> DisplayIOPromise[Literal["DISPLAY_MARKDOWN"], None]:
             c = Component(
                 method_name="DISPLAY_MARKDOWN",
                 label=label,
                 initial_props={},
             )
-            return IOPromise(c, renderer=self._renderer)
+            return DisplayIOPromise(c, renderer=self._renderer)
 
         def metadata(
             self,
             label: str,
             data: KeyValueObject,
             layout: MetadataLayout = "grid",
-        ) -> IOPromise[Literal["DISPLAY_METADATA"], None]:
+        ) -> DisplayIOPromise[Literal["DISPLAY_METADATA"], None]:
             c = Component(
                 method_name="DISPLAY_METADATA",
                 label=label,
@@ -651,13 +652,13 @@ class IO:
                     data=KeyValueObjectModel.parse_obj(data),
                 ).dict(),
             )
-            return IOPromise(c, renderer=self._renderer)
+            return DisplayIOPromise(c, renderer=self._renderer)
 
         def object(
             self,
             label: str,
             data: KeyValueObject,
-        ) -> IOPromise[Literal["DISPLAY_OBJECT"], None]:
+        ) -> DisplayIOPromise[Literal["DISPLAY_OBJECT"], None]:
             c = Component(
                 method_name="DISPLAY_OBJECT",
                 label=label,
@@ -665,7 +666,7 @@ class IO:
                     data=KeyValueObjectModel.parse_obj(data),
                 ).dict(),
             )
-            return IOPromise(c, renderer=self._renderer)
+            return DisplayIOPromise(c, renderer=self._renderer)
 
         def image(
             self,
@@ -676,7 +677,7 @@ class IO:
             height: ImageSize | None = None,
             size: ImageSize | None = None,
             width: ImageSize | None = None,
-        ) -> IOPromise[Literal["DISPLAY_IMAGE"], None]:
+        ) -> DisplayIOPromise[Literal["DISPLAY_IMAGE"], None]:
             if bytes is not None and url is None:
                 if sys.getsizeof(bytes) > MAX_FILE_SIZE_MB * 1000 * 1000:
                     raise ValueError(
@@ -704,7 +705,7 @@ class IO:
                     width=width if width is not None else size,
                 ).dict(),
             )
-            return IOPromise(c, renderer=self._renderer)
+            return DisplayIOPromise(c, renderer=self._renderer)
 
         def table(
             self,
@@ -712,7 +713,7 @@ class IO:
             data: list[TR],
             help_text: str | None = None,
             columns: list[TableColumnDef] | None = None,
-        ) -> IOPromise[Literal["DISPLAY_TABLE"], None]:
+        ) -> DisplayIOPromise[Literal["DISPLAY_TABLE"], None]:
             columns = columns_builder(data=data, columns=columns)
             serialized_rows = [
                 serialize_table_row(key=str(i), row=row, columns=columns)
@@ -754,7 +755,7 @@ class IO:
                 ).dict(),
                 handle_state_change=handle_state_change,
             )
-            return IOPromise(c, renderer=self._renderer)
+            return DisplayIOPromise(c, renderer=self._renderer)
 
         def video(
             self,
@@ -767,7 +768,7 @@ class IO:
             size: ImageSize | None = None,
             height: ImageSize | None = None,
             width: ImageSize | None = None,
-        ) -> IOPromise[Literal["DISPLAY_VIDEO"], None]:
+        ) -> DisplayIOPromise[Literal["DISPLAY_VIDEO"], None]:
             if bytes is not None and url is None:
                 if sys.getsizeof(bytes) > MAX_FILE_SIZE_MB * 1000 * 1000:
                     raise ValueError(
@@ -797,7 +798,7 @@ class IO:
                     width=width if width is not None else size,
                 ).dict(),
             )
-            return IOPromise(c, renderer=self._renderer)
+            return DisplayIOPromise(c, renderer=self._renderer)
 
     @dataclass
     class Experimental:
@@ -809,7 +810,7 @@ class IO:
             columns: dict[str, TypeValue],
             help_text: str | None = None,
             # XXX: Don't think better type is possible here?
-        ) -> IOPromise[Literal["INPUT_SPREADSHEET"], list]:
+        ) -> InputIOPromise[Literal["INPUT_SPREADSHEET"], list]:
             c = Component(
                 method_name="INPUT_SPREADSHEET",
                 label=label,
@@ -818,7 +819,7 @@ class IO:
                     columns=columns,
                 ).dict(),
             )
-            return IOPromise(c, renderer=self._renderer)
+            return InputIOPromise(c, renderer=self._renderer)
 
     _renderer: ComponentRenderer
     input: Input
@@ -953,7 +954,7 @@ class IO:
         ],
         help_text: str | None = None,
         initial_results: Iterable[PassthroughSearchResultValue] | None = None,
-    ) -> IOPromise[Literal["SEARCH"], PassthroughSearchResultValue]:
+    ) -> InputIOPromise[Literal["SEARCH"], PassthroughSearchResultValue]:
         if initial_results is None:
             initial_results = []
 
@@ -1007,4 +1008,4 @@ class IO:
             except KeyError as err:
                 raise ValueError("BAD_RESPONSE") from err
 
-        return IOPromise(c, renderer=self._renderer, get_value=get_value)
+        return InputIOPromise(c, renderer=self._renderer, get_value=get_value)
