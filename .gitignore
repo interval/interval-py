@@ -2,3 +2,5 @@
 __pycache__/
 dist/
 pyrightconfig.json
+.pytest_cache
+.ruff_cache
