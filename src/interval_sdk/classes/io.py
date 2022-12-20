@@ -352,20 +352,19 @@ class IO:
             async def handle_state_change(
                 state: FileUploadState, props: FileUploadProps
             ) -> FileUploadProps:
-                if not generate_presigned_urls:
+                if generate_presigned_urls is None:
+                    props.upload_url = None
+                    props.download_url = None
                     return props
+
                 try:
                     urls = await generate_presigned_urls(state)
-                    return props.copy(
-                        update={
-                            "upload_url": urls.upload_url,
-                            "download_url": urls.download_url,
-                        }
-                    )
-                except Exception as e:
-                    return props.copy(
-                        update={"upload_url": "error", "download_url": "error"}
-                    )
+                    props.upoad_url = urls.upload_url
+                    props.download_url = urls.download_url
+                except Exception:
+                    # FIXME: Bubble this up if possible
+                    props.upload_url = "error"
+                    props.download_url = "error"
                 return props
 
             c = Component(
