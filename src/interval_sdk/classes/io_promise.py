@@ -20,7 +20,7 @@ class IOPromise(Generic[MN_co, Output_co]):
     _component: Component
     _renderer: ComponentRenderer
     _value_getter: Callable[[Any], Output_co] | None = None
-    _validator: IOPromiseValidator[Output_co]
+    _validator: IOPromiseValidator[Output_co] | None = None
 
     def __init__(
         self,
