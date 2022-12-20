@@ -21,6 +21,7 @@ from typing_extensions import NotRequired
 
 from pydantic import (
     BaseModel as PydanticBaseModel,
+    Field,
     StrictBool,
     StrictInt,
     StrictFloat,
@@ -42,6 +43,8 @@ from .util import (
     SerializableRecord,
 )
 
+import urllib.request
+
 # TODO: Try generating most of this with datamode-code-generator
 # https://github.com/koxudaxi/datamodel-code-generator/
 
@@ -61,6 +64,7 @@ InputMethodName = Literal[
     "SELECT_SINGLE",
     "SELECT_MULTIPLE",
     "SEARCH",
+    "UPLOAD_FILE",
 ]
 
 DisplayMethodName = Literal[
@@ -161,6 +165,57 @@ PassthroughRenderableSearchResult = TypeVar(
 
 class InnerRenderableSearchResultModel(RenderableSearchResultModel):
     value: str
+
+
+class FileUploadProps(BaseModel):
+    allowed_extensions: Optional[list[str]]
+    help_text: Optional[str]
+    upload_url: Optional[str]
+    download_url: Optional[str]
+
+
+class FileUploadState(BaseModel):
+    name: str
+    type: str
+
+
+class InnerFileModel(BaseModel):
+    last_modified: datetime | None = Field(None, alias="lastModified")
+    name: str
+    type: str
+    size: int
+    url: str
+
+
+class FileModel(BaseModel):
+    last_modified: datetime | None = Field(None, alias="lastModified")
+    extension: str
+    name: str
+    type: str
+    size: int
+    private_url: str
+
+    class Config:
+        allow_population_by_field_name = True
+
+    async def url(self):
+        return self.private_url
+
+    async def text(self):
+        if not self.private_url:
+            raise ValueError("Cannot get text from a public file")
+        response = urllib.request.urlopen(self.private_url)
+        buffer = response.read()
+        return buffer.decode("utf-8")
+
+    async def json(self):
+        response = urllib.request.urlopen(self.private_url)
+        buffer = response.read()
+        return json.loads(buffer.decode("utf-8"))
+
+    async def buffer(self):
+        response = urllib.request.urlopen(self.private_url)
+        return response.read()
 
 
 KeyValueObjectModel.update_forward_refs()
@@ -587,6 +642,11 @@ input_schema: dict[InputMethodName, MethodDef] = {
         props=SearchProps,
         state=SearchState,
         returns=SearchResultValue,
+    ),
+    "UPLOAD_FILE": MethodDef(
+        props=FileUploadProps,
+        state=FileUploadState,
+        returns=InnerFileModel,
     ),
 }
 

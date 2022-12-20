@@ -472,4 +472,15 @@ async def validity_tester(io: IO):
     ).validate(validate)
 
 
+@interval.action_with_slug("io.input.file")
+async def input_file(io: IO):
+    file = await io.input.file(
+        "Upload file!", help_text="From python!", allowed_extensions=[".txt", ".json"]
+    )
+
+    text = await file.text()
+
+    return {"file_name": file.name, "contents": text}
+
+
 interval.listen()

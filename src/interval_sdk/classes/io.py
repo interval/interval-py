@@ -1,3 +1,4 @@
+import os
 import base64
 import sys
 from dataclasses import dataclass
@@ -65,6 +66,10 @@ from ..io_schema import (
     PassthroughSearchResultValue,
     RenderableSearchResult,
     InnerRenderableSearchResultModel,
+    FileUploadProps,
+    FileUploadState,
+    FileModel,
+    InnerFileModel,
 )
 from .io_promise import (
     IOGroupPromise,
@@ -329,6 +334,61 @@ class IO:
 
             def get_value(val: DateTimeModel) -> datetime:
                 return datetime(val.year, val.month, val.day, val.hour, val.minute)
+
+            return IOPromise(c, renderer=self._renderer, get_value=get_value)
+
+        def file(
+            self,
+            label: str,
+            allowed_extensions: list[str] | None = None,
+            help_text: str | None = None,
+            generate_presigned_urls: Callable[
+                [FileUploadState],
+                Awaitable[FileUploadProps],
+            ]
+            | None = None,
+        ) -> IOPromise[Literal["UPLOAD_FILE"], FileModel]:
+            async def handle_state_change(
+                state: FileUploadState, props: FileUploadProps
+            ) -> FileUploadProps:
+                if not generate_presigned_urls:
+                    return props
+                try:
+                    urls = await generate_presigned_urls(state)
+                    return props.copy(
+                        update={
+                            "upload_url": urls.upload_url,
+                            "download_url": urls.download_url,
+                        }
+                    )
+                except Exception as e:
+                    return props.copy(
+                        update={"upload_url": "error", "download_url": "error"}
+                    )
+                return props
+
+            c = Component(
+                method_name="UPLOAD_FILE",
+                label=label,
+                initial_props=FileUploadProps(
+                    help_text=help_text,
+                    allowed_extensions=allowed_extensions,
+                    upload_url=None,
+                    download_url=None,
+                ).dict(),
+                handle_state_change=handle_state_change,
+            )
+
+            def get_value(val: InnerFileModel) -> FileModel:
+                _, extension = os.path.splitext(val.name)
+                return FileModel(
+                    lastModified=val.last_modified,
+                    extension=extension,
+                    name=val.name,
+                    size=val.size,
+                    type=val.type,
+                    private_url=val.url,
+                )
 
             return IOPromise(c, renderer=self._renderer, get_value=get_value)
 
