@@ -60,6 +60,7 @@ from ..io_schema import (
     TypeValue,
     InputSpreadsheetProps,
     ConfirmProps,
+    ConfirmIdentityProps,
     MethodName,
     SearchProps,
     SearchState,
@@ -846,6 +847,20 @@ class IO:
             label=label,
             initial_props=ConfirmProps(
                 help_text=help_text,
+            ).dict(),
+        )
+        return ExclusiveIOPromise(c, renderer=self._renderer)
+
+    def confirm_identity(
+        self,
+        label: str,
+        grace_period_ms: int | None = None,
+    ) -> ExclusiveIOPromise[Literal["CONFIRM_IDENTITY"], bool]:
+        c = Component(
+            method_name="CONFIRM_IDENTITY",
+            label=label,
+            initial_props=ConfirmIdentityProps(
+                grace_period_ms=grace_period_ms,
             ).dict(),
         )
         return ExclusiveIOPromise(c, renderer=self._renderer)

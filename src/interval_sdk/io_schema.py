@@ -63,6 +63,7 @@ InputMethodName = Literal[
     "INPUT_TIME",
     "INPUT_DATETIME",
     "CONFIRM",
+    "CONFIRM_IDENTITY",
     "SELECT_TABLE",
     "SELECT_SINGLE",
     "SELECT_MULTIPLE",
@@ -439,6 +440,10 @@ class ConfirmProps(BaseModel):
     help_text: Optional[str]
 
 
+class ConfirmIdentityProps(BaseModel):
+    grace_period_ms: Optional[int]
+
+
 class SelectTableProps(BaseModel):
     data: list[InternalTableRowModel]
     help_text: Optional[str]
@@ -623,6 +628,12 @@ input_schema: dict[InputMethodName, MethodDef] = {
     ),
     "CONFIRM": MethodDef(
         props=ConfirmProps,
+        state=None,
+        returns=bool,
+        exclusive=True,
+    ),
+    "CONFIRM_IDENTITY": MethodDef(
+        props=ConfirmIdentityProps,
         state=None,
         returns=bool,
         exclusive=True,

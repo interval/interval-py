@@ -487,4 +487,17 @@ async def input_file(io: IO):
     return {"file_name": file.name, "contents": text}
 
 
+@interval.action_with_slug("io.confirm_identity")
+async def confirm_identity(io: IO):
+    name = await io.input.text("Please enter your name")
+    can_do = await io.confirm_identity(
+        "This is a sensitive action", grace_period_ms=600000
+    )
+
+    if can_do:
+        return {"confirmed": True}
+    else:
+        return {"confirmed": False}
+
+
 interval.listen()
