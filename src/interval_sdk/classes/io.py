@@ -7,7 +7,6 @@ from typing import (
     Iterable,
     Mapping,
     overload,
-    Tuple,
     TypeVar,
     Literal,
     Any,
@@ -871,7 +870,7 @@ class IO:
     def group(
         self,
         p1: GroupableIOPromise[MethodName, _T1],
-    ) -> IOGroupPromise[Tuple[_T1]]:
+    ) -> IOGroupPromise[_T1]:
         """
         Actually returns a list, claims to return a tuple because lists do not support
         variadic types.
@@ -882,7 +881,7 @@ class IO:
         self,
         p1: GroupableIOPromise[MethodName, _T1],
         p2: GroupableIOPromise[MethodName, _T2],
-    ) -> IOGroupPromise[Tuple[_T1, _T2]]:
+    ) -> IOGroupPromise[_T1, _T2]:
         ...
 
     @overload
@@ -891,7 +890,7 @@ class IO:
         p1: GroupableIOPromise[MethodName, _T1],
         p2: GroupableIOPromise[MethodName, _T2],
         p3: GroupableIOPromise[MethodName, _T3],
-    ) -> IOGroupPromise[Tuple[_T1, _T2, _T3]]:
+    ) -> IOGroupPromise[_T1, _T2, _T3]:
         ...
 
     @overload
@@ -901,7 +900,7 @@ class IO:
         p2: GroupableIOPromise[MethodName, _T2],
         p3: GroupableIOPromise[MethodName, _T3],
         p4: GroupableIOPromise[MethodName, _T4],
-    ) -> IOGroupPromise[Tuple[_T1, _T2, _T3, _T4]]:
+    ) -> IOGroupPromise[_T1, _T2, _T3, _T4]:
         ...
 
     @overload
@@ -913,7 +912,7 @@ class IO:
         p4: GroupableIOPromise[MethodName, _T4],
         p5: GroupableIOPromise[MethodName, _T5],
         p6: GroupableIOPromise[MethodName, _T6],
-    ) -> IOGroupPromise[Tuple[_T1, _T2, _T3, _T4, _T5, _T6]]:
+    ) -> IOGroupPromise[_T1, _T2, _T3, _T4, _T5, _T6]:
         ...
 
     @overload
@@ -926,7 +925,7 @@ class IO:
         p5: GroupableIOPromise[MethodName, _T5],
         p6: GroupableIOPromise[MethodName, _T6],
         p7: GroupableIOPromise[MethodName, _T7],
-    ) -> IOGroupPromise[Tuple[_T1, _T2, _T3, _T4, _T5, _T6, _T7]]:
+    ) -> IOGroupPromise[_T1, _T2, _T3, _T4, _T5, _T6, _T7]:
         ...
 
     @overload
@@ -940,13 +939,13 @@ class IO:
         p6: GroupableIOPromise[MethodName, _T6],
         p7: GroupableIOPromise[MethodName, _T7],
         p8: GroupableIOPromise[MethodName, _T8],
-    ) -> IOGroupPromise[Tuple[_T1, _T2, _T3, _T4, _T5, _T6, _T7, _T8]]:
+    ) -> IOGroupPromise[_T1, _T2, _T3, _T4, _T5, _T6, _T7, _T8]:
         ...
 
     @overload
     def group(
         self, *io_promises: GroupableIOPromise[MethodName, Any]
-    ) -> IOGroupPromise[list[Any]]:
+    ) -> IOGroupPromise[Any]:
         ...
 
     def group(  # type: ignore

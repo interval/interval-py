@@ -7,9 +7,16 @@ from typing import (
     Generator,
     cast,
 )
-from typing_extensions import override
+from typing_extensions import Unpack, override
 
-from .component import Component, ComponentRenderer, Output_co, IOPromiseValidator
+from .component import (
+    Component,
+    ComponentRenderer,
+    GroupOutput,
+    IOGroupPromiseValidator,
+    Output_co,
+    IOPromiseValidator,
+)
 from ..io_schema import DisplayMethodName, InputMethodName, MethodName
 
 MN_co = TypeVar("MN_co", bound=MethodName, covariant=True)
@@ -98,10 +105,10 @@ class OptionalIOPromise(InputIOPromise[Input_MN_co, Output_co]):
 IOGroupPromiseSelf = TypeVar("IOGroupPromiseSelf", bound="IOGroupPromise")
 
 
-class IOGroupPromise(Generic[Output_co]):
+class IOGroupPromise(Generic[Unpack[GroupOutput]]):
     _io_promises: tuple[GroupableIOPromise[MethodName, Any], ...]
     _renderer: ComponentRenderer
-    _validator: IOPromiseValidator[Output_co] | None = None
+    _validator: IOGroupPromiseValidator[Unpack[GroupOutput]] | None = None
 
     def __init__(
         self,
@@ -111,19 +118,21 @@ class IOGroupPromise(Generic[Output_co]):
         self._io_promises = io_promises
         self._renderer = renderer
 
-    def __await__(self) -> Generator[Any, None, Output_co]:
+    def __await__(self) -> Generator[Any, None, tuple[Unpack[GroupOutput]]]:
         res = yield from self._renderer(
             [p._component for p in self._io_promises], self._validator
         ).__await__()
         return cast(
-            Output_co,
+            tuple[Unpack[GroupOutput]],
             [self._io_promises[i]._get_value(val) for (i, val) in enumerate(res)],
         )
 
     def validate(
-        self: IOGroupPromiseSelf, validator: IOPromiseValidator[Output_co] | None
+        self: IOGroupPromiseSelf,
+        validator: IOGroupPromiseValidator[Unpack[GroupOutput]] | None,
     ) -> IOGroupPromiseSelf:
-        self._validator = validator
+        # not sure why it can't unify this, but it seems to not affect the external inference
+        self._validator = validator  # type: ignore
         return self
 
     async def _handle_validation(self, return_values: list[Any]) -> str | None:
@@ -134,5 +143,6 @@ class IOGroupPromise(Generic[Output_co]):
         values = [
             io_promises[index]._get_value(v) for index, v in enumerate(return_values)
         ]
-        ret = self._validator(cast(Output_co, values))
+        # not sure why it can't unify this, but it seems to not affect the external inference
+        ret = self._validator(*values)  # type: ignore
         return cast(str | None, await ret if inspect.isawaitable(ret) else ret)

@@ -10,6 +10,7 @@ from typing import (
     TypeVar,
     cast,
 )
+from typing_extensions import TypeVarTuple, Unpack
 
 
 from pydantic import parse_obj_as, ValidationError, BaseModel as PydanticBaseModel
@@ -24,9 +25,13 @@ from ..types import GenericModel
 from ..util import dict_keys_to_snake, dict_strip_none, dict_keys_to_camel
 
 Output_co = TypeVar("Output_co", covariant=True)
+GroupOutput = TypeVarTuple("GroupOutput")
 
 IOPromiseValidator: TypeAlias = Callable[
     [Output_co], Awaitable[str | None] | str | None
+]
+IOGroupPromiseValidator: TypeAlias = Callable[
+    [Unpack[GroupOutput]], Awaitable[str | None] | str | None
 ]
 
 

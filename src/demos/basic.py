@@ -458,8 +458,9 @@ async def io_search(io: IO):
 
 @interval.action
 async def validity_tester(io: IO):
-    async def validate(responses: tuple[str, str, int | None, bool]):
-        [_, _, age, include_drink_tickets] = responses
+    async def validate(
+        _name: str, _email: str, age: int | None, include_drink_tickets: bool
+    ):
         await asyncio.sleep(0.1)
         if (age is None or age < 21) and include_drink_tickets:
             return "Attendees must be 21 years or older to receive drink tickets."
@@ -474,6 +475,21 @@ async def validity_tester(io: IO):
         io.input.number("Age").optional(),
         io.input.boolean("Include drink tickets?"),
     ).validate(validate)
+
+    await io.group(
+        io.input.text("Name"),
+        io.input.email("Email").validate(
+            lambda s: "Must be an Interval employee"
+            if not s.endswith("@interval.com")
+            else None
+        ),
+        io.input.number("Age").optional(),
+        io.input.boolean("Include drink tickets?"),
+    ).validate(
+        lambda _name, _email, age, include_drink_tickets: "Attendees must be 21 years or older to receive drink tickets."
+        if (age is None or age < 21) and include_drink_tickets
+        else None
+    )
 
 
 @interval.action_with_slug("io.input.file")
