@@ -118,6 +118,8 @@ class IO:
             default_value: str | None = None,
             multiline: bool | None = None,
             lines: int | None = None,
+            disabled: bool | None = None,
+            placeholder: str | None = None,
         ) -> InputIOPromise[Literal["INPUT_TEXT"], str]:
             c = Component(
                 method_name="INPUT_TEXT",
@@ -127,6 +129,8 @@ class IO:
                     default_value=default_value,
                     multiline=multiline,
                     lines=lines,
+                    disabled=disabled,
+                    placeholder=placeholder,
                 ).dict(),
             )
             return InputIOPromise(c, renderer=self._renderer)
@@ -136,6 +140,8 @@ class IO:
             label: str,
             help_text: str | None = None,
             default_value: str | None = None,
+            disabled: bool | None = None,
+            placeholder: str | None = None,
         ) -> InputIOPromise[Literal["INPUT_EMAIL"], str]:
             c = Component(
                 method_name="INPUT_EMAIL",
@@ -143,6 +149,8 @@ class IO:
                 initial_props=InputEmailProps(
                     help_text=help_text,
                     default_value=default_value,
+                    disabled=disabled,
+                    placeholder=placeholder,
                 ).dict(),
             )
             return InputIOPromise(c, renderer=self._renderer)
@@ -157,6 +165,8 @@ class IO:
             help_text: str | None = None,
             default_value: float | int | None = None,
             decimals: None = None,
+            disabled: bool | None = None,
+            placeholder: str | None = None,
         ) -> InputIOPromise[Literal["INPUT_NUMBER"], int]:
             ...
 
@@ -170,6 +180,8 @@ class IO:
             help_text: str | None = None,
             default_value: float | int | None = None,
             decimals: int = 0,
+            disabled: bool | None = None,
+            placeholder: str | None = None,
         ) -> InputIOPromise[Literal["INPUT_NUMBER"], float]:
             ...
 
@@ -182,6 +194,8 @@ class IO:
             help_text: str | None = None,
             default_value: float | int | None = None,
             decimals: int | None = None,
+            disabled: bool | None = None,
+            placeholder: str | None = None,
         ):
             c = Component(
                 method_name="INPUT_NUMBER",
@@ -193,6 +207,8 @@ class IO:
                     help_text=help_text,
                     default_value=default_value,
                     decimals=decimals,
+                    disabled=disabled,
+                    placeholder=placeholder,
                 ).dict(),
             )
 
@@ -209,6 +225,7 @@ class IO:
             label: str,
             help_text: str | None = None,
             default_value: str | None = None,
+            disabled: bool | None = None,
         ) -> InputIOPromise[Literal["INPUT_BOOLEAN"], bool]:
             c = Component(
                 method_name="INPUT_BOOLEAN",
@@ -216,6 +233,7 @@ class IO:
                 initial_props=InputBooleanProps(
                     help_text=help_text,
                     default_value=default_value,
+                    disabled=disabled,
                 ).dict(),
             )
             return InputIOPromise(c, renderer=self._renderer)
@@ -224,12 +242,16 @@ class IO:
             self,
             label: str,
             help_text: str | None = None,
+            disabled: bool | None = None,
+            placeholder: str | None = None,
         ) -> InputIOPromise[Literal["INPUT_RICH_TEXT"], str]:
             c = Component(
                 method_name="INPUT_RICH_TEXT",
                 label=label,
                 initial_props=InputRichTextProps(
                     help_text=help_text,
+                    disabled=disabled,
+                    placeholder=placeholder,
                 ).dict(),
             )
             return InputIOPromise(c, renderer=self._renderer)
@@ -240,6 +262,8 @@ class IO:
             help_text: str | None = None,
             allowed_protocols: list[str] | None = None,
             default_value: str | None = None,
+            disabled: bool | None = None,
+            placeholder: str | None = None,
         ) -> InputIOPromise[Literal["INPUT_URL"], ParseResult]:
             c = Component(
                 method_name="INPUT_URL",
@@ -248,6 +272,8 @@ class IO:
                     help_text=help_text,
                     allowed_protocols=allowed_protocols,
                     default_value=default_value,
+                    disabled=disabled,
+                    placeholder=placeholder,
                 ).dict(),
             )
 
@@ -261,6 +287,7 @@ class IO:
             label: str,
             help_text: str | None = None,
             default_value: date | None = None,
+            disabled: bool | None = None,
         ) -> InputIOPromise[Literal["INPUT_DATE"], date]:
             model_default = None
             if default_value is not None:
@@ -275,6 +302,7 @@ class IO:
                 initial_props=InputDateProps(
                     help_text=help_text,
                     default_value=model_default,
+                    disabled=disabled,
                 ).dict(),
             )
 
@@ -288,6 +316,7 @@ class IO:
             label: str,
             help_text: str | None = None,
             default_value: time | None = None,
+            disabled: bool | None = None,
         ) -> InputIOPromise[Literal["INPUT_TIME"], time]:
             model_default = None
             if default_value is not None:
@@ -301,6 +330,7 @@ class IO:
                 initial_props=InputTimeProps(
                     help_text=help_text,
                     default_value=model_default,
+                    disabled=disabled,
                 ).dict(),
             )
 
@@ -314,6 +344,7 @@ class IO:
             label: str,
             help_text: str | None = None,
             default_value: datetime | None = None,
+            disabled: bool | None = None,
         ) -> InputIOPromise[Literal["INPUT_DATETIME"], datetime]:
             model_default = None
             if default_value is not None:
@@ -330,6 +361,7 @@ class IO:
                 initial_props=InputDateTimeProps(
                     help_text=help_text,
                     default_value=model_default,
+                    disabled=disabled,
                 ).dict(),
             )
 
@@ -348,6 +380,7 @@ class IO:
                 Awaitable[FileUploadProps],
             ]
             | None = None,
+            disabled: bool | None = None,
         ) -> InputIOPromise[Literal["UPLOAD_FILE"], FileModel]:
             async def handle_state_change(
                 state: FileUploadState, props: FileUploadProps
@@ -375,6 +408,7 @@ class IO:
                     allowed_extensions=allowed_extensions,
                     upload_url=None,
                     download_url=None,
+                    disabled=disabled,
                 ).dict(),
                 handle_state_change=handle_state_change,
             )
@@ -404,6 +438,7 @@ class IO:
             columns: list[TableColumnDef] | None = None,
             min_selections: int | None = None,
             max_selections: int | None = None,
+            disabled: bool | None = None,
         ) -> InputIOPromise[Literal["SELECT_TABLE"], list[TR]]:
             columns = columns_builder(data=data, columns=columns)
             serialized_rows = [
@@ -453,6 +488,7 @@ class IO:
                     min_selections=min_selections,
                     max_selections=max_selections,
                     total_records=len(serialized_rows),
+                    disabled=disabled,
                 ).dict(),
                 handle_state_change=handle_state_change,
             )
@@ -472,6 +508,7 @@ class IO:
             help_text: str | None = None,
             default_value: RichSelectOption | None = None,
             searchable: bool | None = None,
+            disabled: bool | None = None,
         ) -> InputIOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption_co]:
             ...
 
@@ -483,6 +520,7 @@ class IO:
             help_text: str | None = None,
             default_value: RichSelectOption | None = None,
             searchable: bool | None = None,
+            disabled: bool | None = None,
         ) -> InputIOPromise[Literal["SELECT_SINGLE"], RichSelectOption]:
             ...
 
@@ -493,6 +531,7 @@ class IO:
             help_text: str | None = None,
             default_value: RichSelectOption | None = None,
             searchable: bool | None = None,
+            disabled: bool | None = None,
         ) -> InputIOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption_co]:
             c = Component(
                 method_name="SELECT_SINGLE",
@@ -506,6 +545,7 @@ class IO:
                     if default_value is not None
                     else None,
                     searchable=searchable,
+                    disabled=disabled,
                 ).dict(),
             )
             option_map = {option["value"]: option for option in options}
@@ -526,6 +566,7 @@ class IO:
             default_value: Iterable[LabelValue] | None = None,
             min_selections: int | None = None,
             max_selections: int | None = None,
+            disabled: bool | None = None,
         ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[PassthroughLabelValue]]:
             ...
 
@@ -538,6 +579,7 @@ class IO:
             default_value: Iterable[LabelValue] | None = None,
             min_selections: int | None = None,
             max_selections: int | None = None,
+            disabled: bool | None = None,
         ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[LabelValue]]:
             ...
 
@@ -549,6 +591,7 @@ class IO:
             default_value: Iterable[LabelValue] | None = None,
             min_selections: int | None = None,
             max_selections: int | None = None,
+            disabled: bool | None = None,
         ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[PassthroughLabelValue]]:
             c = Component(
                 method_name="SELECT_MULTIPLE",
@@ -563,6 +606,7 @@ class IO:
                     else [],
                     min_selections=min_selections,
                     max_selections=max_selections,
+                    disabled=disabled,
                 ).dict(),
             )
 
@@ -967,6 +1011,8 @@ class IO:
         ],
         help_text: str | None = None,
         initial_results: Iterable[PassthroughSearchResultValue] | None = None,
+        disabled: bool | None = None,
+        placeholder: str | None = None,
     ) -> InputIOPromise[Literal["SEARCH"], PassthroughSearchResultValue]:
         if initial_results is None:
             initial_results = []
@@ -1008,6 +1054,8 @@ class IO:
             initial_props=SearchProps(
                 help_text=help_text,
                 results=render_results(initial_results),
+                disabled=disabled,
+                placeholder=placeholder,
             ).dict(),
             handle_state_change=handle_state_change,
         )

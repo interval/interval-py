@@ -18,7 +18,6 @@ from datetime import date, time, datetime
 from uuid import UUID
 import io, json, sys
 from typing_extensions import NotRequired
-
 from pydantic import (
     BaseModel as PydanticBaseModel,
     Field,
@@ -27,8 +26,6 @@ from pydantic import (
     StrictFloat,
 )
 from pydantic.fields import ModelField
-
-
 from .types import (
     BaseModel,
     GenericModel,
@@ -177,6 +174,7 @@ class FileUploadProps(BaseModel):
     help_text: Optional[str]
     upload_url: Optional[str]
     download_url: Optional[str]
+    disabled: Optional[bool]
 
 
 class FileUploadState(BaseModel):
@@ -366,11 +364,15 @@ class InputTextProps(BaseModel):
     default_value: Optional[str]
     multiline: Optional[bool]
     lines: Optional[int]
+    disabled: Optional[bool]
+    placeholder: Optional[str]
 
 
 class InputEmailProps(BaseModel):
     help_text: Optional[str]
     default_value: Optional[str]
+    disabled: Optional[bool]
+    placeholder: Optional[str]
 
 
 class InputNumberProps(BaseModel):
@@ -380,21 +382,28 @@ class InputNumberProps(BaseModel):
     decimals: Optional[int]
     prepend: Optional[str]
     help_text: Optional[str]
+    disabled: Optional[bool]
+    placeholder: Optional[str]
 
 
 class InputBooleanProps(BaseModel):
     help_text: Optional[str]
     default_value: Optional[str]
+    disabled: Optional[bool]
 
 
 class InputRichTextProps(BaseModel):
     help_text: Optional[str]
+    disabled: Optional[bool]
+    placeholder: Optional[str]
 
 
 class InputUrlProps(BaseModel):
     help_text: Optional[str]
     default_value: Optional[str]
     allowed_protocols: Optional[list[str]]
+    disabled: Optional[bool]
+    placeholder: Optional[str]
 
 
 class DateModel(BaseModel):
@@ -419,16 +428,19 @@ class DateTimeModel(BaseModel):
 class InputDateProps(BaseModel):
     help_text: Optional[str]
     default_value: Optional[DateModel]
+    disabled: Optional[bool]
 
 
 class InputTimeProps(BaseModel):
     help_text: Optional[str]
     default_value: Optional[TimeModel]
+    disabled: Optional[bool]
 
 
 class InputDateTimeProps(BaseModel):
     help_text: Optional[str]
     default_value: Optional[DateTimeModel]
+    disabled: Optional[bool]
 
 
 class InputSpreadsheetProps(BaseModel):
@@ -452,6 +464,7 @@ class SelectTableProps(BaseModel):
     max_selections: Optional[int]
     total_records: int
     selected_keys: list[str] | None = None
+    disabled: Optional[bool]
 
 
 class SelectSingleProps(BaseModel):
@@ -459,6 +472,7 @@ class SelectSingleProps(BaseModel):
     help_text: Optional[str]
     default_value: Optional[RichSelectOptionModel]
     searchable: Optional[bool]
+    disabled: Optional[bool]
 
 
 class SelectSingleState(BaseModel):
@@ -471,6 +485,7 @@ class SelectMultipleProps(BaseModel):
     default_value: list[LabelValueModel] = []
     min_selections: Optional[int]
     max_selections: Optional[int]
+    disabled: Optional[bool]
 
 
 class DisplayCodeProps(BaseModel):
@@ -569,6 +584,8 @@ class DisplayProgressThroughListProps(BaseModel):
 class SearchProps(BaseModel):
     help_text: Optional[str]
     results: list[InnerRenderableSearchResultModel]
+    disabled: Optional[bool]
+    placeholder: Optional[str]
 
 
 class SearchState(BaseModel):

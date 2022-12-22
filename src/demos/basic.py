@@ -516,4 +516,57 @@ async def confirm_identity(io: IO):
         return {"confirmed": False}
 
 
+@interval.action
+async def disabled_inputs(io: IO):
+    await io.group(
+        io.display.heading("Here are a bunch of disabled inputs"),
+        io.input.text("Name", disabled=True, placeholder="I am a placeholder"),
+        io.input.email("Email", disabled=True, placeholder="foo@bar.com"),
+        io.input.number("Age", disabled=True, placeholder="21"),
+        io.input.boolean("True or false?", disabled=True),
+        io.input.date("Date", disabled=True),
+        io.input.time("Time", disabled=True),
+        io.input.datetime("Date and time", disabled=True),
+        io.input.file("File", disabled=True),
+        io.select.single(
+            "Single select",
+            disabled=True,
+            options=[
+                {
+                    "label": "Red",
+                    "value": "red",
+                },
+                {
+                    "label": "Blue",
+                    "value": "blue",
+                },
+                {
+                    "label": "Orange",
+                    "value": "orange",
+                },
+            ],
+        ),
+        io.select.multiple(
+            "Multi select",
+            disabled=True,
+            options=[
+                {
+                    "label": "Red",
+                    "value": "red",
+                },
+                {
+                    "label": "Blue",
+                    "value": "blue",
+                },
+                {
+                    "label": "Orange",
+                    "value": "orange",
+                },
+            ],
+        ),
+        io.select.table("Table select", data=[{"foo": "bar"}], disabled=True),
+    )
+    return "All done!"
+
+
 interval.listen()
