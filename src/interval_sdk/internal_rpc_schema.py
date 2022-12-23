@@ -1,8 +1,8 @@
-from dataclasses import dataclass
-from typing import Any, Optional, Type, TypeAlias, Literal
+from typing import Any, Optional, Type, TypeAlias, Literal, TypedDict
+from typing_extensions import Annotated
 
 from pydantic import Field
-from typing_extensions import Annotated
+from pydantic.dataclasses import dataclass
 
 from .util import SerializableRecord
 from .types import BaseModel
@@ -47,17 +47,74 @@ class MarkTransactionCompleteInputs(BaseModel):
     result: Optional[str]
 
 
+class AccessControlObjectDefinition(TypedDict):
+    teams: list[str]
+
+
+AccessControlDefinition: TypeAlias = (
+    Literal["entire-organization"] | AccessControlObjectDefinition
+)
+
+
+class SdkAlert(BaseModel):
+    min_sdk_version: str
+    severity: Literal["INFO", "WARNING", "ERROR"]
+    message: str | None = None
+
+
+class ActionDefinition(BaseModel):
+    group_slug: str | None = None
+    slug: str
+    name: str | None = None
+    description: str | None = None
+    backgroundable: bool = False
+    unlisted: bool = False
+    access: AccessControlDefinition | None = None
+
+
+class PageDefinition(BaseModel):
+    slug: str
+    name: str
+    description: str | None = None
+    has_handler: bool = False
+    unlisted: bool = False
+    access: AccessControlDefinition | None = None
+
+
 class InitializeHostInputs(BaseModel):
     api_key: str
-    callable_action_names: list[str]
     sdk_name: str
     sdk_version: str
+    actions: list[ActionDefinition]
+    groups: list[PageDefinition]
 
 
-class InitializeHostReturns(BaseModel):
+@dataclass
+class OrganizationDef:
+    name: str
+    slug: str
+
+
+class InitializeHostReturnsSuccess(BaseModel):
+    type: Literal["success"]
     environment: ActionEnvironment
     invalid_slugs: list[str]
+    organization: OrganizationDef
     dashboard_url: str
+    sdk_alert: SdkAlert | None = None
+    warnings: list[str]
+
+
+class InitializeHostReturnsError(BaseModel):
+    type: Literal["error"]
+    message: str
+    sdk_alert: SdkAlert | None = None
+
+
+InitializeHostReturns = Annotated[
+    InitializeHostReturnsSuccess | InitializeHostReturnsError,
+    Field(discriminator="type"),
+]
 
 
 class EnqueueActionInputs(BaseModel):
@@ -190,21 +247,48 @@ class IOResponseInputs(BaseModel):
     transaction_id: str
 
 
-class ActionContextUser(BaseModel):
+@dataclass
+class ActionContextUser:
     email: str
     first_name: str | None = None
     last_name: str | None = None
 
 
-class ActionContext(BaseModel):
+@dataclass
+class ActionInfo:
+    slug: str
+    url: str
+
+
+@dataclass
+class ActionContext:
     environment: ActionEnvironment
     user: ActionContextUser
     params: SerializableRecord
+    organization: OrganizationDef
+    action: ActionInfo
+
+
+@dataclass
+class PageInfo:
+    slug: str
+
+
+@dataclass
+class PageContext:
+    environment: ActionEnvironment
+    user: ActionContextUser
+    params: SerializableRecord
+    organization: OrganizationDef
+    page: PageInfo
 
 
 class StartTransactionInputs(ActionContext):
     transaction_id: str
-    action_name: str
+    action: ActionInfo
+    environment: ActionEnvironment
+    user: ActionContextUser
+    params: SerializableRecord
 
 
 HostSchemaMethodName = Literal["IO_RESPONSE", "START_TRANSACTION"]

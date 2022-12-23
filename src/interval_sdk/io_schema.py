@@ -148,6 +148,26 @@ class ImageModel(BaseModel):
     size: Optional[ImageSize] = None
 
 
+ButtonTheme = Literal["danger"]
+
+
+class ButtonItem(TypedDict):
+    label: str
+    theme: Optional[ButtonTheme]
+    params: Optional[SerializableRecord]
+    url: Optional[str]
+    disabled: Optional[bool]
+
+
+class ButtonItemModel(BaseModel):
+    label: str
+    theme: ButtonTheme | None = None
+    route: str | None = None
+    params: SerializableRecord | None = None
+    url: str | None = None
+    disabled: bool = False
+
+
 class RenderableSearchResult(TypedDict):
     label: ObjectLiteral
     description: NotRequired[str]

@@ -1,7 +1,7 @@
 import asyncio, importlib.metadata
 from dataclasses import dataclass
 from inspect import signature
-from typing import Optional, TypeAlias, Callable, Awaitable, cast
+from typing import Optional, Callable, cast
 from urllib.parse import urlparse, urlunparse
 from uuid import uuid4, UUID
 
@@ -12,20 +12,24 @@ from pydantic import parse_raw_as
 from .io_schema import (
     ActionResult,
     IOFunctionReturnModel,
-    IOFunctionReturnType,
     SerializableRecord,
 )
+from .classes.action import Action
+from .classes.page import Page
 from .classes.isocket import ISocket
 from .classes.logger import Logger, LogLevel
 from .classes.io_client import IOClient, IOError, IORender, IOResponse
-from .classes.io import IO
 from .classes.rpc import DuplexRPCClient
 from .internal_rpc_schema import (
     ActionContext,
+    ActionDefinition,
+    ActionEnvironment,
     EnqueueActionInputs,
     EnqueueActionReturns,
     DequeueActionInputs,
     DequeueActionReturns,
+    OrganizationDef,
+    PageDefinition,
     WSServerSchema,
     HostSchema,
     StartTransactionInputs,
@@ -43,16 +47,8 @@ from .util import (
     serialize_dates,
     deserialize_dates,
 )
+from .handlers import IntervalActionHandler, IntervalPageHandler, IOResponseHandler
 from .types import BaseModel
-
-
-IntervalActionHandler: TypeAlias = (
-    Callable[[], Awaitable[IOFunctionReturnType]]
-    | Callable[[IO], Awaitable[IOFunctionReturnType]]
-    | Callable[[IO, ActionContext], Awaitable[IOFunctionReturnType]]
-)
-
-IOResponseHandler: TypeAlias = Callable[[IOResponse], Awaitable[None]]
 
 
 @dataclass
@@ -196,41 +192,121 @@ class Interval:
     _logger: Logger
     _endpoint: str = "wss://interval.com/websocket"
     _api_key: str
-    _actions: dict[str, IntervalActionHandler]
 
     _io_response_handlers: dict[str, IOResponseHandler] = {}
     _isocket: ISocket | None = None
     _server_rpc: DuplexRPCClient[WSServerSchema, HostSchema] | None = None
-    _is_connected: bool = False
+    _is_connected = False
+    _is_initialized = False
 
     actions: Actions
 
+    organization: OrganizationDef | None = None
+    environment: ActionEnvironment | None = None
+
+    _routes: dict[str, Action | Page] = {}
+    _action_definitions: list[ActionDefinition] = []
+    _page_definitions: list[PageDefinition] = []
+    _action_handlers: dict[str, IntervalActionHandler]
+    _page_handlers: dict[str, IntervalPageHandler]
+
     def __init__(
-        self, api_key: str, endpoint: Optional[str] = None, log_level: LogLevel = "prod"
+        self,
+        api_key: str,
+        endpoint: Optional[str] = None,
+        log_level: LogLevel = "info",
     ):
         self._api_key = api_key
         if endpoint is not None:
             self._endpoint = endpoint
 
-        self._actions = {}
+        self._action_handlers = {}
         self._logger = Logger(log_level)
         self.actions = Interval.Actions(self._api_key, self._endpoint)
 
-    def action(self, action_callback: IntervalActionHandler) -> None:
-        return self._add_action(action_callback.__name__, action_callback)
+    def walk_routes(self):
+        page_definitions: list[PageDefinition] = []
+        action_definitions: list[ActionDefinition] = []
+        action_handlers: dict[str, IntervalActionHandler] = {}
+        page_handlers: dict[str, IntervalPageHandler] = {}
+
+        def walk_page(group_slug: str, page: Page):
+            page_definitions.append(
+                PageDefinition(
+                    slug=group_slug,
+                    name=page.name,
+                    description=page.description,
+                    has_handler=page.handler is not None,
+                    unlisted=page.unlisted,
+                    access=page.access,
+                )
+            )
+
+            if page.handler is not None:
+                page_handlers[group_slug] = page.handler
+
+            for (slug, route) in page.routes.items():
+                if isinstance(route, Page):
+                    walk_page(f"{group_slug}/{slug}", route)
+                else:
+                    action_definitions.append(
+                        ActionDefinition(
+                            group_slug=group_slug,
+                            slug=slug,
+                            name=route.name,
+                            description=route.description,
+                            backgroundable=route.backgroundable,
+                            unlisted=route.unlisted,
+                            access=route.access,
+                        )
+                    )
+
+                    action_handlers[f"{group_slug}/{slug}"] = route.handler
+
+        for slug, route in self._routes.items():
+            if isinstance(route, Page):
+                walk_page(slug, route)
+            else:
+                action_definitions.append(
+                    ActionDefinition(
+                        slug=slug,
+                        name=route.name,
+                        description=route.description,
+                        backgroundable=route.backgroundable,
+                        unlisted=route.unlisted,
+                        access=route.access,
+                    )
+                )
+
+                action_handlers[slug] = route.handler
+
+        self._page_definitions = page_definitions
+        self._action_definitions = action_definitions
+        self._action_handlers = action_handlers
+        self._page_handlers = page_handlers
+
+    def action(self, action_handler: IntervalActionHandler) -> None:
+        return self._add_route(action_handler.__name__, Action(handler=action_handler))
 
     def action_with_slug(self, slug: str) -> Callable[[IntervalActionHandler], None]:
-        def action_adder(action_callback: IntervalActionHandler):
-            self._add_action(slug, action_callback)
+        def action_adder(action_handler: IntervalActionHandler):
+            self._add_route(slug, Action(handler=action_handler))
 
         return action_adder
+
+    # TODO: Try inferring this slug
+    def route(self, slug: str) -> Callable[[Action | Page], None]:
+        def adder(action_or_page: Action | Page):
+            self._add_route(slug, action_or_page)
+
+        return adder
+
+    def _add_route(self, slug: str, action_or_page: Action | Page) -> None:
+        self._routes[slug] = action_or_page
 
     @property
     def _log(self):
         return self._logger
-
-    def _add_action(self, slug: str, action_callback: IntervalActionHandler) -> None:
-        self._actions[slug] = action_callback
 
     @property
     def is_connected(self):
@@ -317,8 +393,12 @@ class Interval:
             raise NotInitializedError("ISocket not initialized")
 
         async def start_transaction(inputs: StartTransactionInputs):
-            slug = inputs.action_name
-            handler = self._actions.get(slug, None)
+            if self.organization is None:
+                self._logger.error("No organization defined")
+                return
+
+            slug = inputs.action.slug
+            handler = self._action_handlers.get(slug, None)
 
             if handler is None:
                 self._log.debug("No handler", slug)
@@ -341,6 +421,8 @@ class Interval:
                 user=inputs.user,
                 params=deserialize_dates(inputs.params),
                 environment=inputs.environment,
+                organization=self.organization,
+                action=inputs.action,
             )
 
             async def call_handler():
@@ -420,14 +502,18 @@ class Interval:
         if self._isocket is None:
             raise NotInitializedError("isocket not initialized")
 
-        slugs = list(self._actions.keys())
+        is_initial_initialization = not self._is_initialized
+        self._is_initialized = True
+
+        self.walk_routes()
 
         try:
-            logged_in: InitializeHostReturns | None = await self._send(
+            response: InitializeHostReturns | None = await self._send(
                 "INITIALIZE_HOST",
                 InitializeHostInputs(
                     api_key=self._api_key,
-                    callable_action_names=slugs,
+                    actions=self._action_definitions,
+                    groups=self._page_definitions,
                     sdk_name=SDK_NAME,
                     sdk_version=sdk_version,
                 ),
@@ -437,24 +523,37 @@ class Interval:
             self._log.print_exception(err)
             raise err
 
-        if logged_in is None:
-            raise IntervalError("The provided API key is not valid")
+        if response is None:
+            raise IntervalError("Unknown error")
 
-        if len(logged_in.invalid_slugs) > 0:
-            self._log.warn("[Interval]", "⚠ Invalid slugs detected:", end="\n\n")
+        if response.sdk_alert:
+            self._logger.handle_sdk_alert(response.sdk_alert)
 
-            for slug in logged_in.invalid_slugs:
+        if response.type == "error":
+            raise IntervalError(response.message)
+
+        if len(response.invalid_slugs) > 0:
+            self._logger.warn("[Interval]", "⚠ Invalid slugs detected:", end="\n\n")
+
+            for slug in response.invalid_slugs:
                 self._log.warn(" -", slug)
 
-            self._log.warn(
+            self._logger.warn(
                 "Action slugs must contain only letters, numbers, underscores, periods, and hyphens.",
                 start="\n",
             )
 
-            if len(logged_in.invalid_slugs) == len(slugs):
-                raise IntervalError("No valid slugs provided")
+        for warning in response.warnings:
+            self._logger.warn(warning)
 
-        self._log.prod("Connected! Access your actions at: ", logged_in.dashboard_url)
-        isocket = self._isocket
-        if isocket is not None:
-            self._log.debug("Host ID:", isocket.id)
+        if is_initial_initialization:
+            self._log.prod(
+                "Connected! Access your actions at: ", response.dashboard_url
+            )
+
+            if self._isocket is not None:
+                self._log.debug("Host ID:", self._isocket.id)
+
+        self.organization = response.organization
+
+        return response
