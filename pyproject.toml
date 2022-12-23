@@ -46,6 +46,7 @@ exclude = [
 ignore = [
 	"E501", # line length violations
 	"E722", # bare except
+	"E401", # multiple imports on same line
 ]
 
 # Ignore import violations in all `__init__.py` files
