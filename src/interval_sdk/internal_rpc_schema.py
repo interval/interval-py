@@ -1,18 +1,11 @@
-from typing import Any, Optional, Type, TypeAlias, Literal, TypedDict
+from typing import Any, Generic, Optional, Type, TypeAlias, Literal, TypeVar, TypedDict
 from typing_extensions import Annotated
 
 from pydantic import Field
 from pydantic.dataclasses import dataclass
 
 from .util import SerializableRecord
-from .types import BaseModel
-
-
-class DuplexMessage(BaseModel):
-    id: str
-    method_name: str
-    data: Any
-    kind: Literal["CALL", "RESPONSE"]
+from .types import BaseModel, GenericModel
 
 
 ActionEnvironment: TypeAlias = Literal["live", "development"]
@@ -248,7 +241,7 @@ class IOResponseInputs(BaseModel):
 
 
 @dataclass
-class ActionContextUser:
+class ContextUser:
     email: str
     first_name: str | None = None
     last_name: str | None = None
@@ -263,7 +256,7 @@ class ActionInfo:
 @dataclass
 class ActionContext:
     environment: ActionEnvironment
-    user: ActionContextUser
+    user: ContextUser
     params: SerializableRecord
     organization: OrganizationDef
     action: ActionInfo
@@ -277,7 +270,7 @@ class PageInfo:
 @dataclass
 class PageContext:
     environment: ActionEnvironment
-    user: ActionContextUser
+    user: ContextUser
     params: SerializableRecord
     organization: OrganizationDef
     page: PageInfo
@@ -287,11 +280,45 @@ class StartTransactionInputs(ActionContext):
     transaction_id: str
     action: ActionInfo
     environment: ActionEnvironment
-    user: ActionContextUser
+    user: ContextUser
     params: SerializableRecord
 
 
-HostSchemaMethodName = Literal["IO_RESPONSE", "START_TRANSACTION"]
+class OpenPageInputs(BaseModel):
+    page_key: str
+    client_id: str | None = None
+    page: PageInfo
+    environment: ActionEnvironment
+    user: ContextUser
+    params: SerializableRecord
+
+
+class OpenPageReturnsSuccess(BaseModel):
+    type: Literal["SUCCESS"]
+    page_key: str
+
+
+class OpenPageReturnsError(BaseModel):
+    type: Literal["ERROR"]
+    message: str | None = None
+
+
+OpenPageReturns = Annotated[
+    OpenPageReturnsSuccess | OpenPageReturnsError,
+    Field(discriminator="type"),
+]
+
+
+class ClosePageInputs(BaseModel):
+    page_key: str
+
+
+HostSchemaMethodName = Literal[
+    "IO_RESPONSE",
+    "START_TRANSACTION",
+    "OPEN_PAGE",
+    "CLOSE_PAGE",
+]
 HostSchema = dict[HostSchemaMethodName, RPCMethod]
 
 host_schema: HostSchema = {
@@ -303,4 +330,28 @@ host_schema: HostSchema = {
         inputs=StartTransactionInputs,
         returns=None,
     ),
+    "OPEN_PAGE": RPCMethod(
+        inputs=OpenPageInputs,
+        returns=OpenPageReturns,
+    ),
+    "CLOSE_PAGE": RPCMethod(
+        inputs=ClosePageInputs,
+        returns=None,
+    ),
 }
+
+AnyRPCSchemaMethodName: TypeAlias = (
+    WSServerSchemaMethodName | ClientSchemaMethodName | HostSchemaMethodName
+)
+
+RPCSchemaMethodName = TypeVar(
+    "RPCSchemaMethodName",
+    bound=AnyRPCSchemaMethodName,
+)
+
+
+class DuplexMessage(GenericModel, Generic[RPCSchemaMethodName]):
+    id: str
+    method_name: RPCSchemaMethodName
+    data: Any
+    kind: Literal["CALL", "RESPONSE"]

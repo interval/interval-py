@@ -28,14 +28,14 @@ from .internal_rpc_schema import (
     EnqueueActionReturns,
     DequeueActionInputs,
     DequeueActionReturns,
+    HostSchemaMethodName,
     OrganizationDef,
     PageDefinition,
-    WSServerSchema,
-    HostSchema,
     StartTransactionInputs,
     SendIOCallInputs,
     MarkTransactionCompleteInputs,
     IOResponseInputs,
+    WSServerSchemaMethodName,
     ws_server_schema,
     host_schema,
     InitializeHostInputs,
@@ -195,7 +195,9 @@ class Interval:
 
     _io_response_handlers: dict[str, IOResponseHandler] = {}
     _isocket: ISocket | None = None
-    _server_rpc: DuplexRPCClient[WSServerSchema, HostSchema] | None = None
+    _server_rpc: DuplexRPCClient[
+        WSServerSchemaMethodName, HostSchemaMethodName
+    ] | None = None
     _is_connected = False
     _is_initialized = False
 
@@ -312,7 +314,7 @@ class Interval:
     def is_connected(self):
         return self._is_connected
 
-    async def _send(self, method_name: str, inputs: BaseModel):
+    async def _send(self, method_name: WSServerSchemaMethodName, inputs: BaseModel):
         if self._server_rpc is None:
             raise NotInitializedError("server_rpc not initialized")
 

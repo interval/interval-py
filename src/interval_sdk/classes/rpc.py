@@ -4,13 +4,15 @@ from typing import Any, Callable, Generic, TypeVar, TypeAlias, Awaitable
 
 from pydantic import ValidationError, parse_obj_as
 
-from ..internal_rpc_schema import DuplexMessage, MethodDef
+from ..internal_rpc_schema import AnyRPCSchemaMethodName, DuplexMessage, RPCMethod
 from .isocket import ISocket
 from ..types import BaseModel
 from ..util import dict_keys_to_camel
 
-CallerSchema = TypeVar("CallerSchema", bound=MethodDef)
-ResponderSchema = TypeVar("ResponderSchema", bound=MethodDef)
+CallerSchemaMethodName = TypeVar("CallerSchemaMethodName", bound=AnyRPCSchemaMethodName)
+ResponderSchemaMethodName = TypeVar(
+    "ResponderSchemaMethodName", bound=AnyRPCSchemaMethodName
+)
 
 id_count = 0
 
@@ -21,21 +23,21 @@ def generate_id():
     return str(id_count)
 
 
-class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
+class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]):
     # TODO: Try typing this
     RPCHandler: TypeAlias = Callable[[Any], Awaitable[Any]]
 
     _communicator: ISocket
-    _can_call: CallerSchema
-    _can_respond_to: ResponderSchema
+    _can_call: dict[CallerSchemaMethodName, RPCMethod]
+    _can_respond_to: dict[ResponderSchemaMethodName, RPCMethod]
     _handlers: dict[str, RPCHandler] = {}
     _pending_calls: dict[str, Future[Any]] = {}
 
     def __init__(
         self,
         communicator: ISocket,
-        can_call: CallerSchema,
-        can_respond_to: ResponderSchema,
+        can_call: dict[CallerSchemaMethodName, RPCMethod],
+        can_respond_to: dict[ResponderSchemaMethodName, RPCMethod],
         handlers: dict[str, RPCHandler],
     ):
         self._communicator = communicator
@@ -83,7 +85,9 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
         if on_reply_fut is not None:
             on_reply_fut.set_result(parsed.data)
 
-    async def _handle_received_call(self, parsed: DuplexMessage):
+    async def _handle_received_call(
+        self, parsed: DuplexMessage[ResponderSchemaMethodName]
+    ):
         method_name = parsed.method_name
         method = self._can_respond_to[method_name]
 
@@ -101,8 +105,7 @@ class DuplexRPCClient(Generic[CallerSchema, ResponderSchema]):
 
         await self._communicator.send(prepared_response_text)
 
-    # TODO: Can this be typed?
-    async def send(self, method_name: str, inputs: BaseModel):
+    async def send(self, method_name: CallerSchemaMethodName, inputs: BaseModel):
         id = generate_id()
 
         message = DuplexMessage(
