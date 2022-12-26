@@ -1,3 +1,4 @@
+from dataclasses import dataclass as base_dataclass
 from typing import Any, Generic, Optional, Type, TypeAlias, Literal, TypeVar, TypedDict
 from typing_extensions import Annotated
 
@@ -11,7 +12,7 @@ from .types import BaseModel, GenericModel
 ActionEnvironment: TypeAlias = Literal["live", "development"]
 
 
-@dataclass
+@base_dataclass
 class RPCMethod:
     inputs: Type
     returns: Type
