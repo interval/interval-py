@@ -1,7 +1,5 @@
-from typing import Literal, Awaitable, TypeAlias
-from uuid import uuid4
-
-from pydantic.dataclasses import dataclass
+from dataclasses import dataclass
+from typing import Callable, Literal, Awaitable, TypeAlias
 
 from interval_sdk.classes.io_promise import DisplayIOPromise
 from interval_sdk.util import json_dumps_snake, json_loads_camel
@@ -18,7 +16,7 @@ class PageError(BaseModel):
     stack: str | None = None
 
 
-EventualStr: TypeAlias = str | Awaitable[str]
+EventualStr: TypeAlias = str | Awaitable[str] | Callable[[], Awaitable[str]]
 
 
 @dataclass

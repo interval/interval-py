@@ -1,5 +1,5 @@
+from dataclasses import dataclass, field
 from typing import Callable
-from pydantic.dataclasses import dataclass
 
 from .action import Action
 from ..internal_rpc_schema import AccessControlDefinition
@@ -11,7 +11,7 @@ class Page:
     name: str
     description: str | None = None
     unlisted = False
-    routes: dict[str, "Action | Page"] = {}
+    routes: dict[str, "Action | Page"] = field(default_factory=dict)
     handler: IntervalPageHandler | None = None
     access: AccessControlDefinition | None = None
 
