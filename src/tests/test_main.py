@@ -24,7 +24,7 @@ async def host(
         log_level="debug",
     )
 
-    @interval.action_with_slug("io.display.heading")
+    @interval.action("io.display.heading")
     async def display_heading(io: IO):
         await io.display.heading("io.display.heading result")
 
@@ -36,14 +36,14 @@ async def host(
             "environment": ctx.environment,
         }
 
-    @interval.action_with_slug("io.group")
+    @interval.action("io.group")
     async def group(io: IO):
         await io.group(
             io.display.markdown("1. First item"),
             io.display.markdown("2. Second item"),
         )
 
-    @interval.action_with_slug("io.display.object")
+    @interval.action("io.display.object")
     async def display_object(io: IO):
         await io.group(
             io.display.object(
@@ -61,7 +61,7 @@ async def host(
             )
         )
 
-    @interval.action_with_slug("io.display.table")
+    @interval.action("io.display.table")
     async def display_table(io: IO):
         await io.display.table(
             "io.display.table result",
@@ -75,12 +75,12 @@ async def host(
             ],
         )
 
-    @interval.action_with_slug("io.input.text")
+    @interval.action("io.input.text")
     async def io_input_text(io: IO):
         name = await io.input.text("First name")
         return {"name": name}
 
-    @interval.action_with_slug("io.input.number")
+    @interval.action("io.input.number")
     async def input_number(io: IO):
         num = await io.input.number("Enter a number")
         num2 = await io.input.number(
@@ -89,7 +89,7 @@ async def host(
 
         return {"sum": num + num2}
 
-    @interval.action_with_slug("io.input.richText")
+    @interval.action("io.input.richText")
     async def rich_text(io: IO):
         body = await io.input.rich_text("Email body")
         await io.display.markdown(
@@ -102,7 +102,7 @@ async def host(
             """
         )
 
-    @interval.action_with_slug("io.select.single")
+    @interval.action("io.select.single")
     async def select_single(io: IO):
         selected = await io.select.single(
             "Choose role",
@@ -115,7 +115,7 @@ async def host(
 
         await io.display.markdown(f"You selected: {selected['label']}")
 
-    @interval.action_with_slug("io.select.multiple")
+    @interval.action("io.select.multiple")
     async def select_multiple(io: IO):
         class Option(LabelValue):
             extraData: NotRequired[bool]
@@ -163,7 +163,7 @@ async def host(
             else None,
         }
 
-    @interval.action_with_slug("io.select.table")
+    @interval.action("io.select.table")
     async def select_table(io: IO):
         selected = await io.select.table(
             "Select some rows",

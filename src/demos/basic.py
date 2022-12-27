@@ -16,7 +16,7 @@ interval = Interval(
 )
 
 
-@interval.action
+@interval.action(name="Hello, Interval!", description="From a Python decorator!")
 async def hello_interval():
     return {"hello": "from python!"}
 
@@ -129,7 +129,7 @@ async def select_multiple(io: IO):
     }
 
 
-@interval.action_with_slug("add-two-numbers")
+@interval.action(slug="add-two-numbers")
 async def add_two_numbers(io: IO):
     n1 = await io.input.number("First number")
     n2 = await io.input.number(
@@ -144,7 +144,7 @@ async def add_two_numbers(io: IO):
     return {"n1": n1, "n2": n2, "sum": n1 + n2, "from": "🐍"}
 
 
-@interval.action_with_slug("io.display.code")
+@interval.action(slug="io.display.code")
 async def io_display_code(io: IO):
     await io.group(
         io.display.code(
@@ -169,7 +169,7 @@ setInterval(logTime, 1000)""",
     return "All done!"
 
 
-@interval.action_with_slug("io.display.link")
+@interval.action(slug="io.display.link")
 async def io_display_link(io: IO):
     await io.display.link(
         "Code",
@@ -180,7 +180,7 @@ async def io_display_link(io: IO):
     return "All done!"
 
 
-@interval.action_with_slug("io.display.video")
+@interval.action(slug="io.display.video")
 async def io_display_video(io: IO):
     await io.display.video(
         "Video via url",
@@ -191,7 +191,7 @@ async def io_display_video(io: IO):
     return "All done!"
 
 
-@interval.action_with_slug("io.display.metadata")
+@interval.action(slug="io.display.metadata")
 async def io_display_metadata(io: IO):
     await io.display.metadata(
         "User info",
@@ -206,7 +206,7 @@ async def io_display_metadata(io: IO):
     return "All done!"
 
 
-@interval.action_with_slug("io.input.url")
+@interval.action("io.input.url")
 async def io_input_url(io: IO):
     url, opt_url = await io.group(
         io.input.url("One URL please"),
@@ -219,7 +219,7 @@ async def io_input_url(io: IO):
     return {"url": str(url), "opt_url": str(opt_url)}
 
 
-@interval.action_with_slug("io.display.object")
+@interval.action("io.display.object")
 async def io_display_object(io: IO):
     await io.group(
         io.display.object(
@@ -380,7 +380,7 @@ async def optional_values(io: IO):
     }
 
 
-@interval.action_with_slug("io.search")
+@interval.action("io.search")
 async def io_search(io: IO):
     states = [
         "Alabama",
@@ -492,7 +492,7 @@ async def validity_tester(io: IO):
     )
 
 
-@interval.action_with_slug("io.input.file")
+@interval.action("io.input.file")
 async def input_file(io: IO):
     file = await io.input.file(
         "Upload file!", help_text="From python!", allowed_extensions=[".txt", ".json"]
@@ -507,7 +507,7 @@ async def input_file(io: IO):
     }
 
 
-@interval.action_with_slug("io.confirm_identity")
+@interval.action("io.confirm_identity")
 async def confirm_identity(io: IO):
     _name = await io.input.text("Please enter your name")
     can_do = await io.confirm_identity(

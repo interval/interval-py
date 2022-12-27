@@ -1,7 +1,7 @@
 import asyncio, importlib.metadata
 from dataclasses import dataclass
-from inspect import signature
-from typing import Any, Optional, Callable, cast
+from inspect import signature, isfunction
+from typing import Any, Optional, Callable, Type, cast
 from urllib.parse import urlparse, urlunparse
 from uuid import uuid4, UUID
 
@@ -21,6 +21,7 @@ from .classes.logger import Logger, LogLevel
 from .classes.io_client import IOClient, IOError, IORender, IOResponse
 from .classes.rpc import DuplexRPCClient
 from .internal_rpc_schema import (
+    AccessControlDefinition,
     ActionContext,
     ActionDefinition,
     ActionEnvironment,
@@ -279,21 +280,45 @@ class Interval:
         self._action_handlers = action_handlers
         self._page_handlers = page_handlers
 
-    def action(self, action_handler: IntervalActionHandler) -> None:
-        return self._add_route(action_handler.__name__, Action(handler=action_handler))
+    def action(
+        self,
+        handler_or_slug: IntervalActionHandler | str | None = None,
+        *,
+        slug: str | None = None,
+        name: str | None = None,
+        description: str | None = None,
+        backgroundable: bool = False,
+        unlisted: bool = False,
+        access: AccessControlDefinition | None = None,
+    ) -> Callable[[IntervalActionHandler], None]:
+        def action_adder(handler: IntervalActionHandler):
+            self._add_route(
+                slug
+                if slug is not None
+                else handler_or_slug
+                if (handler_or_slug is not None and isinstance(handler_or_slug, str))
+                else handler.__name__,
+                Action(
+                    handler=handler,
+                    name=name,
+                    description=description,
+                    backgroundable=backgroundable,
+                    unlisted=unlisted,
+                    access=access,
+                ),
+            )
 
-    def action_with_slug(self, slug: str) -> Callable[[IntervalActionHandler], None]:
-        def action_adder(action_handler: IntervalActionHandler):
-            self._add_route(slug, Action(handler=action_handler))
+        if handler_or_slug is not None and isfunction(handler_or_slug):
+            action_adder(handler_or_slug)
 
         return action_adder
 
-    # TODO: Try inferring this slug
-    def route(self, slug: str) -> Callable[[Action | Page], None]:
-        def adder(action_or_page: Action | Page):
-            self._add_route(slug, action_or_page)
-
-        return adder
+    # def route(self, slug: str | None = None) -> Callable[[Action | Page], None]:
+    #     def adder(action_or_page: Action | Page):
+    #         inner_slug = slug if slug is not None else action_or_page.__name__
+    #         self._add_route(inner_slug, action_or_page)
+    #
+    #     return adder
 
     def _add_route(self, slug: str, action_or_page: Action | Page) -> None:
         self._routes[slug] = action_or_page
@@ -434,7 +459,7 @@ class Interval:
                         elif len(params) == 2:
                             resp = await handler(client.io, ctx)  # type: ignore
                         else:
-                            raise Exception(
+                            raise IntervalError(
                                 "handler accepts invalid number of arguments"
                             )
 
