@@ -9,6 +9,14 @@ if TYPE_CHECKING:
     from pydantic.typing import AbstractSetIntStr, MappingIntStrAny
 
 
+class NotInitializedError(Exception):
+    pass
+
+
+class IntervalError(Exception):
+    pass
+
+
 class BaseModel(PydanticBaseModel):
     class Config:
         json_loads = json_loads_camel

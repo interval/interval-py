@@ -1,4 +1,3 @@
-import os
 import base64
 import sys
 from dataclasses import dataclass
@@ -414,14 +413,12 @@ class IO:
             )
 
             def get_value(val: InnerFileModel) -> IntervalFile:
-                _, extension = os.path.splitext(val.name)
                 return IntervalFile(
                     last_modified=val.last_modified,
-                    extension=extension,
                     name=val.name,
                     size=val.size,
                     type=val.type,
-                    private_url=val.url,
+                    url=val.url,
                 )
 
             return InputIOPromise(c, renderer=self._renderer, get_value=get_value)

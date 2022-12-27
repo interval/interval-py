@@ -48,6 +48,7 @@ from .util import (
     deserialize_dates,
 )
 from .handlers import IntervalActionHandler, IntervalPageHandler, IOResponseHandler
+from .types import IntervalError, NotInitializedError
 
 
 @dataclass
@@ -55,14 +56,6 @@ class QueuedAction:
     id: str
     assignee: str | None
     params: SerializableRecord | None
-
-
-class NotInitializedError(Exception):
-    pass
-
-
-class IntervalError(Exception):
-    pass
 
 
 # Intentionally different from the pypi package name,

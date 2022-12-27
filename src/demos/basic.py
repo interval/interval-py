@@ -498,11 +498,13 @@ async def input_file(io: IO):
         "Upload file!", help_text="From python!", allowed_extensions=[".txt", ".json"]
     )
 
-    print(file)
+    text = file.text()
 
-    text = await file.text()
-
-    return {"file_name": file.name, "contents": text}
+    return {
+        "file_name": file.name,
+        "extension": file.extension,
+        "contents": text,
+    }
 
 
 @interval.action_with_slug("io.confirm_identity")
