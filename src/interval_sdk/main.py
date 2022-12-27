@@ -1,7 +1,7 @@
 import asyncio, importlib.metadata
 from dataclasses import dataclass
 from inspect import signature, isfunction
-from typing import Any, Optional, Callable, Type, cast
+from typing import Any, Optional, Callable, cast
 from urllib.parse import urlparse, urlunparse
 from uuid import uuid4, UUID
 
@@ -71,11 +71,13 @@ except:
 
 
 class Interval:
-    class Actions:
+    class Routes:
         _api_key: str
         _endpoint: str
+        _interval: "Interval"
 
-        def __init__(self, api_key: str, endpoint: str):
+        def __init__(self, interval: "Interval", api_key: str, endpoint: str):
+            self._interval = interval
             self._api_key = api_key
             url = urlparse(endpoint)
             self._endpoint = urlunparse(
@@ -83,6 +85,14 @@ class Interval:
                     scheme=url.scheme.replace("ws", "http"), path="/api/actions"
                 )
             )
+
+        def add(self, slug: str, action_or_page: Action | Page):
+            # TODO: Support updates after listen()
+            self._interval._routes[slug] = action_or_page
+
+        def remove(self, slug: str):
+            # TODO: Support updates after listen()
+            del self._interval._routes[slug]
 
         def _get_address(self, path: str) -> str:
             if path.startswith("/"):
@@ -194,7 +204,7 @@ class Interval:
     _is_connected = False
     _is_initialized = False
 
-    actions: Actions
+    routes: Routes
 
     organization: OrganizationDef | None = None
     environment: ActionEnvironment | None = None
@@ -217,7 +227,7 @@ class Interval:
 
         self._action_handlers = {}
         self._logger = Logger(log_level)
-        self.actions = Interval.Actions(self._api_key, self._endpoint)
+        self.routes = Interval.Routes(self, self._api_key, self._endpoint)
 
     def walk_routes(self):
         page_definitions: list[PageDefinition] = []
@@ -292,7 +302,7 @@ class Interval:
         access: AccessControlDefinition | None = None,
     ) -> Callable[[IntervalActionHandler], None]:
         def action_adder(handler: IntervalActionHandler):
-            self._add_route(
+            self.routes.add(
                 slug
                 if slug is not None
                 else handler_or_slug
@@ -319,9 +329,6 @@ class Interval:
     #         self._add_route(inner_slug, action_or_page)
     #
     #     return adder
-
-    def _add_route(self, slug: str, action_or_page: Action | Page) -> None:
-        self._routes[slug] = action_or_page
 
     @property
     def _log(self):

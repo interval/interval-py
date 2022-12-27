@@ -26,7 +26,7 @@ task = loop.create_task(interval.listen_async())
 
 async def queue():
     await asyncio.sleep(1)
-    await interval.actions.enqueue(
+    await interval.routes.enqueue(
         "echo_context",
         params={
             "true": True,
@@ -38,7 +38,7 @@ async def queue():
         },
     )
 
-    await interval.actions.enqueue(
+    await interval.routes.enqueue(
         "echo_context",
         assignee_email="alex@interval.com",
         params={
@@ -46,11 +46,11 @@ async def queue():
         },
     )
 
-    queued_action = await interval.actions.enqueue(
+    queued_action = await interval.routes.enqueue(
         "echo_context", params={"message": "Hello, anyone!"}
     )
 
-    await interval.actions.dequeue(queued_action.id)
+    await interval.routes.dequeue(queued_action.id)
 
 
 loop.create_task(queue())

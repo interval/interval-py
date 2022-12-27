@@ -4,6 +4,7 @@ from typing import cast
 from typing_extensions import NotRequired
 
 from interval_sdk import Interval, IO
+from interval_sdk.classes.action import Action
 from interval_sdk.io_schema import (
     RichSelectOption,
     RenderableSearchResult,
@@ -19,6 +20,15 @@ interval = Interval(
 @interval.action(name="Hello, Interval!", description="From a Python decorator!")
 async def hello_interval():
     return {"hello": "from python!"}
+
+
+async def manual_action_handler(io: IO):
+    await io.display.markdown("IO works!")
+
+
+manual_action = Action(name="Manual!", handler=manual_action_handler)
+
+interval.routes.add("manual_action", manual_action)
 
 
 @interval.action
