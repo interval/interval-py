@@ -323,6 +323,28 @@ class Interval:
 
         return action_adder
 
+    def page(
+        self,
+        name: str,
+        slug: str | None = None,
+        description: str | None = None,
+        unlisted: bool = False,
+        access: AccessControlDefinition | None = None,
+    ) -> Callable[[IntervalPageHandler], None]:
+        def page_adder(handler: IntervalPageHandler):
+            self.routes.add(
+                slug if slug is not None else handler.__name__,
+                Page(
+                    handler=handler,
+                    name=name,
+                    description=description,
+                    unlisted=unlisted,
+                    access=access,
+                ),
+            )
+
+        return page_adder
+
     # def route(self, slug: str | None = None) -> Callable[[Action | Page], None]:
     #     def adder(action_or_page: Action | Page):
     #         inner_slug = slug if slug is not None else action_or_page.__name__

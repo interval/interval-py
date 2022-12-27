@@ -5,6 +5,8 @@ from typing_extensions import NotRequired
 
 from interval_sdk import Interval, IO
 from interval_sdk.classes.action import Action
+from interval_sdk.classes.layout import Layout
+from interval_sdk.classes.page import Page
 from interval_sdk.io_schema import (
     RichSelectOption,
     RenderableSearchResult,
@@ -29,6 +31,26 @@ async def manual_action_handler(io: IO):
 manual_action = Action(name="Manual!", handler=manual_action_handler)
 
 interval.routes.add("manual_action", manual_action)
+
+page = Page(name="New page!")
+
+
+@page.handle
+async def handler(display: IO.Display):
+    return Layout(
+        title="Hey",
+        children=[
+            display.markdown("Hey!"),
+        ],
+    )
+
+
+@page.action()
+async def sub_action():
+    return "Hi!"
+
+
+interval.routes.add("new_page", page)
 
 
 @interval.action

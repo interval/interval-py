@@ -27,7 +27,7 @@ class BasicLayout:
     menu_items: list[ButtonItem] | None = None
 
 
-Layout = BasicLayout
+Layout: TypeAlias = BasicLayout
 
 
 class BasicLayoutModel(BaseModel):
