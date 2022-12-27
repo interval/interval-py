@@ -498,6 +498,8 @@ async def input_file(io: IO):
         "Upload file!", help_text="From python!", allowed_extensions=[".txt", ".json"]
     )
 
+    print(file)
+
     text = await file.text()
 
     return {"file_name": file.name, "contents": text}
@@ -505,7 +507,7 @@ async def input_file(io: IO):
 
 @interval.action_with_slug("io.confirm_identity")
 async def confirm_identity(io: IO):
-    name = await io.input.text("Please enter your name")
+    _name = await io.input.text("Please enter your name")
     can_do = await io.confirm_identity(
         "This is a sensitive action", grace_period_ms=600000
     )

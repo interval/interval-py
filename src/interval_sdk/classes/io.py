@@ -68,7 +68,6 @@ from ..io_schema import (
     InnerRenderableSearchResultModel,
     FileUploadProps,
     FileUploadState,
-    FileModel,
     InnerFileModel,
 )
 from .io_promise import (
@@ -82,6 +81,7 @@ from .component import (
     Component,
     ComponentRenderer,
 )
+from .interval_file import IntervalFile
 from ..components.table import (
     TABLE_DATA_BUFFER_SIZE,
     columns_builder,
@@ -381,7 +381,7 @@ class IO:
             ]
             | None = None,
             disabled: bool | None = None,
-        ) -> InputIOPromise[Literal["UPLOAD_FILE"], FileModel]:
+        ) -> InputIOPromise[Literal["UPLOAD_FILE"], IntervalFile]:
             async def handle_state_change(
                 state: FileUploadState, props: FileUploadProps
             ) -> FileUploadProps:
@@ -413,10 +413,10 @@ class IO:
                 handle_state_change=handle_state_change,
             )
 
-            def get_value(val: InnerFileModel) -> FileModel:
+            def get_value(val: InnerFileModel) -> IntervalFile:
                 _, extension = os.path.splitext(val.name)
-                return FileModel(
-                    lastModified=val.last_modified,
+                return IntervalFile(
+                    last_modified=val.last_modified,
                     extension=extension,
                     name=val.name,
                     size=val.size,

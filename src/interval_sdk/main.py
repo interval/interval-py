@@ -48,7 +48,6 @@ from .util import (
     deserialize_dates,
 )
 from .handlers import IntervalActionHandler, IntervalPageHandler, IOResponseHandler
-from .types import BaseModel
 
 
 @dataclass
