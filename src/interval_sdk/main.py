@@ -1,7 +1,7 @@
 import asyncio, importlib.metadata
 from dataclasses import dataclass
 from inspect import signature
-from typing import Optional, Callable, cast
+from typing import Any, Optional, Callable, cast
 from urllib.parse import urlparse, urlunparse
 from uuid import uuid4, UUID
 
@@ -314,7 +314,9 @@ class Interval:
     def is_connected(self):
         return self._is_connected
 
-    async def _send(self, method_name: WSServerSchemaMethodName, inputs: BaseModel):
+    async def _send(
+        self, method_name: WSServerSchemaMethodName, inputs: dict[str, Any]
+    ):
         if self._server_rpc is None:
             raise NotInitializedError("server_rpc not initialized")
 
@@ -412,7 +414,7 @@ class Interval:
                     SendIOCallInputs(
                         transaction_id=inputs.transaction_id,
                         io_call=instruction.json(exclude_unset=True),
-                    ),
+                    ).dict(),
                 )
 
             client = IOClient(logger=self._logger, send=send)
@@ -465,7 +467,7 @@ class Interval:
                         MarkTransactionCompleteInputs(
                             transaction_id=inputs.transaction_id,
                             result=result.json(),
-                        ),
+                        ).dict(),
                     )
                 except IOError as ioerr:
                     if ioerr.kind == "CANCELED":
@@ -518,7 +520,7 @@ class Interval:
                     groups=self._page_definitions,
                     sdk_name=SDK_NAME,
                     sdk_version=sdk_version,
-                ),
+                ).dict(exclude_none=True),
             )
         except Exception as err:
             self._log.debug(err)

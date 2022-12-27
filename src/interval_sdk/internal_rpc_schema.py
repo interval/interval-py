@@ -1,5 +1,14 @@
 from dataclasses import dataclass as base_dataclass
-from typing import Any, Generic, Optional, Type, TypeAlias, Literal, TypeVar, TypedDict
+from typing import (
+    Any,
+    Generic,
+    Optional,
+    Type,
+    TypeAlias,
+    Literal,
+    TypeVar,
+    TypedDict,
+)
 from typing_extensions import Annotated
 
 from pydantic import Field
@@ -277,7 +286,7 @@ class PageContext:
     page: PageInfo
 
 
-class StartTransactionInputs(ActionContext):
+class StartTransactionInputs(BaseModel):
     transaction_id: str
     action: ActionInfo
     environment: ActionEnvironment

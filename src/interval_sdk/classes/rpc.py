@@ -1,4 +1,4 @@
-import asyncio
+import asyncio, sys
 from asyncio import Future
 from typing import Any, Callable, Generic, TypeVar, TypeAlias, Awaitable
 
@@ -6,7 +6,6 @@ from pydantic import ValidationError, parse_obj_as
 
 from ..internal_rpc_schema import AnyRPCSchemaMethodName, DuplexMessage, RPCMethod
 from .isocket import ISocket
-from ..types import BaseModel
 from ..util import dict_keys_to_camel
 
 CallerSchemaMethodName = TypeVar("CallerSchemaMethodName", bound=AnyRPCSchemaMethodName)
@@ -30,7 +29,7 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
     _communicator: ISocket
     _can_call: dict[CallerSchemaMethodName, RPCMethod]
     _can_respond_to: dict[ResponderSchemaMethodName, RPCMethod]
-    _handlers: dict[str, RPCHandler] = {}
+    _handlers: dict[ResponderSchemaMethodName, RPCHandler] = {}
     _pending_calls: dict[str, Future[Any]] = {}
 
     def __init__(
@@ -38,7 +37,7 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
         communicator: ISocket,
         can_call: dict[CallerSchemaMethodName, RPCMethod],
         can_respond_to: dict[ResponderSchemaMethodName, RPCMethod],
-        handlers: dict[str, RPCHandler],
+        handlers: dict[ResponderSchemaMethodName, RPCHandler],
     ):
         self._communicator = communicator
         self._communicator.on_message = self._on_message
@@ -61,12 +60,27 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
             if input.kind == "CALL":
                 try:
                     return await self._handle_received_call(input)
-                except KeyError:
-                    print("[DuplexRPCClient] Received unsupported call:", input)
-                except ValidationError:
-                    print("[DuplexRPCClient] Received invalid call:", input)
-                except:
-                    print("[DuplexRPCClient] Failed handling call:", input)
+                except KeyError as err:
+                    print(
+                        "[DuplexRPCClient] Received unsupported call:",
+                        input,
+                        err,
+                        file=sys.stderr,
+                    )
+                except ValidationError as err:
+                    print(
+                        "[DuplexRPCClient] Received invalid call:",
+                        input,
+                        err,
+                        file=sys.stderr,
+                    )
+                except Exception as err:
+                    print(
+                        "[DuplexRPCClient] Failed handling call:",
+                        input,
+                        err,
+                        file=sys.stderr,
+                    )
             elif input.kind == "RESPONSE":
                 try:
                     return await self._handle_received_response(input)
@@ -105,12 +119,12 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
 
         await self._communicator.send(prepared_response_text)
 
-    async def send(self, method_name: CallerSchemaMethodName, inputs: BaseModel):
+    async def send(self, method_name: CallerSchemaMethodName, inputs: dict[str, Any]):
         id = generate_id()
 
         message = DuplexMessage(
             id=id,
-            data=dict_keys_to_camel(inputs.dict(exclude_unset=True)),
+            data=dict_keys_to_camel(inputs),
             method_name=method_name,
             kind="CALL",
         )
