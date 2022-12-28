@@ -12,6 +12,12 @@ from interval_sdk.io_schema import (
     RenderableSearchResult,
 )
 
+prod = Interval(
+    "live_N47qd1BrOMApNPmVd0BiDZQRLkocfdJKzvt8W6JT5ICemrAN",
+    endpoint="ws://localhost:3000/websocket",
+    log_level="debug",
+)
+
 interval = Interval(
     "alex_dev_kcLjzxNFxmGLf0aKtLVhuckt6sziQJtxFOdtM19tBrMUp5mj",
     endpoint="ws://localhost:3000/websocket",
@@ -173,7 +179,8 @@ async def select_multiple(io: IO):
     }
 
 
-@interval.action(slug="add-two-numbers")
+@prod.action(slug="add-two-numbers", backgroundable=True)
+@interval.action(slug="add-two-numbers", backgroundable=True)
 async def add_two_numbers(io: IO):
     n1 = await io.input.number("First number")
     n2 = await io.input.number(
@@ -617,4 +624,11 @@ async def disabled_inputs(io: IO):
     return "All done!"
 
 
+# prod.listen()
 interval.listen()
+
+# FIXME: Multiple running at once conflict, for some reason
+# loop = asyncio.get_event_loop()
+# loop.create_task(prod.listen_async())
+# loop.create_task(interval.listen_async())
+# loop.run_forever()

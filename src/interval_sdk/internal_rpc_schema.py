@@ -55,6 +55,47 @@ class LeavePageInputs(BaseModel):
     page_key: str
 
 
+class LoadingState(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    items_in_queue: int | None = None
+    items_completed: int | None = None
+
+
+class SendLoadingCallInputs(LoadingState):
+    transaction_id: str
+    label: str | None = None
+
+
+class SendLogInputs(BaseModel):
+    transaction_id: str
+    data: str
+    index: int | None = None
+    timestamp: int | None = None
+
+
+@dataclass
+class DeliveryInstruction:
+    to: str
+    method: Literal["EMAIL", "SLACK"] | None = None
+
+
+class NotifyInputs(BaseModel):
+    transaction_id: str
+    message: str
+    title: str | None = None
+    idempotency_key: str | None = None
+    delivery_instructions: list[DeliveryInstruction] | None = None
+    created_at: str
+
+
+class SendRedirectInputs(BaseModel):
+    transaction_id: str
+    url: str | None = None
+    route: str | None = None
+    params: SerializableRecord | None = None
+
+
 class MarkTransactionCompleteInputs(BaseModel):
     transaction_id: str
     result: Optional[str]
@@ -177,6 +218,10 @@ WSServerSchemaMethodName = Literal[
     "CONNECT_TO_TRANSACTION_AS_CLIENT",
     "RESPOND_TO_IO_CALL",
     "SEND_IO_CALL",
+    "SEND_LOADING_CALL",
+    "SEND_LOG",
+    "NOTIFY",
+    "SEND_REDIRECT",
     "SEND_PAGE",
     "LEAVE_PAGE",
     "MARK_TRANSACTION_COMPLETE",
@@ -206,6 +251,22 @@ ws_server_schema: WSServerSchema = {
     ),
     "LEAVE_PAGE": RPCMethod(
         inputs=LeavePageInputs,
+        returns=bool,
+    ),
+    "SEND_LOADING_CALL": RPCMethod(
+        inputs=SendLoadingCallInputs,
+        returns=bool,
+    ),
+    "SEND_LOG": RPCMethod(
+        inputs=SendLogInputs,
+        returns=bool,
+    ),
+    "NOTIFY": RPCMethod(
+        inputs=NotifyInputs,
+        returns=bool,
+    ),
+    "SEND_REDIRECT": RPCMethod(
+        inputs=SendRedirectInputs,
         returns=bool,
     ),
     "MARK_TRANSACTION_COMPLETE": RPCMethod(

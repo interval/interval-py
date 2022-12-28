@@ -40,6 +40,7 @@ from .internal_rpc_schema import (
     DequeueActionInputs,
     DequeueActionReturns,
     HostSchemaMethodName,
+    LoadingState,
     OpenPageInputs,
     OpenPageReturns,
     OpenPageReturnsError,
@@ -47,6 +48,7 @@ from .internal_rpc_schema import (
     OrganizationDef,
     PageContext,
     PageDefinition,
+    SendLoadingCallInputs,
     StartTransactionInputs,
     SendPageInputs,
     SendIOCallInputs,
@@ -223,6 +225,7 @@ class Interval:
     _page_futures: dict[str, asyncio.Task] = {}
     _io_response_handlers: dict[str, IOResponseHandler] = {}
     _pending_io_calls: dict[str, str] = {}
+    _transaction_loading_states: dict[str, LoadingState] = {}
 
     _isocket: ISocket | None = None
     _server_rpc: DuplexRPCClient[
@@ -327,7 +330,7 @@ class Interval:
         backgroundable: bool = False,
         unlisted: bool = False,
         access: AccessControlDefinition | None = None,
-    ) -> Callable[[IntervalActionHandler], None]:
+    ) -> Callable[[IntervalActionHandler], IntervalActionHandler]:
         def action_adder(handler: IntervalActionHandler):
             self.routes.add(
                 slug
@@ -344,6 +347,7 @@ class Interval:
                     access=access,
                 ),
             )
+            return handler
 
         if handler_or_slug is not None and isfunction(handler_or_slug):
             action_adder(handler_or_slug)
@@ -357,7 +361,7 @@ class Interval:
         description: str | None = None,
         unlisted: bool = False,
         access: AccessControlDefinition | None = None,
-    ) -> Callable[[IntervalPageHandler], None]:
+    ) -> Callable[[IntervalPageHandler], IntervalPageHandler]:
         def page_adder(handler: IntervalPageHandler):
             self.routes.add(
                 slug if slug is not None else handler.__name__,
@@ -369,6 +373,7 @@ class Interval:
                     access=access,
                 ),
             )
+            return handler
 
         return page_adder
 
@@ -414,6 +419,122 @@ class Interval:
         self._create_rpc_client()
         await self._initialize_host()
 
+    async def _resend_pending_io_calls(self, ids_to_resend: list[str] | None = None):
+        if not self._is_connected:
+            return
+
+        if ids_to_resend is None:
+            to_resend: dict[str, str] = dict(self._pending_io_calls)
+        else:
+            to_resend: dict[str, str] = {}
+            for id in ids_to_resend:
+                try:
+                    to_resend[id] = self._pending_io_calls[id]
+                except KeyError:
+                    pass
+
+        while len(to_resend) > 0:
+            items = list(to_resend.items())
+            responses = await asyncio.gather(
+                *(
+                    self._send(
+                        "SEND_IO_CALL",
+                        SendIOCallInputs(
+                            transaction_id=transaction_id,
+                            io_call=io_call,
+                        ).dict(),
+                    )
+                    for transaction_id, io_call in items
+                ),
+                return_exceptions=True,
+            )
+            for i, response in enumerate(responses):
+                transaction_id = items[i][0]
+                if isinstance(response, BaseException):
+                    if isinstance(response, IOError):
+                        self._logger.warn(
+                            "Failed resending pending IO call:", response.kind
+                        )
+                        if (
+                            response.kind == "CANCELED"
+                            or response.kind == "TRANSACTION_CLOSED"
+                        ):
+                            self._logger.debug(
+                                "Aborting resending pending IO call:", response
+                            )
+                            del to_resend[transaction_id]
+                            del self._pending_io_calls[transaction_id]
+                else:
+                    del to_resend[transaction_id]
+                    if not response:
+                        # Unsuccessful, don't retry again
+                        del self._pending_io_calls[transaction_id]
+
+            if len(to_resend) > 0:
+                self._logger.debug(
+                    f"Trying again in {self._retry_interval_seconds}s..."
+                )
+                await asyncio.sleep(self._retry_interval_seconds)
+
+    async def _resend_transaction_loading_states(
+        self, ids_to_resend: list[str] | None = None
+    ):
+        if not self._is_connected:
+            return
+
+        if ids_to_resend is None:
+            to_resend: dict[str, LoadingState] = dict(self._transaction_loading_states)
+        else:
+            to_resend: dict[str, LoadingState] = {}
+            for id in ids_to_resend:
+                try:
+                    to_resend[id] = self._transaction_loading_states[id]
+                except KeyError:
+                    pass
+
+        while len(to_resend) > 0:
+            items = list(to_resend.items())
+            responses = await asyncio.gather(
+                (
+                    self._send(
+                        "SEND_LOADING_CALL",
+                        SendLoadingCallInputs(
+                            transaction_id=transaction_id,
+                            *loading_state,
+                        ).dict(),
+                    )
+                    for transaction_id, loading_state in items
+                ),
+                return_exceptions=True,
+            )
+            for i, response in enumerate(responses):
+                transaction_id = items[i][0]
+                if isinstance(response, BaseException):
+                    if isinstance(response, IOError):
+                        self._logger.warn(
+                            "Failed resending loading call:", response.kind
+                        )
+                        if (
+                            response.kind == "CANCELED"
+                            or response.kind == "TRANSACTION_CLOSED"
+                        ):
+                            self._logger.debug(
+                                "Aborting resending loading call:", response
+                            )
+                            del to_resend[transaction_id]
+                            del self._transaction_loading_states[transaction_id]
+                else:
+                    del to_resend[transaction_id]
+                    if not response:
+                        # Unsuccessful, don't retry again
+                        del self._transaction_loading_states[transaction_id]
+
+            if len(to_resend) > 0:
+                self._logger.debug(
+                    f"Trying again in {self._retry_interval_seconds}s..."
+                )
+                await asyncio.sleep(self._retry_interval_seconds)
+
     async def _create_socket_connection(self, instance_id: UUID = uuid4()):
         async def on_close(code: int, reason: str):
             if not self._is_connected:
@@ -436,6 +557,9 @@ class Interval:
                     await self._create_socket_connection(instance_id=instance_id)
                     self._log.prod("Reconnection successful")
                     self._is_connected = True
+                    # Might want to await these instead
+                    asyncio.create_task(self._resend_pending_io_calls())
+                    asyncio.create_task(self._resend_transaction_loading_states())
                 except Exception as err:
                     self._log.prod("Unable to reconnect. Retrying in 3s...")
                     self._log.debug(err)
@@ -509,6 +633,9 @@ class Interval:
                 self._logger.error("No organization defined")
                 return
 
+            if inputs.transaction_id in self._io_response_handlers:
+                self._logger.debug("Transaction already started, not starting again")
+
             slug = inputs.action.slug
             handler = self._action_handlers.get(slug, None)
 
@@ -517,11 +644,13 @@ class Interval:
                 return
 
             async def send(instruction: IORender):
+                io_call = instruction.json(exclude_unset=True)
+                self._pending_io_calls[inputs.transaction_id] = io_call
                 await self._send(
                     "SEND_IO_CALL",
                     SendIOCallInputs(
                         transaction_id=inputs.transaction_id,
-                        io_call=instruction.json(exclude_unset=True),
+                        io_call=io_call,
                     ).dict(),
                 )
 
@@ -537,7 +666,7 @@ class Interval:
                 action=inputs.action,
             )
 
-            async def call_handler():
+            async def handle_action():
                 try:
                     result: ActionResult
                     try:
@@ -590,8 +719,11 @@ class Interval:
                 except Exception as err:
                     self._log.debug("Uncaught exception:", err)
                     self._log.print_exception(err)
+                finally:
+                    del self._pending_io_calls[inputs.transaction_id]
+                    del self._io_response_handlers[inputs.transaction_id]
 
-            _ = asyncio.create_task(call_handler(), name="call_handler")
+            _ = asyncio.create_task(handle_action(), name="handle_action")
 
         async def io_response(inputs: IOResponseInputs) -> None:
             self._log.debug("Got IO response", inputs)

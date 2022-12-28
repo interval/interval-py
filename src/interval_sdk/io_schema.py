@@ -790,7 +790,7 @@ class IOResponse(PydanticBaseModel):
     id: UUID
     input_group_key: str | None = None
     transaction_id: str
-    kind: Literal["RETURN", "SET_STATE"]
+    kind: Literal["RETURN", "SET_STATE", "CANCELED"]
     values: list[Any]
 
     class Config:
