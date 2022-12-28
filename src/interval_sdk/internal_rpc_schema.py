@@ -45,6 +45,16 @@ class SendIOCallInputs(BaseModel):
     io_call: str
 
 
+class SendPageInputs(BaseModel):
+    page_key: str
+    # stringified page
+    page: str
+
+
+class LeavePageInputs(BaseModel):
+    page_key: str
+
+
 class MarkTransactionCompleteInputs(BaseModel):
     transaction_id: str
     result: Optional[str]
@@ -99,7 +109,7 @@ class OrganizationDef:
 
 
 class InitializeHostReturnsSuccess(BaseModel):
-    type: Literal["success"]
+    type: Literal["success"] = "success"
     environment: ActionEnvironment
     invalid_slugs: list[str]
     organization: OrganizationDef
@@ -109,7 +119,7 @@ class InitializeHostReturnsSuccess(BaseModel):
 
 
 class InitializeHostReturnsError(BaseModel):
-    type: Literal["error"]
+    type: Literal["error"] = "error"
     message: str
     sdk_alert: SdkAlert | None = None
 
@@ -127,12 +137,12 @@ class EnqueueActionInputs(BaseModel):
 
 
 class EnqueueActionReturnsSuccess(BaseModel):
-    type: Literal["success"]
+    type: Literal["success"] = "success"
     id: str
 
 
 class EnqueueActionReturnsError(BaseModel):
-    type: Literal["error"]
+    type: Literal["error"] = "error"
     message: str
 
 
@@ -147,14 +157,14 @@ class DequeueActionInputs(BaseModel):
 
 
 class DequeueActionReturnsSuccess(BaseModel):
-    type: Literal["success"]
+    type: Literal["success"] = "success"
     id: str
     assignee: str | None
     params: SerializableRecord | None
 
 
 class DequeueActionReturnsError(BaseModel):
-    type: Literal["error"]
+    type: Literal["error"] = "error"
     message: str
 
 
@@ -167,6 +177,8 @@ WSServerSchemaMethodName = Literal[
     "CONNECT_TO_TRANSACTION_AS_CLIENT",
     "RESPOND_TO_IO_CALL",
     "SEND_IO_CALL",
+    "SEND_PAGE",
+    "LEAVE_PAGE",
     "MARK_TRANSACTION_COMPLETE",
     "INITIALIZE_HOST",
     "ENQUEUE_ACTION",
@@ -186,6 +198,14 @@ ws_server_schema: WSServerSchema = {
     ),
     "SEND_IO_CALL": RPCMethod(
         inputs=SendIOCallInputs,
+        returns=bool,
+    ),
+    "SEND_PAGE": RPCMethod(
+        inputs=SendPageInputs,
+        returns=bool,
+    ),
+    "LEAVE_PAGE": RPCMethod(
+        inputs=LeavePageInputs,
         returns=bool,
     ),
     "MARK_TRANSACTION_COMPLETE": RPCMethod(
@@ -304,12 +324,12 @@ class OpenPageInputs(BaseModel):
 
 
 class OpenPageReturnsSuccess(BaseModel):
-    type: Literal["SUCCESS"]
+    type: Literal["SUCCESS"] = "SUCCESS"
     page_key: str
 
 
 class OpenPageReturnsError(BaseModel):
-    type: Literal["ERROR"]
+    type: Literal["ERROR"] = "ERROR"
     message: str | None = None
 
 

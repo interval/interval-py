@@ -772,9 +772,6 @@ def json_dumps_io_render(io_render: dict[str, Any], *args, **kwargs) -> str:
         else:
             obj[snake_to_camel(key)] = val
 
-    # FIXME: Remove this
-    print(obj, file=sys.stderr)
-
     return json.dumps(obj, *args, **kwargs)
 
 
@@ -782,7 +779,7 @@ class IORender(BaseModel):
     id: UUID
     input_group_key: UUID
     to_render: list[ComponentRenderInfo]
-    kind: Literal["RENDER"]
+    kind: Literal["RENDER"] = "RENDER"
     validation_error_message: str | None = None
 
     class Config:

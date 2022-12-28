@@ -1,6 +1,6 @@
 import asyncio, importlib.metadata
 from dataclasses import dataclass
-from inspect import signature, isfunction
+from inspect import iscoroutine, signature, isfunction
 from typing import Any, Optional, Callable, cast
 from urllib.parse import urlparse, urlunparse
 from uuid import uuid4, UUID
@@ -9,8 +9,16 @@ import aiohttp
 import websockets, websockets.client, websockets.exceptions
 from pydantic import parse_raw_as
 
+from interval_sdk.classes.layout import (
+    BasicLayoutModel,
+    Layout,
+    PageError,
+    PageLayoutKey,
+)
+
 from .io_schema import (
     ActionResult,
+    ButtonItemModel,
     IOFunctionReturnModel,
     SerializableRecord,
 )
@@ -25,14 +33,21 @@ from .internal_rpc_schema import (
     ActionContext,
     ActionDefinition,
     ActionEnvironment,
+    ClosePageInputs,
     EnqueueActionInputs,
     EnqueueActionReturns,
     DequeueActionInputs,
     DequeueActionReturns,
     HostSchemaMethodName,
+    OpenPageInputs,
+    OpenPageReturns,
+    OpenPageReturnsError,
+    OpenPageReturnsSuccess,
     OrganizationDef,
+    PageContext,
     PageDefinition,
     StartTransactionInputs,
+    SendPageInputs,
     SendIOCallInputs,
     MarkTransactionCompleteInputs,
     IOResponseInputs,
@@ -196,7 +211,16 @@ class Interval:
     _endpoint: str = "wss://interval.com/websocket"
     _api_key: str
 
+    _retry_interval_seconds: float = 3
+    _ping_interval_seconds: float = 30
+    _close_unresponsive_connection_timeout_seconds: float = 180
+    _reinitialize_batch_timeout_seconds: float = 0.2
+
+    _page_io_clients: dict[str, IOClient] = {}
+    _page_futures: dict[str, asyncio.Task] = {}
     _io_response_handlers: dict[str, IOResponseHandler] = {}
+    _pending_io_calls: dict[str, str] = {}
+
     _isocket: ISocket | None = None
     _server_rpc: DuplexRPCClient[
         WSServerSchemaMethodName, HostSchemaMethodName
@@ -442,7 +466,7 @@ class Interval:
         if self._isocket is None:
             raise NotInitializedError("ISocket not initialized")
 
-        async def start_transaction(inputs: StartTransactionInputs):
+        async def start_transaction(inputs: StartTransactionInputs) -> None:
             if self.organization is None:
                 self._logger.error("No organization defined")
                 return
@@ -504,8 +528,10 @@ class Interval:
                         result = ActionResult(
                             status="FAILURE",
                             data=IOFunctionReturnModel.parse_obj(
-                                # FIXME: Proper message?
-                                {"message": str(err)}
+                                {
+                                    "error": err.__class__.__name__,
+                                    "message": str(err),
+                                }
                             ),
                         )
                     await self._send(
@@ -529,7 +555,7 @@ class Interval:
 
             _ = asyncio.create_task(call_handler(), name="call_handler")
 
-        async def io_response(inputs: IOResponseInputs):
+        async def io_response(inputs: IOResponseInputs) -> None:
             self._log.debug("Got IO response", inputs)
             io_resp = IOResponse.parse_raw(inputs.value)
             try:
@@ -538,6 +564,255 @@ class Interval:
             except KeyError:
                 self._log.debug("Missing reply handler for", inputs.transaction_id)
 
+        async def open_page(inputs: OpenPageInputs) -> OpenPageReturns:
+            self._logger.debug("OPEN_PAGE", inputs)
+
+            if self.organization is None:
+                self._logger.error("No organization defined")
+                return OpenPageReturnsError(
+                    message="No organization defined.",
+                )
+
+            try:
+                page_handler = self._page_handlers[inputs.page.slug]
+            except KeyError:
+                self._logger.error("No page handler found for slug", inputs.page.slug)
+                return OpenPageReturnsError(message="No page handler found.")
+
+            # TODO superjson paramsMeta
+            ctx = PageContext(
+                user=inputs.user,
+                params=deserialize_dates(inputs.params),
+                environment=inputs.environment,
+                organization=self.organization,
+                page=inputs.page,
+            )
+
+            page: Layout | None = None
+            menu_items: list[ButtonItemModel] | None = None
+            render_instruction: IORender | None = None
+            errors: list[PageError] = []
+
+            MAX_PAGE_RETRIES = 5
+
+            # TODO: Coalesce multiple calls into one somehow
+            async def send_page():
+                if page is not None:
+                    page_layout = BasicLayoutModel(
+                        kind="BASIC",
+                        errors=errors,
+                    )
+
+                    if page.title is not None:
+                        page_layout.title = (
+                            page.title if isinstance(page.title, str) else None
+                        )
+
+                    if page.description is not None:
+                        page_layout.description = (
+                            page.description
+                            if isinstance(page.description, str)
+                            else None
+                        )
+
+                    if render_instruction is not None:
+                        page_layout.children = render_instruction
+
+                    if menu_items is not None:
+                        page_layout.menu_items = menu_items
+
+                    for _ in range(MAX_PAGE_RETRIES):
+                        try:
+                            await self._send(
+                                "SEND_PAGE",
+                                SendPageInputs(
+                                    page_key=inputs.page_key,
+                                    page=page_layout.json(exclude_unset=True),
+                                ).dict(),
+                            )
+                            return
+                        except Exception as err:
+                            self._logger.debug("Failed sending page", err)
+                            self._logger.debug(
+                                "Retrying in", self._retry_interval_seconds, "seconds"
+                            )
+                            await asyncio.sleep(self._retry_interval_seconds)
+                    raise IntervalError(
+                        "Unsuccessful sending page, max retries exceeded."
+                    )
+
+            async def handle_send(instruction: IORender):
+                nonlocal render_instruction
+                render_instruction = instruction
+                await send_page()
+
+            client = IOClient(logger=self._logger, send=handle_send)
+
+            self._page_io_clients[inputs.page_key] = client
+            self._io_response_handlers[inputs.page_key] = client.on_response
+
+            def page_error(
+                error: BaseException, layout_key: PageLayoutKey
+            ) -> PageError:
+                return PageError(
+                    layout_key=layout_key,
+                    error=error.__class__.__name__,
+                    message=str(error),
+                )
+
+            async def handle_page():
+                nonlocal page, menu_items
+                try:
+                    sig = signature(page_handler)
+                    params = sig.parameters
+                    if len(params) == 0:
+                        resp = await page_handler()  # type: ignore
+                    elif len(params) == 1:
+                        resp = await page_handler(client.io.display)  # type: ignore
+                    elif len(params) == 2:
+                        resp = await page_handler(client.io.display, ctx)  # type: ignore
+                    else:
+                        raise IntervalError(
+                            "handler accepts invalid number of arguments"
+                        )
+
+                    page = resp
+
+                    if page.title is not None:
+                        if isfunction(page.title):
+                            try:
+                                page.title = page.title()
+                            except Exception as err:
+                                self._logger.error(err)
+                                errors.append(page_error(err, "title"))
+
+                        if iscoroutine(page.title):
+                            fut = asyncio.create_task(page.title)
+
+                            def handle_title(task: asyncio.Task[str]):
+                                try:
+                                    del self._page_futures[fut.get_name()]
+                                except:
+                                    pass
+
+                                if page is None:
+                                    return
+
+                                try:
+                                    page.title = task.result()
+                                    asyncio.create_task(send_page())
+                                except Exception as err:
+                                    errors.append(page_error(err, "description"))
+
+                            fut.add_done_callback(handle_title)
+                            self._page_futures[fut.get_name()] = fut
+
+                    if page.description is not None:
+                        if isfunction(page.description):
+                            try:
+                                page.description = page.description()
+                            except Exception as err:
+                                self._logger.error(err)
+                                errors.append(page_error(err, "description"))
+
+                        if iscoroutine(page.description):
+                            fut = asyncio.create_task(page.description)
+
+                            def handle_title(task: asyncio.Task[str]):
+                                try:
+                                    del self._page_futures[fut.get_name()]
+                                except:
+                                    pass
+
+                                if page is None:
+                                    return
+
+                                try:
+                                    page.description = task.result()
+                                    asyncio.create_task(send_page())
+                                except Exception as err:
+                                    errors.append(page_error(err, "description"))
+
+                            fut.add_done_callback(handle_title)
+                            self._page_futures[fut.get_name()] = fut
+
+                    if page.menu_items:
+                        menu_items = [
+                            ButtonItemModel.parse_obj(item) for item in page.menu_items
+                        ]
+
+                    if page.children is not None:
+                        fut = asyncio.create_task(
+                            client.render_components(
+                                [p._component for p in page.children]
+                            )
+                        )
+
+                        def handle_children(task: asyncio.Task):
+                            try:
+                                del self._page_futures[fut.get_name()]
+                            except:
+                                pass
+
+                            try:
+                                task.result()
+                                self._logger.debug(
+                                    "Initial children render complete for page_key",
+                                    inputs.page_key,
+                                )
+                            except IOError as err:
+                                self._logger.error(err)
+                                if err.__cause__ is not None:
+                                    errors.append(
+                                        page_error(err.__cause__, layout_key="children")
+                                    )
+                                else:
+                                    errors.append(page_error(err, "children"))
+
+                                asyncio.create_task(send_page())
+                            except Exception as err:
+                                self._logger.error(err)
+                                errors.append(page_error(err, layout_key="children"))
+                                asyncio.create_task(send_page())
+
+                        fut.add_done_callback(handle_children)
+                        self._page_futures[fut.get_name()] = fut
+                except Exception as err:
+                    self._logger.error("Error in page:", err)
+                    page_layout = BasicLayoutModel(kind="BASIC", errors=errors)
+
+                    await self._send(
+                        "SEND_PAGE",
+                        SendPageInputs(
+                            page_key=inputs.page_key,
+                            page=page_layout.json(),
+                        ).dict(),
+                    )
+
+            fut = asyncio.create_task(handle_page())
+            self._page_futures[inputs.page_key] = fut
+
+            return OpenPageReturnsSuccess(page_key=inputs.page_key)
+
+        async def close_page(inputs: ClosePageInputs) -> None:
+            self._logger.debug("CLOSE_PAGE", inputs)
+            try:
+                del self._page_io_clients[inputs.page_key]
+            except KeyError:
+                pass
+
+            try:
+                fut = self._page_futures[inputs.page_key]
+                fut.cancel()
+                del self._page_futures[inputs.page_key]
+            except KeyError:
+                pass
+
+            try:
+                del self._io_response_handlers[inputs.page_key]
+            except KeyError:
+                pass
+
         self._server_rpc = DuplexRPCClient(
             communicator=self._isocket,
             can_call=ws_server_schema,
@@ -545,6 +820,8 @@ class Interval:
             handlers={
                 "START_TRANSACTION": start_transaction,
                 "IO_RESPONSE": io_response,
+                "OPEN_PAGE": open_page,
+                "CLOSE_PAGE": close_page,
             },
         )
 

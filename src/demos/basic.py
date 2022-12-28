@@ -37,10 +37,22 @@ page = Page(name="New page!")
 
 @page.handle
 async def handler(display: IO.Display):
+    data = [{"a": i, "b": i * 2, "c": i * 3} for i in range(100)]
+
+    async def title():
+        await asyncio.sleep(1)
+        return "Hey!"
+
+    async def description():
+        await asyncio.sleep(0.5)
+        return "Description??"
+
     return Layout(
-        title="Hey",
+        title=title,
+        description=description(),
         children=[
             display.markdown("Hey!"),
+            display.table("Tables?", data=data),
         ],
     )
 
