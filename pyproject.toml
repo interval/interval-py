@@ -40,6 +40,7 @@ filelock = "^3.8.2"
 exclude = [
 	"**/node_modules",
 	"**/__pycache__",
+	"**/.venv",
 ]
 
 [tool.ruff]
