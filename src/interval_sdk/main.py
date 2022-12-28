@@ -5,6 +5,7 @@ from typing import Any, Optional, Callable, cast
 from urllib.parse import urlparse, urlunparse
 from uuid import uuid4, UUID
 
+import time
 import aiohttp
 import websockets, websockets.client, websockets.exceptions
 from pydantic import parse_raw_as
@@ -214,6 +215,8 @@ class Interval:
     _retry_interval_seconds: float = 3
     _ping_interval_seconds: float = 30
     _close_unresponsive_connection_timeout_seconds: float = 180
+    _last_ping: float = 0
+    _ping_task: asyncio.Task | None = None
     _reinitialize_batch_timeout_seconds: float = 0.2
 
     _page_io_clients: dict[str, IOClient] = {}
@@ -416,7 +419,7 @@ class Interval:
             if not self._is_connected:
                 return
 
-            if self._isocket is not None:
+            if self._isocket is not None and not self._isocket.is_closed:
                 # Must be sure to close the previous connection or its
                 # producer/consumer loops will continue forever.
                 await self._isocket.close()
@@ -455,6 +458,41 @@ class Interval:
 
         await self._isocket.connect()
         self._is_connected = True
+        self._last_ping = time.time()
+
+        async def ping_interval():
+            while True:
+                await asyncio.sleep(self._ping_interval_seconds)
+                if not self._is_connected or not self._isocket:
+                    if self._ping_task is not None:
+                        self._ping_task.cancel()
+                        self._ping_task = None
+                    return
+
+                try:
+                    await self._isocket.ping()
+                    self._last_ping = time.time()
+                except Exception as err:
+                    self._log.prod("Pong not received in time", err)
+                    # if error is not a timeout
+                    if not isinstance(err, asyncio.TimeoutError):
+                        self._log.error(err)
+
+                    if (
+                        self._last_ping
+                        < time.time()
+                        - self._close_unresponsive_connection_timeout_seconds
+                    ):
+                        self._log.prod(
+                            "No pong received in the last three minutes, closing connection to Interval and retrying..."
+                        )
+
+                        await self._isocket.close()
+                        if self._ping_task is not None:
+                            self._ping_task.cancel()
+                            self._ping_task = None
+
+        self._ping_task = asyncio.create_task(ping_interval())
 
         if self._server_rpc is None:
             return
