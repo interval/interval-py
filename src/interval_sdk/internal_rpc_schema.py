@@ -1,6 +1,8 @@
 from dataclasses import dataclass as base_dataclass
 from typing import (
     Any,
+    Awaitable,
+    Callable,
     Generic,
     Optional,
     Type,
@@ -344,13 +346,43 @@ class ActionInfo:
     url: str
 
 
-@dataclass
 class ActionContext:
     environment: ActionEnvironment
     user: ContextUser
     params: SerializableRecord
     organization: OrganizationDef
     action: ActionInfo
+
+    _transaction_id: str
+    _send_log: Callable[..., Awaitable[None]]
+    _log_index = 0
+
+    def __init__(
+        self,
+        transaction_id: str,
+        environment: ActionEnvironment,
+        user: ContextUser,
+        params: SerializableRecord,
+        organization: OrganizationDef,
+        action: ActionInfo,
+        send_log: Callable[..., Awaitable[None]],
+    ):
+        self._transaction_id = transaction_id
+        self._send_log = send_log
+
+        self.environment = environment
+        self.user = user
+        self.params = params
+        self.organization = organization
+        self.action = action
+
+    async def log(self, *args):
+        self._log_index += 1
+        await self._send_log(
+            self._transaction_id,
+            self._log_index,
+            *args,
+        )
 
 
 @dataclass

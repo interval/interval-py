@@ -7,6 +7,7 @@ from interval_sdk import Interval, IO
 from interval_sdk.classes.action import Action
 from interval_sdk.classes.layout import Layout
 from interval_sdk.classes.page import Page
+from interval_sdk.internal_rpc_schema import ActionContext
 from interval_sdk.io_schema import (
     RichSelectOption,
     RenderableSearchResult,
@@ -69,6 +70,12 @@ async def sub_action():
 
 
 interval.routes.add("new_page", page)
+
+
+@interval.action
+async def log_test(_io: IO, ctx: ActionContext):
+    for i in range(10):
+        await ctx.log("hi!", i)
 
 
 @interval.action

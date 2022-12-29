@@ -1,11 +1,10 @@
-import asyncio, importlib.metadata
+import asyncio, importlib.metadata, json, time
 from dataclasses import dataclass
 from inspect import iscoroutine, signature, isfunction
 from typing import Any, Optional, Callable, cast
 from urllib.parse import urlparse, urlunparse
 from uuid import uuid4, UUID
 
-import time
 import aiohttp
 import websockets, websockets.client, websockets.exceptions
 from pydantic import parse_raw_as
@@ -49,6 +48,7 @@ from .internal_rpc_schema import (
     PageContext,
     PageDefinition,
     SendLoadingCallInputs,
+    SendLogInputs,
     StartTransactionInputs,
     SendPageInputs,
     SendIOCallInputs,
@@ -110,7 +110,10 @@ class Interval:
 
         def remove(self, slug: str):
             # TODO: Support updates after listen()
-            del self._interval._routes[slug]
+            try:
+                del self._interval._routes[slug]
+            except KeyError:
+                pass
 
         def _get_address(self, path: str) -> str:
             if path.startswith("/"):
@@ -393,7 +396,9 @@ class Interval:
         return self._is_connected
 
     async def _send(
-        self, method_name: WSServerSchemaMethodName, inputs: dict[str, Any]
+        self,
+        method_name: WSServerSchemaMethodName,
+        inputs: dict[str, Any],
     ):
         if self._server_rpc is None:
             raise NotInitializedError("server_rpc not initialized")
@@ -407,7 +412,35 @@ class Interval:
             else:
                 self._log.debug("Not connected, retrying again in 3s...")
 
-            await asyncio.sleep(3)
+            await asyncio.sleep(self._retry_interval_seconds)
+
+    async def _send_log(self, transaction_id: str, index: int, *args):
+        if len(args) == 0:
+            return
+
+        data = " ".join(
+            [arg if isinstance(arg, str) else json.dumps(arg) for arg in args]
+        )
+        if len(data) > 10000:
+            data = (
+                data[:10000]
+                + "..."
+                + "\n^ Warning: 10k logline character limit reached.\nTo avoid this error, try separating your data into multiple ctx.log() calls."
+            )
+
+        try:
+            return await self._send(
+                "SEND_LOG",
+                SendLogInputs(
+                    transaction_id=transaction_id,
+                    data=data,
+                    index=index,
+                    # expects time in milliseconds for JS Dates
+                    timestamp=time.time_ns() // 1000000,
+                ).dict(),
+            )
+        except Exception as err:
+            self._logger.error("Failed sending log to Interval", err)
 
     def listen(self):
         loop = asyncio.get_event_loop()
@@ -462,13 +495,22 @@ class Interval:
                             self._logger.debug(
                                 "Aborting resending pending IO call:", response
                             )
-                            del to_resend[transaction_id]
-                            del self._pending_io_calls[transaction_id]
+                            try:
+                                del to_resend[transaction_id]
+                            except KeyError:
+                                pass
+                            try:
+                                del self._pending_io_calls[transaction_id]
+                            except KeyError:
+                                pass
                 else:
                     del to_resend[transaction_id]
                     if not response:
                         # Unsuccessful, don't retry again
-                        del self._pending_io_calls[transaction_id]
+                        try:
+                            del self._pending_io_calls[transaction_id]
+                        except KeyError:
+                            pass
 
             if len(to_resend) > 0:
                 self._logger.debug(
@@ -521,13 +563,25 @@ class Interval:
                             self._logger.debug(
                                 "Aborting resending loading call:", response
                             )
-                            del to_resend[transaction_id]
-                            del self._transaction_loading_states[transaction_id]
+                            try:
+                                del to_resend[transaction_id]
+                            except KeyError:
+                                pass
+                            try:
+                                del self._transaction_loading_states[transaction_id]
+                            except KeyError:
+                                pass
                 else:
-                    del to_resend[transaction_id]
+                    try:
+                        del to_resend[transaction_id]
+                    except KeyError:
+                        pass
                     if not response:
                         # Unsuccessful, don't retry again
-                        del self._transaction_loading_states[transaction_id]
+                        try:
+                            del self._transaction_loading_states[transaction_id]
+                        except KeyError:
+                            pass
 
             if len(to_resend) > 0:
                 self._logger.debug(
@@ -582,7 +636,7 @@ class Interval:
 
         await self._isocket.connect()
         self._is_connected = True
-        self._last_ping = time.time()
+        self._last_ping: float = time.time()
 
         async def ping_interval():
             while True:
@@ -659,11 +713,13 @@ class Interval:
             self._io_response_handlers[inputs.transaction_id] = client.on_response
 
             ctx = ActionContext(
+                transaction_id=inputs.transaction_id,
                 user=inputs.user,
                 params=deserialize_dates(inputs.params),
                 environment=inputs.environment,
                 organization=self.organization,
                 action=inputs.action,
+                send_log=self._send_log,
             )
 
             async def handle_action():
@@ -720,8 +776,14 @@ class Interval:
                     self._log.debug("Uncaught exception:", err)
                     self._log.print_exception(err)
                 finally:
-                    del self._pending_io_calls[inputs.transaction_id]
-                    del self._io_response_handlers[inputs.transaction_id]
+                    try:
+                        del self._pending_io_calls[inputs.transaction_id]
+                    except KeyError:
+                        pass
+                    try:
+                        del self._io_response_handlers[inputs.transaction_id]
+                    except KeyError:
+                        pass
 
             _ = asyncio.create_task(handle_action(), name="handle_action")
 
