@@ -50,6 +50,7 @@ from .internal_rpc_schema import (
     PageDefinition,
     SendLoadingCallInputs,
     SendLogInputs,
+    SendRedirectInputs,
     StartTransactionInputs,
     SendPageInputs,
     SendIOCallInputs,
@@ -443,6 +444,11 @@ class Interval:
         except Exception as err:
             self._logger.error("Failed sending log to Interval", err)
 
+    async def _send_redirect(self, inputs: SendRedirectInputs):
+        response = await self._send("SEND_REDIRECT", inputs.dict())
+        if not response:
+            raise IntervalError("Failed sending redirect")
+
     def listen(self):
         loop = asyncio.get_event_loop()
         loop.create_task(self.listen_async())
@@ -725,12 +731,14 @@ class Interval:
 
             ctx = ActionContext(
                 transaction_id=inputs.transaction_id,
+                logger=self._logger,
                 user=inputs.user,
                 params=deserialize_dates(inputs.params),
                 environment=inputs.environment,
                 organization=self.organization,
                 action=inputs.action,
                 send_log=self._send_log,
+                send_redirect=self._send_redirect,
                 loading=TransactionLoadingState(
                     logger=self._logger,
                     sender=send_loading_state,

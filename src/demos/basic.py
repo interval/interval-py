@@ -1,4 +1,4 @@
-import asyncio
+import asyncio, json
 from datetime import date, datetime
 from typing import cast
 from typing_extensions import NotRequired
@@ -97,6 +97,35 @@ async def loading_test(_io: IO, ctx: ActionContext):
     await ctx.loading.start("Finishing up...")
 
     await asyncio.sleep(1)
+
+
+@interval.action
+async def redirect(io: IO, ctx: ActionContext):
+    [url, _, route, params_str] = await io.group(
+        io.input.url("URL").optional(),
+        io.display.markdown("--- or ---"),
+        io.input.text("Route").optional(),
+        io.input.text("Params", multiline=True).optional(),
+    )
+
+    params: dict | None = None
+    if url is not None:
+        await ctx.redirect(url=url.geturl())
+    elif route is not None:
+        if params_str is not None:
+            try:
+                params = json.loads(params_str)
+            except:
+                await ctx.log("Invalid params object", params_str)
+        await ctx.redirect(route=route, params=params)
+    else:
+        raise Exception("Must enter either URL or route")
+
+    return {
+        "url": url.geturl() if url is not None else None,
+        "route": route,
+        "params": params_str,
+    }
 
 
 @interval.action

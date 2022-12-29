@@ -16,7 +16,7 @@ from typing_extensions import Annotated
 from pydantic import Field
 from pydantic.dataclasses import dataclass
 
-from .classes.logger import SdkAlert
+from .classes.logger import Logger, SdkAlert
 from .classes.transaction_loading_state import LoadingState, TransactionLoadingState
 
 from .util import SerializableRecord
@@ -345,22 +345,28 @@ class ActionContext:
     loading: TransactionLoadingState
 
     _transaction_id: str
+    _logger: Logger
+    _send_redirect: Callable[[SendRedirectInputs], Awaitable[None]]
     _send_log: Callable[..., Awaitable[None]]
     _log_index = 0
 
     def __init__(
         self,
         transaction_id: str,
+        logger: Logger,
         environment: ActionEnvironment,
         user: ContextUser,
         params: SerializableRecord,
         organization: OrganizationDef,
         action: ActionInfo,
-        send_log: Callable[..., Awaitable[None]],
         loading: TransactionLoadingState,
+        send_log: Callable[..., Awaitable[None]],
+        send_redirect: Callable[[SendRedirectInputs], Awaitable[None]],
     ):
         self._transaction_id = transaction_id
+        self._logger = logger
         self._send_log = send_log
+        self._send_redirect = send_redirect
 
         self.environment = environment
         self.user = user
@@ -376,6 +382,28 @@ class ActionContext:
             self._log_index,
             *args,
         )
+
+    async def redirect(
+        self,
+        url: str | None = None,
+        route: str | None = None,
+        params: SerializableRecord | None = None,
+    ):
+        if (url is None and route is None) or (url is not None and route is not None):
+            self._logger.error("Must specify exactly one of either `url` or `route`.")
+
+        inputs = SendRedirectInputs(
+            transaction_id=self._transaction_id,
+        )
+
+        if url is not None:
+            inputs.url = url
+        if route is not None:
+            inputs.route = route
+            if params is not None:
+                inputs.params = params
+
+        await self._send_redirect(inputs)
 
 
 @dataclass
