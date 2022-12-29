@@ -15,6 +15,7 @@ from interval_sdk.classes.layout import (
     PageError,
     PageLayoutKey,
 )
+from interval_sdk.classes.transaction_loading_state import TransactionLoadingState
 
 from .io_schema import (
     ActionResult,
@@ -542,7 +543,7 @@ class Interval:
                         "SEND_LOADING_CALL",
                         SendLoadingCallInputs(
                             transaction_id=transaction_id,
-                            *loading_state,
+                            **loading_state.dict(),
                         ).dict(),
                     )
                     for transaction_id, loading_state in items
@@ -708,6 +709,16 @@ class Interval:
                     ).dict(),
                 )
 
+            async def send_loading_state(loading_state: LoadingState):
+                self._transaction_loading_states[inputs.transaction_id] = loading_state
+                await self._send(
+                    "SEND_LOADING_CALL",
+                    SendLoadingCallInputs(
+                        transaction_id=inputs.transaction_id,
+                        **loading_state.dict(),
+                    ).dict(),
+                )
+
             client = IOClient(logger=self._logger, send=send)
 
             self._io_response_handlers[inputs.transaction_id] = client.on_response
@@ -720,6 +731,10 @@ class Interval:
                 organization=self.organization,
                 action=inputs.action,
                 send_log=self._send_log,
+                loading=TransactionLoadingState(
+                    logger=self._logger,
+                    sender=send_loading_state,
+                ),
             )
 
             async def handle_action():

@@ -1,7 +1,7 @@
 import sys, traceback
 from typing import TypeAlias, Literal
 
-from interval_sdk.internal_rpc_schema import SdkAlert
+from ..types import BaseModel
 
 LogLevel: TypeAlias = Literal["quiet", "info", "debug"]
 
@@ -9,6 +9,12 @@ CHANGELOG_URL = "https://interval.com/changelog"
 
 WARN_EMOJI = "\u26A0\uFE0F"
 ERROR_EMOJI = "‼️"
+
+
+class SdkAlert(BaseModel):
+    min_sdk_version: str
+    severity: Literal["INFO", "WARNING", "ERROR"]
+    message: str | None = None
 
 
 class Logger:

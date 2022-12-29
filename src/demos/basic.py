@@ -79,6 +79,27 @@ async def log_test(_io: IO, ctx: ActionContext):
 
 
 @interval.action
+async def loading_test(_io: IO, ctx: ActionContext):
+    await ctx.loading.start("Fetching users...")
+
+    await asyncio.sleep(1)
+
+    num_users = 100
+
+    await ctx.loading.start(
+        title="Exporting users",
+        description="We're exporting all users. This may take a while.",
+        items_in_queue=num_users,
+    )
+    for _ in range(num_users):
+        await asyncio.sleep(0.1)
+        await ctx.loading.complete_one()
+    await ctx.loading.start("Finishing up...")
+
+    await asyncio.sleep(1)
+
+
+@interval.action
 async def throw_error():
     raise Exception("Error!")
 

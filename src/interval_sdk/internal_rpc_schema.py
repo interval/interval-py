@@ -16,6 +16,9 @@ from typing_extensions import Annotated
 from pydantic import Field
 from pydantic.dataclasses import dataclass
 
+from .classes.logger import SdkAlert
+from .classes.transaction_loading_state import LoadingState, TransactionLoadingState
+
 from .util import SerializableRecord
 from .types import BaseModel, GenericModel
 
@@ -55,13 +58,6 @@ class SendPageInputs(BaseModel):
 
 class LeavePageInputs(BaseModel):
     page_key: str
-
-
-class LoadingState(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    items_in_queue: int | None = None
-    items_completed: int | None = None
 
 
 class SendLoadingCallInputs(LoadingState):
@@ -110,12 +106,6 @@ class AccessControlObjectDefinition(TypedDict):
 AccessControlDefinition: TypeAlias = (
     Literal["entire-organization"] | AccessControlObjectDefinition
 )
-
-
-class SdkAlert(BaseModel):
-    min_sdk_version: str
-    severity: Literal["INFO", "WARNING", "ERROR"]
-    message: str | None = None
 
 
 class ActionDefinition(BaseModel):
@@ -352,6 +342,7 @@ class ActionContext:
     params: SerializableRecord
     organization: OrganizationDef
     action: ActionInfo
+    loading: TransactionLoadingState
 
     _transaction_id: str
     _send_log: Callable[..., Awaitable[None]]
@@ -366,6 +357,7 @@ class ActionContext:
         organization: OrganizationDef,
         action: ActionInfo,
         send_log: Callable[..., Awaitable[None]],
+        loading: TransactionLoadingState,
     ):
         self._transaction_id = transaction_id
         self._send_log = send_log
@@ -375,6 +367,7 @@ class ActionContext:
         self.params = params
         self.organization = organization
         self.action = action
+        self.loading = loading
 
     async def log(self, *args):
         self._log_index += 1
