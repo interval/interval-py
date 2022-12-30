@@ -100,6 +100,41 @@ async def loading_test(_io: IO, ctx: ActionContext):
 
 
 @interval.action
+async def notify(io: IO, ctx: ActionContext):
+    deliveries = []
+
+    more_deliveries = True
+    while more_deliveries:
+        [_heading, to, method, more_deliveries] = await io.group(
+            io.display.heading("Let's send a notification"),
+            io.input.text("To"),
+            io.select.single(
+                "Method",
+                options=[
+                    {"label": method, "value": method} for method in ["SLACK", "EMAIL"]
+                ],
+            ).optional(),
+            io.input.boolean("Send another?"),
+        )
+
+        deliveries.append(
+            {
+                "to": to,
+                "method": method["value"] if method is not None else None,
+            }
+        )
+        await ctx.log("Current delivery array:", deliveries)
+
+    [message, title] = await io.group(
+        io.input.text("Message"), io.input.text("Title").optional()
+    )
+
+    await ctx.notify(message=message, title=title, delivery=deliveries)
+
+    return "OK, notified!"
+
+
+@interval.action
 async def redirect(io: IO, ctx: ActionContext):
     [url, _, route, params_str] = await io.group(
         io.input.url("URL").optional(),

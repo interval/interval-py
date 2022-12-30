@@ -1,5 +1,6 @@
-import asyncio, importlib.metadata, json, time
+import asyncio, importlib.metadata, time
 from dataclasses import dataclass
+from datetime import datetime
 from inspect import iscoroutine, signature, isfunction
 from typing import Any, Optional, Callable, cast
 from urllib.parse import urlparse, urlunparse
@@ -35,12 +36,16 @@ from .internal_rpc_schema import (
     ActionDefinition,
     ActionEnvironment,
     ClosePageInputs,
+    DeliveryInstruction,
+    DeliveryInstructionModel,
     EnqueueActionInputs,
     EnqueueActionReturns,
     DequeueActionInputs,
     DequeueActionReturns,
     HostSchemaMethodName,
     LoadingState,
+    NotifyInputs,
+    NotifyReturns,
     OpenPageInputs,
     OpenPageReturns,
     OpenPageReturnsError,
@@ -65,6 +70,7 @@ from .internal_rpc_schema import (
 from .util import (
     DeserializableRecord,
     ensure_serialized,
+    isoformat_datetime,
     serialize_dates,
     deserialize_dates,
 )
@@ -92,19 +98,10 @@ except:
 
 class Interval:
     class Routes:
-        _api_key: str
-        _endpoint: str
         _interval: "Interval"
 
-        def __init__(self, interval: "Interval", api_key: str, endpoint: str):
+        def __init__(self, interval: "Interval"):
             self._interval = interval
-            self._api_key = api_key
-            url = urlparse(endpoint)
-            self._endpoint = urlunparse(
-                url._replace(
-                    scheme=url.scheme.replace("ws", "http"), path="/api/actions"
-                )
-            )
 
         def add(self, slug: str, action_or_page: Action | Page):
             # TODO: Support updates after listen()
@@ -116,19 +113,6 @@ class Interval:
                 del self._interval._routes[slug]
             except KeyError:
                 pass
-
-        def _get_address(self, path: str) -> str:
-            if path.startswith("/"):
-                path = path[1:]
-
-            return f"{self._endpoint}/{path}"
-
-        @property
-        def _headers(self) -> dict:
-            return {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self._api_key}",
-            }
 
         async def enqueue(
             self,
@@ -155,9 +139,11 @@ class Interval:
                 except ValueError as e:
                     raise IntervalError("Invalid input.") from e
 
-                async with aiohttp.ClientSession(headers=self._headers) as session:
+                async with aiohttp.ClientSession(
+                    headers=self._interval._api_headers
+                ) as session:
                     async with session.post(
-                        self._get_address("enqueue"), data=data
+                        self._interval._get_api_address("actions/enqueue"), data=data
                     ) as resp:
                         try:
                             text = await resp.text()
@@ -187,9 +173,11 @@ class Interval:
                 except ValueError as err:
                     raise IntervalError("Invalid input.") from err
 
-                async with aiohttp.ClientSession(headers=self._headers) as session:
+                async with aiohttp.ClientSession(
+                    headers=self._interval._api_headers
+                ) as session:
                     async with session.post(
-                        self._get_address("dequeue"), data=data
+                        self._interval._get_api_address("actions/dequeue"), data=data
                     ) as resp:
                         try:
                             response = parse_raw_as(
@@ -217,6 +205,7 @@ class Interval:
 
     _logger: Logger
     _endpoint: str = "wss://interval.com/websocket"
+    _http_endpoint: str
     _api_key: str
 
     _retry_interval_seconds: float = 3
@@ -236,6 +225,7 @@ class Interval:
     _server_rpc: DuplexRPCClient[
         WSServerSchemaMethodName, HostSchemaMethodName
     ] | None = None
+    _intentionally_closed = False
     _is_connected = False
     _is_initialized = False
 
@@ -260,11 +250,29 @@ class Interval:
         if endpoint is not None:
             self._endpoint = endpoint
 
+        url = urlparse(self._endpoint)
+        self._http_endpoint = urlunparse(
+            url._replace(scheme=url.scheme.replace("ws", "http"), path="/api")
+        )
+
         self._action_handlers = {}
         self._logger = Logger(log_level)
-        self.routes = Interval.Routes(self, self._api_key, self._endpoint)
+        self.routes = Interval.Routes(self)
 
-    def walk_routes(self):
+    def _get_api_address(self, path: str) -> str:
+        if path.startswith("/"):
+            path = path[1:]
+
+        return f"{self._http_endpoint}/{path}"
+
+    @property
+    def _api_headers(self) -> dict:
+        return {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self._api_key}",
+        }
+
+    def _walk_routes(self):
         page_definitions: list[PageDefinition] = []
         action_definitions: list[ActionDefinition] = []
         action_handlers: dict[str, IntervalActionHandler] = {}
@@ -420,9 +428,7 @@ class Interval:
         if len(args) == 0:
             return
 
-        data = " ".join(
-            [arg if isinstance(arg, str) else json.dumps(arg) for arg in args]
-        )
+        data = " ".join([str(arg) for arg in args])
         if len(data) > 10000:
             data = (
                 data[:10000]
@@ -458,6 +464,66 @@ class Interval:
         await self._create_socket_connection()
         self._create_rpc_client()
         await self._initialize_host()
+
+    async def close(self):
+        self._intentionally_closed = True
+        self._server_rpc = None
+        if self._isocket is not None:
+            await self._isocket.close()
+            self._isocket = None
+
+        self._is_connected = False
+
+    async def notify(
+        self,
+        message: str,
+        title: str | None = None,
+        delivery: list[DeliveryInstruction] | None = None,
+        transaction_id: str | None = None,
+        idempotency_key: str | None = None,
+    ):
+        await self._notify(
+            NotifyInputs(
+                message=message,
+                transaction_id=transaction_id,
+                title=title,
+                delivery_instructions=[
+                    DeliveryInstructionModel.parse_obj(d) for d in delivery
+                ]
+                if delivery is not None
+                else None,
+                idempotency_key=idempotency_key,
+                created_at=isoformat_datetime(datetime.now()),
+            )
+        )
+
+    async def _notify(self, inputs: NotifyInputs):
+        if inputs.transaction_id is None and (
+            self.environment == "development"
+            or (
+                self.environment is None
+                and (self._api_key is None or not self._api_key.startswith("live_"))
+            )
+        ):
+            self._logger.warn(
+                "Calls to notify() outside of a transaction currently have no effect when Interval is instantiated with a development API key. Please use a live key to send notifications."
+            )
+
+        async with aiohttp.ClientSession(headers=self._api_headers) as session:
+            async with session.post(
+                self._get_api_address("notify"),
+                data=inputs.json(exclude_none=True),
+            ) as resp:
+                try:
+                    text = await resp.text()
+                    response = parse_raw_as(NotifyReturns, text)
+                except Exception as e:
+                    raise IntervalError("Received invalid API response.") from e
+
+                if response.type == "error":
+                    raise IntervalError(
+                        f"There was a problem sending the notification: {response.message}"
+                    )
 
     async def _resend_pending_io_calls(self, ids_to_resend: list[str] | None = None):
         if not self._is_connected:
@@ -598,6 +664,10 @@ class Interval:
 
     async def _create_socket_connection(self, instance_id: UUID = uuid4()):
         async def on_close(code: int, reason: str):
+            if self._intentionally_closed:
+                self._intentionally_closed = False
+                return
+
             if not self._is_connected:
                 return
 
@@ -739,6 +809,7 @@ class Interval:
                 action=inputs.action,
                 send_log=self._send_log,
                 send_redirect=self._send_redirect,
+                notify=self._notify,
                 loading=TransactionLoadingState(
                     logger=self._logger,
                     sender=send_loading_state,
@@ -1087,7 +1158,7 @@ class Interval:
         is_initial_initialization = not self._is_initialized
         self._is_initialized = True
 
-        self.walk_routes()
+        self._walk_routes()
 
         try:
             response: InitializeHostReturns | None = await self._send(

@@ -247,3 +247,7 @@ def format_time(t: time) -> str:
 
 def format_datetime(d: datetime) -> str:
     return d.strftime("%c")
+
+
+def isoformat_datetime(d: datetime) -> str:
+    return d.isoformat(timespec="milliseconds") + "Z"

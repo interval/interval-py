@@ -1,4 +1,5 @@
 from dataclasses import dataclass as base_dataclass
+from datetime import datetime
 from typing import (
     Any,
     Awaitable,
@@ -19,7 +20,7 @@ from pydantic.dataclasses import dataclass
 from .classes.logger import Logger, SdkAlert
 from .classes.transaction_loading_state import LoadingState, TransactionLoadingState
 
-from .util import SerializableRecord
+from .util import SerializableRecord, isoformat_datetime, json_dumps_strip_none
 from .types import BaseModel, GenericModel
 
 
@@ -72,19 +73,40 @@ class SendLogInputs(BaseModel):
     timestamp: int | None = None
 
 
-@dataclass
-class DeliveryInstruction:
+class DeliveryInstruction(TypedDict):
+    to: str
+    method: Optional[Literal["EMAIL", "SLACK"]]
+
+
+class DeliveryInstructionModel(BaseModel):
     to: str
     method: Literal["EMAIL", "SLACK"] | None = None
 
+    class Config:
+        json_dumps = json_dumps_strip_none
+
 
 class NotifyInputs(BaseModel):
-    transaction_id: str
     message: str
+    transaction_id: str | None = None
     title: str | None = None
     idempotency_key: str | None = None
-    delivery_instructions: list[DeliveryInstruction] | None = None
+    delivery_instructions: list[DeliveryInstructionModel] | None = None
     created_at: str
+
+
+class NotifyReturnsSuccess(BaseModel):
+    type: Literal["success"] = "success"
+
+
+class NotifyReturnsError(BaseModel):
+    type: Literal["error"] = "error"
+    message: str
+
+
+NotifyReturns = Annotated[
+    NotifyReturnsSuccess | NotifyReturnsError, Field(discriminator="type")
+]
 
 
 class SendRedirectInputs(BaseModel):
@@ -348,6 +370,7 @@ class ActionContext:
     _logger: Logger
     _send_redirect: Callable[[SendRedirectInputs], Awaitable[None]]
     _send_log: Callable[..., Awaitable[None]]
+    _notify: Callable[[NotifyInputs], Awaitable[None]]
     _log_index = 0
 
     def __init__(
@@ -362,11 +385,13 @@ class ActionContext:
         loading: TransactionLoadingState,
         send_log: Callable[..., Awaitable[None]],
         send_redirect: Callable[[SendRedirectInputs], Awaitable[None]],
+        notify: Callable[[NotifyInputs], Awaitable[None]],
     ):
         self._transaction_id = transaction_id
         self._logger = logger
         self._send_log = send_log
         self._send_redirect = send_redirect
+        self._notify = notify
 
         self.environment = environment
         self.user = user
@@ -381,6 +406,28 @@ class ActionContext:
             self._transaction_id,
             self._log_index,
             *args,
+        )
+
+    async def notify(
+        self,
+        message: str,
+        title: str | None = None,
+        delivery: list[DeliveryInstruction] | None = None,
+        idempotency_key: str | None = None,
+    ):
+        return await self._notify(
+            NotifyInputs(
+                message=message,
+                title=title,
+                delivery_instructions=[
+                    DeliveryInstructionModel.parse_obj(d) for d in delivery
+                ]
+                if delivery is not None
+                else None,
+                transaction_id=self._transaction_id,
+                idempotency_key=idempotency_key,
+                created_at=isoformat_datetime(datetime.now()),
+            )
         )
 
     async def redirect(
