@@ -36,7 +36,7 @@ from ..io_schema import (
     InternalTableRowModel,
     InternalTableColumnModel,
     SelectTableProps,
-    PassthroughRichSelectOption_co,
+    PassthroughRichSelectOption,
     RichSelectOption,
     SelectSingleProps,
     RichSelectOptionModel,
@@ -501,12 +501,12 @@ class IO:
         def single(
             self,
             label: str,
-            options: Iterable[PassthroughRichSelectOption_co],
+            options: Iterable[PassthroughRichSelectOption],
             help_text: str | None = None,
-            default_value: RichSelectOption | None = None,
+            default_value: RichSelectOption | str | None = None,
             searchable: bool | None = None,
             disabled: bool | None = None,
-        ) -> InputIOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption_co]:
+        ) -> InputIOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption]:
             ...
 
         @overload
@@ -521,35 +521,77 @@ class IO:
         ) -> InputIOPromise[Literal["SELECT_SINGLE"], RichSelectOption]:
             ...
 
+        @overload
         def single(
             self,
             label: str,
-            options: Iterable[PassthroughRichSelectOption_co],
+            options: Iterable[str],
             help_text: str | None = None,
-            default_value: RichSelectOption | None = None,
+            default_value: str | None = None,
             searchable: bool | None = None,
             disabled: bool | None = None,
-        ) -> InputIOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption_co]:
+        ) -> InputIOPromise[Literal["SELECT_SINGLE"], str]:
+            ...
+
+        @overload
+        def single(
+            self,
+            label: str,
+            options: Iterable[RichSelectOption | str],
+            help_text: str | None = None,
+            default_value: RichSelectOption | str | None = None,
+            searchable: bool | None = None,
+            disabled: bool | None = None,
+        ) -> InputIOPromise[Literal["SELECT_SINGLE"], RichSelectOption | str]:
+            ...
+
+        def single(
+            self,
+            label: str,
+            options: Iterable[PassthroughRichSelectOption],
+            help_text: str | None = None,
+            default_value: RichSelectOption | str | None = None,
+            searchable: bool | None = None,
+            disabled: bool | None = None,
+        ) -> InputIOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption]:
+            normalized_options: list[RichSelectOption] = [
+                {"label": option, "value": option}
+                if isinstance(option, str)
+                else option
+                for option in options
+            ]
+            normalized_default_value: RichSelectOption | None = (
+                {"label": default_value, "value": default_value}
+                if isinstance(default_value, str)
+                else default_value
+            )
+
             c = Component(
                 method_name="SELECT_SINGLE",
                 label=label,
                 initial_props=SelectSingleProps(
                     options=[
-                        RichSelectOptionModel.parse_obj(option) for option in options
+                        RichSelectOptionModel.parse_obj(option)
+                        for option in normalized_options
                     ],
                     help_text=help_text,
-                    default_value=RichSelectOptionModel.parse_obj(default_value)
-                    if default_value is not None
+                    default_value=RichSelectOptionModel.parse_obj(
+                        normalized_default_value
+                    )
+                    if normalized_default_value is not None
                     else None,
                     searchable=searchable,
                     disabled=disabled,
                 ).dict(),
             )
-            option_map = {option["value"]: option for option in options}
+            option_map = {
+                option if isinstance(option, str) else option["value"]: option
+                for option in options
+            }
 
             def get_value(
                 item: RichSelectOptionModel,
-            ) -> PassthroughRichSelectOption_co:
+            ) -> PassthroughRichSelectOption:
                 return option_map[item.value]
 
             return InputIOPromise(c, renderer=self._renderer, get_value=get_value)
@@ -560,7 +602,7 @@ class IO:
             label: str,
             options: Iterable[PassthroughLabelValue],
             help_text: str | None = None,
-            default_value: Iterable[LabelValue] | None = None,
+            default_value: Iterable[LabelValue | str] | None = None,
             min_selections: int | None = None,
             max_selections: int | None = None,
             disabled: bool | None = None,
@@ -580,26 +622,73 @@ class IO:
         ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[LabelValue]]:
             ...
 
+        @overload
+        def multiple(
+            self,
+            label: str,
+            options: Iterable[str],
+            help_text: str | None = None,
+            default_value: Iterable[str] | None = None,
+            min_selections: int | None = None,
+            max_selections: int | None = None,
+            disabled: bool | None = None,
+        ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[str]]:
+            ...
+
+        @overload
+        def multiple(
+            self,
+            label: str,
+            options: Iterable[LabelValue | str],
+            help_text: str | None = None,
+            default_value: Iterable[LabelValue | str] | None = None,
+            min_selections: int | None = None,
+            max_selections: int | None = None,
+            disabled: bool | None = None,
+        ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[LabelValue | str]]:
+            ...
+
         def multiple(
             self,
             label: str,
             options: Iterable[PassthroughLabelValue],
             help_text: str | None = None,
-            default_value: Iterable[LabelValue] | None = None,
+            default_value: Iterable[LabelValue | str] | None = None,
             min_selections: int | None = None,
             max_selections: int | None = None,
             disabled: bool | None = None,
         ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[PassthroughLabelValue]]:
+            normalized_options: list[LabelValue] = [
+                {"label": option, "value": option}
+                if isinstance(option, str)
+                else option
+                for option in options
+            ]
+            normalized_default_value: list[LabelValue] | None = (
+                [
+                    {"label": value, "value": value}
+                    if isinstance(value, str)
+                    else value
+                    for value in default_value
+                ]
+                if default_value is not None
+                else default_value
+            )
+
             c = Component(
                 method_name="SELECT_MULTIPLE",
                 label=label,
                 initial_props=SelectMultipleProps(
-                    options=[LabelValueModel.parse_obj(option) for option in options],
+                    options=[
+                        LabelValueModel.parse_obj(option)
+                        for option in normalized_options
+                    ],
                     help_text=help_text,
                     default_value=[
-                        LabelValueModel.parse_obj(val) for val in default_value
+                        LabelValueModel.parse_obj(val)
+                        for val in normalized_default_value
                     ]
-                    if default_value is not None
+                    if normalized_default_value is not None
                     else [],
                     min_selections=min_selections,
                     max_selections=max_selections,
@@ -607,7 +696,10 @@ class IO:
                 ).dict(),
             )
 
-            option_map = {option["value"]: option for option in options}
+            option_map = {
+                option if isinstance(option, str) else option["value"]: option
+                for option in options
+            }
 
             def get_value(
                 val: list[LabelValueModel],

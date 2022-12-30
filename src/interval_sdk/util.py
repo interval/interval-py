@@ -214,8 +214,10 @@ def serialize_dates(
     if record is None:
         return None
 
-    if isinstance(record, (datetime, date, time)):
+    if isinstance(record, date | time):
         return record.isoformat()
+    if isinstance(record, datetime):
+        return isoformat_datetime(record)
 
     if isinstance(record, dict):
         return cast(

@@ -115,8 +115,8 @@ class RichSelectOption(TypedDict):
     imageUrl: NotRequired[str]
 
 
-PassthroughRichSelectOption_co = TypeVar(
-    "PassthroughRichSelectOption_co", bound=RichSelectOption, covariant=True
+PassthroughRichSelectOption = TypeVar(
+    "PassthroughRichSelectOption", bound=RichSelectOption | str
 )
 
 
@@ -215,7 +215,7 @@ class LabelValue(TypedDict):
     value: ObjectLiteral
 
 
-PassthroughLabelValue = TypeVar("PassthroughLabelValue", bound=LabelValue)
+PassthroughLabelValue = TypeVar("PassthroughLabelValue", bound=LabelValue | str)
 
 
 class LabelValueModel(BaseModel):
@@ -242,7 +242,7 @@ class DeserializableModel(BaseModel):
 
 
 class DeserializableRecordModel(BaseModel):
-    __root__: dict[str, DeserializableModel]
+    __root__: dict[str, DeserializableModel | None]
 
 
 class SerializableModel(BaseModel):
@@ -250,7 +250,7 @@ class SerializableModel(BaseModel):
 
 
 class SerializableRecordModel(BaseModel):
-    __root__: dict[str, SerializableModel]
+    __root__: dict[str, SerializableModel | None]
 
 
 class IOFunctionReturnModel(BaseModel):

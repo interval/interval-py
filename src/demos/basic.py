@@ -111,7 +111,8 @@ async def notify(io: IO, ctx: ActionContext):
             io.select.single(
                 "Method",
                 options=[
-                    {"label": method, "value": method} for method in ["SLACK", "EMAIL"]
+                    "SLACK",
+                    "EMAIL",
                 ],
             ).optional(),
             io.input.boolean("Send another?"),
@@ -120,7 +121,7 @@ async def notify(io: IO, ctx: ActionContext):
         deliveries.append(
             {
                 "to": to,
-                "method": method["value"] if method is not None else None,
+                "method": method,
             }
         )
         await ctx.log("Current delivery array:", deliveries)
@@ -203,6 +204,7 @@ async def select_single(io: IO):
                     {
                         "label": "Red",
                         "value": "red",
+                        "extraData": True,
                     },
                 ),
                 cast(
@@ -228,6 +230,14 @@ async def select_single(io: IO):
 
 @interval.action
 async def select_multiple(io: IO):
+    basic = await io.select.multiple("Just strings", options=["a", "b"])
+    print(basic)
+
+    both = await io.select.multiple(
+        "Both", options=["string", {"label": "object", "value": "object"}]
+    )
+    print(both)
+
     class Option(RichSelectOption):
         extraData: NotRequired[bool]
 
@@ -260,15 +270,16 @@ async def select_multiple(io: IO):
 
     selected_values = [o["value"] for o in selected]
 
-    ret: dict[str, bool] = {}
+    ret: dict[str, bool | None] = {}
 
     for option in options:
         ret[str(option["label"])] = option["value"] in selected_values
 
-    return {
-        **ret,
-        "extraData": selected[1]["extraData"] if "extraData" in selected[1] else None,
-    }
+    ret["extraData"] = selected[1]["extraData"] if "extraData" in selected[1] else None
+
+    print(ret)
+
+    return ret
 
 
 @prod.action(slug="add-two-numbers", backgroundable=True)
