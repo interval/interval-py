@@ -42,7 +42,7 @@ def serialize_table_row(
         # TODO: image
 
         if val is not None:
-            if val is dict:
+            if isinstance(val, dict):
                 val = cast(TableRowValueObject, val)
                 if "label" in val and val["label"] is not None:
                     if isinstance(val["label"], datetime):
@@ -85,7 +85,7 @@ def columns_builder(
     if columns:
 
         def normalize_col(col: TableColumnDef | str) -> TableColumnDef:
-            if col is str:
+            if isinstance(col, str):
                 col = cast(str, col)
 
                 if log_missing_column is not None and col not in data_columns:
@@ -107,7 +107,7 @@ def columns_builder(
 
             return col
 
-        return list(map(normalize_col, columns))
+        return [normalize_col(col) for col in columns]
 
     return [{"label": label, "accessorKey": label} for label in data_columns]
 

@@ -434,6 +434,8 @@ async def table_test(io: IO):
                     "href": f"https://example.com/{row['b']}",
                 },
             },
+            "c",
+            {"label": "D", "accessorKey": "d"},
         ],
     )
 

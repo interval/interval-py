@@ -432,14 +432,14 @@ class IO:
             label: str,
             data: list[TR],
             help_text: str | None = None,
-            columns: list[TableColumnDef] | None = None,
+            columns: list[TableColumnDef | str] | None = None,
             min_selections: int | None = None,
             max_selections: int | None = None,
             disabled: bool | None = None,
         ) -> InputIOPromise[Literal["SELECT_TABLE"], list[TR]]:
-            columns = columns_builder(data=data, columns=columns)
+            normalized_columns = columns_builder(data=data, columns=columns)
             serialized_rows = [
-                serialize_table_row(key=str(i), row=row, columns=columns)
+                serialize_table_row(key=str(i), row=row, columns=normalized_columns)
                 for (i, row) in enumerate(data)
             ]
 
@@ -476,7 +476,8 @@ class IO:
                 initial_props=SelectTableProps(
                     help_text=help_text,
                     columns=[
-                        InternalTableColumnModel.parse_obj(col) for col in columns
+                        InternalTableColumnModel.parse_obj(col)
+                        for col in normalized_columns
                     ],
                     data=[
                         InternalTableRowModel.parse_obj(row)
@@ -844,11 +845,11 @@ class IO:
             label: str,
             data: list[TR],
             help_text: str | None = None,
-            columns: list[TableColumnDef] | None = None,
+            columns: list[TableColumnDef | str] | None = None,
         ) -> DisplayIOPromise[Literal["DISPLAY_TABLE"], None]:
-            columns = columns_builder(data=data, columns=columns)
+            normalized_columns = columns_builder(data=data, columns=columns)
             serialized_rows = [
-                serialize_table_row(key=str(i), row=row, columns=columns)
+                serialize_table_row(key=str(i), row=row, columns=normalized_columns)
                 for (i, row) in enumerate(data)
             ]
 
@@ -877,7 +878,8 @@ class IO:
                 initial_props=DisplayTableProps(
                     help_text=help_text,
                     columns=[
-                        InternalTableColumnModel.parse_obj(col) for col in columns
+                        InternalTableColumnModel.parse_obj(col)
+                        for col in normalized_columns
                     ],
                     data=[
                         InternalTableRowModel.parse_obj(row)
