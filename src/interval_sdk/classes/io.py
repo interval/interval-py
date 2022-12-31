@@ -99,6 +99,7 @@ _T5 = TypeVar("_T5")
 _T6 = TypeVar("_T6")
 _T7 = TypeVar("_T7")
 _T8 = TypeVar("_T8")
+_T9 = TypeVar("_T9")
 
 TR = TypeVar("TR", bound=TableRow)
 
@@ -1079,8 +1080,23 @@ class IO:
 
     @overload
     def group(
+        self,
+        p1: GroupableIOPromise[MethodName, _T1],
+        p2: GroupableIOPromise[MethodName, _T2],
+        p3: GroupableIOPromise[MethodName, _T3],
+        p4: GroupableIOPromise[MethodName, _T4],
+        p5: GroupableIOPromise[MethodName, _T5],
+        p6: GroupableIOPromise[MethodName, _T6],
+        p7: GroupableIOPromise[MethodName, _T7],
+        p8: GroupableIOPromise[MethodName, _T8],
+        p9: GroupableIOPromise[MethodName, _T9],
+    ) -> IOGroupPromise[_T1, _T2, _T3, _T4, _T5, _T6, _T7, _T8, _T9]:
+        ...
+
+    @overload
+    def group(
         self, *io_promises: GroupableIOPromise[MethodName, Any]
-    ) -> IOGroupPromise[Any]:
+    ) -> IOGroupPromise[list[Any]]:
         ...
 
     def group(  # type: ignore

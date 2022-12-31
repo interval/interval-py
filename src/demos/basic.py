@@ -26,6 +26,31 @@ interval = Interval(
 )
 
 
+@interval.action
+async def group_types(io: IO):
+    resp = await io.group(
+        io.display.heading("Typed"),
+        io.input.text("text"),
+        io.input.number("int"),
+        io.input.number("float", decimals=2).optional(),
+    )
+    print(resp)
+    resp = await io.group(
+        io.display.heading("Fallback"),
+        io.input.text("text"),
+        io.input.number("int"),
+        io.input.number("float", decimals=2).optional(),
+        io.input.text("text").optional(),
+        io.input.text("text").optional(),
+        io.input.text("text").optional(),
+        io.input.text("text").optional(),
+        io.input.text("text").optional(),
+        io.input.text("text").optional(),
+        io.input.text("text").optional(),
+    )
+    print(resp)
+
+
 @interval.action(name="Hello, Interval!", description="From a Python decorator!")
 async def hello_interval():
     return {"hello": "from python!"}

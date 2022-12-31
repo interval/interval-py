@@ -6,6 +6,7 @@ from typing import (
     Any,
     Generator,
     cast,
+    overload,
 )
 from typing_extensions import Unpack, override
 
@@ -118,7 +119,16 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
         self._io_promises = io_promises
         self._renderer = renderer
 
+    @overload
+    def __await__(self: "IOGroupPromise[list[Any]]") -> Generator[Any, None, list[Any]]:
+        """Fallback typing for calls with 10 or more arguments."""
+        ...
+
+    @overload
     def __await__(self) -> Generator[Any, None, tuple[Unpack[GroupOutput]]]:
+        ...
+
+    def __await__(self) -> Generator[Any, None, tuple[Unpack[GroupOutput]]]:  # type: ignore
         res = yield from self._renderer(
             [p._component for p in self._io_promises], self._validator
         ).__await__()
