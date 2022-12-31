@@ -138,11 +138,10 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
         )
 
     def validate(
-        self: IOGroupPromiseSelf,
+        self: "IOGroupPromise[Unpack[GroupOutput]]",
         validator: IOGroupPromiseValidator[Unpack[GroupOutput]] | None,
-    ) -> IOGroupPromiseSelf:
-        # not sure why it can't unify this, but it seems to not affect the external inference
-        self._validator = validator  # type: ignore
+    ) -> "IOGroupPromise[Unpack[GroupOutput]]":
+        self._validator = validator
         return self
 
     async def _handle_validation(self, return_values: list[Any]) -> str | None:
@@ -153,6 +152,5 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
         values = [
             io_promises[index]._get_value(v) for index, v in enumerate(return_values)
         ]
-        # not sure why it can't unify this, but it seems to not affect the external inference
         ret = self._validator(*values)  # type: ignore
         return cast(str | None, await ret if inspect.isawaitable(ret) else ret)
