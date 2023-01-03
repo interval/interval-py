@@ -29,7 +29,6 @@ class ISocket:
     _ws: websockets.client.WebSocketClientProtocol
     _send_timeout: float
     _connect_timeout: float
-    _ping_timeout: float
     _is_authenticated: bool
 
     id: UUID
@@ -50,7 +49,6 @@ class ISocket:
         id: UUID = uuid4(),
         send_timeout: float = 3,
         connect_timeout: float = 10,
-        ping_timeout: float = 3,
         on_message: Callable[[str], Awaitable[None]] | None = None,
         on_open: Callable[[], Awaitable[None]] | None = None,
         on_error: Callable[[Exception], Awaitable[None]] | None = None,
@@ -60,7 +58,6 @@ class ISocket:
         self.id = id
         self._send_timeout = send_timeout
         self._connect_timeout = connect_timeout
-        self._ping_timeout = ping_timeout
         self.is_closed = False
 
         self.on_message = on_message
@@ -166,14 +163,7 @@ class ISocket:
         if self._ws is None:
             raise NotConnectedError
 
-        loop = asyncio.get_running_loop()
-
-        id = uuid4()
-        fut = loop.create_future()
-        message = Message(id=id, data="ping", type="MESSAGE")
-        self._pending_messages[message.id] = PendingMessage(
-            message=message, on_ack_received=fut
-        )
-        await self._out_queue.put(message)
-
-        await asyncio.wait_for(fut, self._ping_timeout)
+        # start the ping
+        waiter = await self._ws.ping()
+        # wait for the response
+        return await waiter
