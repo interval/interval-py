@@ -1,4 +1,5 @@
 import asyncio, importlib.metadata, time
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import datetime
 from inspect import iscoroutine, signature, isfunction
@@ -9,6 +10,7 @@ from uuid import uuid4, UUID
 import aiohttp
 import websockets, websockets.client, websockets.exceptions
 from pydantic import parse_raw_as
+from interval_sdk.classes.io import IO
 
 from interval_sdk.classes.layout import (
     BasicLayoutModel,
@@ -89,6 +91,9 @@ class QueuedAction:
 # `-py` suffix is superfluous there but important to us.
 SDK_NAME = "interval-py"
 sdk_version = "???"
+
+io_var: ContextVar[IO] = ContextVar("io")
+ctx_var: ContextVar[ActionContext | PageContext] = ContextVar("ctx")
 
 try:
     sdk_version = importlib.metadata.version(__package__)
@@ -799,7 +804,7 @@ class Interval:
 
             self._io_response_handlers[inputs.transaction_id] = client.on_response
 
-            ctx = ActionContext(
+            action_ctx = ActionContext(
                 transaction_id=inputs.transaction_id,
                 logger=self._logger,
                 user=inputs.user,
@@ -819,7 +824,11 @@ class Interval:
             async def handle_action():
                 try:
                     result: ActionResult
+                    io_token = io_var.set(client.io)
+                    ctx_token = ctx_var.set(action_ctx)
+
                     try:
+
                         sig = signature(handler)
                         params = sig.parameters
                         if len(params) == 0:
@@ -827,7 +836,7 @@ class Interval:
                         elif len(params) == 1:
                             resp = await handler(client.io)  # type: ignore
                         elif len(params) == 2:
-                            resp = await handler(client.io, ctx)  # type: ignore
+                            resp = await handler(client.io, action_ctx)  # type: ignore
                         else:
                             raise IntervalError(
                                 "handler accepts invalid number of arguments"
@@ -851,6 +860,9 @@ class Interval:
                                 }
                             ),
                         )
+                    finally:
+                        io_var.reset(io_token)
+                        ctx_var.reset(ctx_token)
                     await self._send(
                         "MARK_TRANSACTION_COMPLETE",
                         MarkTransactionCompleteInputs(
@@ -906,7 +918,7 @@ class Interval:
                 return OpenPageReturnsError(message="No page handler found.")
 
             # TODO superjson paramsMeta
-            ctx = PageContext(
+            page_ctx = PageContext(
                 user=inputs.user,
                 params=deserialize_dates(inputs.params),
                 environment=inputs.environment,
@@ -988,6 +1000,8 @@ class Interval:
 
             async def handle_page():
                 nonlocal page, menu_items
+                io_token = io_var.set(client.io)
+                ctx_token = ctx_var.set(page_ctx)
                 try:
                     sig = signature(page_handler)
                     params = sig.parameters
@@ -996,7 +1010,7 @@ class Interval:
                     elif len(params) == 1:
                         resp = await page_handler(client.io.display)  # type: ignore
                     elif len(params) == 2:
-                        resp = await page_handler(client.io.display, ctx)  # type: ignore
+                        resp = await page_handler(client.io.display, page_ctx)  # type: ignore
                     else:
                         raise IntervalError(
                             "handler accepts invalid number of arguments"
@@ -1114,6 +1128,9 @@ class Interval:
                             page=page_layout.json(),
                         ).dict(),
                     )
+                finally:
+                    io_var.reset(io_token)
+                    ctx_var.reset(ctx_token)
 
             fut = asyncio.create_task(handle_page())
             self._page_futures[inputs.page_key] = fut

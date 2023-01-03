@@ -3,7 +3,7 @@ from datetime import date, datetime
 from typing import cast
 from typing_extensions import NotRequired
 
-from interval_sdk import Interval, IO
+from interval_sdk import Interval, IO, io_var, ctx_var
 from interval_sdk.classes.action import Action
 from interval_sdk.classes.layout import Layout
 from interval_sdk.classes.page import Page
@@ -98,13 +98,16 @@ interval.routes.add("new_page", page)
 
 
 @interval.action
-async def log_test(_io: IO, ctx: ActionContext):
+async def log_test():
+    ctx = cast(ActionContext, ctx_var.get())
     for i in range(10):
         await ctx.log("hi!", i)
 
 
-@interval.action
-async def loading_test(_io: IO, ctx: ActionContext):
+@prod.action()
+@interval.action()
+async def loading_test():
+    ctx = cast(ActionContext, ctx_var.get())
     await ctx.loading.start("Fetching users...")
 
     await asyncio.sleep(1)
@@ -194,11 +197,24 @@ async def throw_error():
     raise Exception("Error!")
 
 
-@interval.action
-async def echo_message(io: IO):
+@prod.action()
+@interval.action()
+async def echo_message():
+    io = io_var.get()
     [message] = await io.group(io.input.text("Hello!", help_text="From python!"))
 
     return message
+
+
+@prod.action()
+@interval.action()
+async def context():
+    ctx = ctx_var.get()
+    return {
+        "user": f"{ctx.user.first_name} {ctx.user.last_name}",
+        "message": ctx.params.get("message", None),
+        "environment": ctx.environment,
+    }
 
 
 @interval.action
@@ -309,7 +325,8 @@ async def select_multiple(io: IO):
 
 @prod.action(slug="add-two-numbers", backgroundable=True)
 @interval.action(slug="add-two-numbers", backgroundable=True)
-async def add_two_numbers(io: IO):
+async def add_two_numbers():
+    io = io_var.get()
     n1 = await io.input.number("First number")
     n2 = await io.input.number(
         "Second number",
