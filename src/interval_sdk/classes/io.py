@@ -75,6 +75,7 @@ from .io_promise import (
     GroupableIOPromise,
     ExclusiveIOPromise,
     InputIOPromise,
+    KeyedIONamespace,
 )
 from .component import (
     Component,
@@ -1099,11 +1100,23 @@ class IO:
     ) -> IOGroupPromise[list[Any]]:
         ...
 
+    @overload
+    def group(
+        self,
+        **kw_io_promises: GroupableIOPromise[MethodName, Any],
+    ) -> IOGroupPromise[KeyedIONamespace]:
+        ...
+
     def group(  # type: ignore
         self,
         *io_promises: GroupableIOPromise[MethodName, Any],
-    ) -> IOGroupPromise[list[Any]]:
-        return IOGroupPromise(io_promises=io_promises, renderer=self._renderer)
+        **kw_io_promises: GroupableIOPromise[MethodName, Any],
+    ):
+        return IOGroupPromise(
+            io_promises=io_promises,
+            kw_io_promises=kw_io_promises,
+            renderer=self._renderer,
+        )
 
     def search(
         self,

@@ -98,6 +98,21 @@ interval.routes.add("new_page", page)
 
 
 @interval.action
+async def keyed_group(io: IO):
+    res = await io.group(
+        name=io.input.text("Name"),
+        num=io.input.number("Number?").optional(),
+    )
+
+    print(res)
+
+    return {
+        "name": res.name,
+        "num": res.num,
+    }
+
+
+@interval.action
 async def log_test():
     ctx = cast(ActionContext, ctx_var.get())
     for i in range(10):

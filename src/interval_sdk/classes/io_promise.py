@@ -106,18 +106,38 @@ class OptionalIOPromise(InputIOPromise[Input_MN_co, Output_co]):
 IOGroupPromiseSelf = TypeVar("IOGroupPromiseSelf", bound="IOGroupPromise")
 
 
+class KeyedIONamespace:
+    __items: dict[str, Any] = {}
+
+    def __init__(self, items: dict[str, Any]):
+        self.__items = items
+
+    def __getattr__(self, name: str) -> Any:
+        return self.__items[name]
+
+
 class IOGroupPromise(Generic[Unpack[GroupOutput]]):
     _io_promises: tuple[GroupableIOPromise[MethodName, Any], ...]
+    _kw_io_promises: dict[str, GroupableIOPromise[MethodName, Any]] | None = None
     _renderer: ComponentRenderer
     _validator: IOGroupPromiseValidator[Unpack[GroupOutput]] | None = None
 
     def __init__(
         self,
-        io_promises: tuple[GroupableIOPromise[MethodName, Any], ...],
         renderer: ComponentRenderer,
+        io_promises: tuple[GroupableIOPromise[MethodName, Any], ...],
+        kw_io_promises: dict[str, GroupableIOPromise[MethodName, Any]] | None = None,
     ):
-        self._io_promises = io_promises
         self._renderer = renderer
+        self._io_promises = io_promises
+        self._kw_io_promises = kw_io_promises
+
+    @overload
+    def __await__(
+        self: "IOGroupPromise[KeyedIONamespace]",
+    ) -> Generator[Any, None, KeyedIONamespace]:
+        """Fallback typing for calls with keyword arguments."""
+        ...
 
     @overload
     def __await__(self: "IOGroupPromise[list[Any]]") -> Generator[Any, None, list[Any]]:
@@ -128,14 +148,23 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
     def __await__(self) -> Generator[Any, None, tuple[Unpack[GroupOutput]]]:
         ...
 
-    def __await__(self) -> Generator[Any, None, tuple[Unpack[GroupOutput]]]:  # type: ignore
-        res = yield from self._renderer(
-            [p._component for p in self._io_promises], self._validator
-        ).__await__()
-        return cast(
-            tuple[Unpack[GroupOutput]],
-            [self._io_promises[i]._get_value(val) for (i, val) in enumerate(res)],
-        )
+    def __await__(self) -> Generator[Any, None, tuple[Unpack[GroupOutput]] | KeyedIONamespace]:  # type: ignore
+        if self._kw_io_promises is not None:
+            res = yield from self._renderer(
+                [p._component for p in self._kw_io_promises.values()], self._validator
+            ).__await__()
+            res_dict = {
+                key: res[i] for i, key in enumerate(self._kw_io_promises.keys())
+            }
+            return KeyedIONamespace(res_dict)
+        else:
+            res = yield from self._renderer(
+                [p._component for p in self._io_promises], self._validator
+            ).__await__()
+            return cast(
+                tuple[Unpack[GroupOutput]],
+                [self._io_promises[i]._get_value(val) for (i, val) in enumerate(res)],
+            )
 
     def validate(
         self: "IOGroupPromise[Unpack[GroupOutput]]",
