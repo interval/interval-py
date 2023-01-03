@@ -150,7 +150,6 @@ class PageDefinition(BaseModel):
 
 
 class InitializeHostInputs(BaseModel):
-    api_key: str
     sdk_name: str
     sdk_version: str
     actions: list[ActionDefinition]

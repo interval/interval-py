@@ -20,7 +20,7 @@ async def echo_context(_: IO, ctx: ActionContext):
     }
 
 
-loop = asyncio.new_event_loop()
+loop = asyncio.get_event_loop()
 task = loop.create_task(interval.listen_async())
 
 

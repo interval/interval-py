@@ -39,14 +39,15 @@ class ISocket:
     on_authenticated: Future[None]
     is_closed: bool
 
-    _out_queue: asyncio.Queue[Message] = asyncio.Queue()
-    _pending_messages: dict[UUID, PendingMessage] = {}
+    _out_queue: asyncio.Queue[Message]
+    _pending_messages: dict[UUID, PendingMessage]
+    _message_tasks: set[asyncio.Task]
     _connection_future: Future | None
 
     def __init__(
         self,
         ws: websockets.client.WebSocketClientProtocol,
-        id: UUID = uuid4(),
+        id: UUID | None = None,
         send_timeout: float = 3,
         connect_timeout: float = 10,
         on_message: Callable[[str], Awaitable[None]] | None = None,
@@ -55,7 +56,7 @@ class ISocket:
         on_close: Callable[[int, str], Awaitable[None]] | None = None,
     ):
         self._ws = ws
-        self.id = id
+        self.id = id if id is not None else uuid4()
         self._send_timeout = send_timeout
         self._connect_timeout = connect_timeout
         self.is_closed = False
@@ -64,6 +65,10 @@ class ISocket:
         self.on_open = on_open
         self.on_error = on_error
         self.on_close = on_close
+
+        self._out_queue = asyncio.Queue()
+        self._pending_messages = {}
+        self._message_tasks = set()
 
     async def connect(self) -> None:
         if self.on_open:
@@ -77,6 +82,17 @@ class ISocket:
             self._consumer_handler(self._ws),
             self._producer_handler(self._ws),
         )
+
+        def on_complete(fut: Future[tuple[None, None]]):
+            try:
+                fut.result()
+            except BaseException as err:
+                print(
+                    "[ISocket] Encountered connection loop error", err, file=sys.stderr
+                )
+            self._connection_future = None
+
+        self._connection_future.add_done_callback(on_complete)
         await asyncio.wait_for(fut, self._connect_timeout)
 
     async def _consumer_handler(
@@ -100,33 +116,43 @@ class ISocket:
                         self.on_authenticated.set_result(None)
                         continue
 
-                    if self.on_message:
-                        asyncio.ensure_future(self.on_message(meta.data))
+                    task = asyncio.create_task(self._handle_message(meta.data))
+
+                    def on_complete(task: asyncio.Task):
+                        self._message_tasks.remove(task)
+
+                    task.add_done_callback(on_complete)
+                    self._message_tasks.add(task)
         except websockets.exceptions.ConnectionClosed as e:
-            if not self.on_authenticated.done():
-                self.on_authenticated.cancel()
-            if self.on_close:
-                await self.on_close(e.code, e.reason)
+            await self._handle_close(e.code, e.reason)
         except Exception as e:
-            print("Error in consumer handler", e, file=sys.stderr)
+            print("[ISocket] Error in consumer handler", e, file=sys.stderr)
+
+    async def _handle_message(self, message: str):
+        if self.on_message is not None:
+            await self.on_message(message)
 
     async def _producer_handler(
         self, ws: websockets.client.WebSocketClientProtocol
     ) -> None:
 
         while True:
-            message = await self._out_queue.get()
             try:
-                await ws.send(message.json())
-                self._out_queue.task_done()
-            except websockets.exceptions.ConnectionClosed as e:
-                if self.on_close:
-                    await self.on_close(e.code, e.reason)
-            except asyncio.exceptions.TimeoutError:
-                # No need to put back in queue, we'll try resending again
-                pass
+                message = await self._out_queue.get()
+                print(f"[{self.id}] producing", message)
+                try:
+                    await ws.send(message.json())
+                except websockets.exceptions.ConnectionClosed as e:
+                    await self._handle_close(e.code, e.reason)
+                except asyncio.exceptions.TimeoutError:
+                    # No need to put back in queue, we'll try resending again
+                    pass
+                except Exception as e:
+                    print("[ISocket] Error in producer handler", e, file=sys.stderr)
+                finally:
+                    self._out_queue.task_done()
             except Exception as e:
-                print("Error in producer handler", e, file=sys.stderr)
+                print("[ISocket] Error getting message from queue?", e)
 
     async def send(self, data: str) -> None:
         if self._ws is None:
@@ -144,7 +170,7 @@ class ISocket:
 
         await asyncio.wait_for(fut, self._send_timeout)
 
-    async def close(self) -> None:
+    async def _handle_close(self, code: int, reason: str):
         self.is_closed = True
 
         if self._connection_future is not None:
@@ -154,7 +180,10 @@ class ISocket:
             await self._ws.close()
 
         if self.on_close:
-            await self.on_close(1000, "Closed by client")
+            await self.on_close(code, reason)
+
+    async def close(self) -> None:
+        await self._handle_close(1000, "Closed by client")
 
     async def ping(self) -> None:
         if self.is_closed:

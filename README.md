@@ -41,7 +41,7 @@ likely want to run forever or run alongside another permanent task.
 import asyncio
 
 # This is what synchronous `listen()` does under the hood
-loop = asyncio.new_event_loop()
+loop = asyncio.get_event_loop()
 loop.create_task(interval.listen_async())
 loop.run_forever()
 ```

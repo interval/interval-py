@@ -786,11 +786,7 @@ async def disabled_inputs(io: IO):
     return "All done!"
 
 
-# prod.listen()
-interval.listen()
-
-# FIXME: Multiple running at once conflict, for some reason
-# loop = asyncio.get_event_loop()
-# loop.create_task(prod.listen_async())
-# loop.create_task(interval.listen_async())
-# loop.run_forever()
+loop = asyncio.get_event_loop()
+loop.create_task(prod.listen_async())
+loop.create_task(interval.listen_async())
+loop.run_forever()

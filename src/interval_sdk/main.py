@@ -219,11 +219,11 @@ class Interval:
     _close_unresponsive_connection_timeout_seconds: float = 180
     _reinitialize_batch_timeout_seconds: float = 0.2
 
-    _page_io_clients: dict[str, IOClient] = {}
-    _page_futures: dict[str, asyncio.Task] = {}
-    _io_response_handlers: dict[str, IOResponseHandler] = {}
-    _pending_io_calls: dict[str, str] = {}
-    _transaction_loading_states: dict[str, LoadingState] = {}
+    _page_io_clients: dict[str, IOClient]
+    _page_futures: dict[str, asyncio.Task]
+    _io_response_handlers: dict[str, IOResponseHandler]
+    _pending_io_calls: dict[str, str]
+    _transaction_loading_states: dict[str, LoadingState]
 
     _isocket: ISocket | None = None
     _server_rpc: DuplexRPCClient[
@@ -238,9 +238,9 @@ class Interval:
     organization: OrganizationDef | None = None
     environment: ActionEnvironment | None = None
 
-    _routes: dict[str, Action | Page] = {}
-    _action_definitions: list[ActionDefinition] = []
-    _page_definitions: list[PageDefinition] = []
+    _routes: dict[str, Action | Page]
+    _action_definitions: list[ActionDefinition]
+    _page_definitions: list[PageDefinition]
     _action_handlers: dict[str, IntervalActionHandler]
     _page_handlers: dict[str, IntervalPageHandler]
 
@@ -259,7 +259,16 @@ class Interval:
             url._replace(scheme=url.scheme.replace("ws", "http"), path="/api")
         )
 
+        self._page_io_clients = {}
+        self._page_futures = {}
+        self._io_response_handlers = {}
+        self._pending_io_calls = {}
+        self._transaction_loading_states = {}
+        self._routes = {}
+        self._action_definitions = []
+        self._page_definitions = []
         self._action_handlers = {}
+        self._page_handlers = {}
         self._logger = Logger(log_level)
         self.routes = Interval.Routes(self)
 
@@ -465,7 +474,7 @@ class Interval:
         loop.run_forever()
 
     async def listen_async(self):
-        await self._create_socket_connection()
+        await self._create_socket_connection(uuid4())
         self._create_rpc_client()
         await self._initialize_host()
 
@@ -666,24 +675,18 @@ class Interval:
                 )
                 await asyncio.sleep(self._retry_interval_seconds)
 
-    async def _create_socket_connection(self, instance_id: UUID = uuid4()):
+    async def _create_socket_connection(self, instance_id: UUID):
         async def on_close(code: int, reason: str):
             if self._intentionally_closed:
                 self._intentionally_closed = False
                 return
 
-            self._log.prod(
-                f"Lost connection to Interval (code {code}). Reason: {reason}"
-            )
-
             if not self._is_connected:
                 return
 
-            if self._isocket is not None and not self._isocket.is_closed:
-                # Must be sure to close the previous connection or its
-                # producer/consumer loops will continue forever.
-                await self._isocket.close()
-
+            self._log.prod(
+                f"Lost connection to Interval (code {code}). Reason: {reason}"
+            )
             self._log.prod("Reconnecting...")
             self._is_connected = False
 
@@ -692,9 +695,10 @@ class Interval:
                     await self._create_socket_connection(instance_id=instance_id)
                     self._log.prod("Reconnection successful")
                     self._is_connected = True
-                    # Might want to await these instead
-                    asyncio.create_task(self._resend_pending_io_calls())
-                    asyncio.create_task(self._resend_transaction_loading_states())
+                    await asyncio.gather(
+                        self._resend_pending_io_calls(),
+                        self._resend_transaction_loading_states(),
+                    )
                 except Exception as err:
                     self._log.prod("Unable to reconnect. Retrying in 3s...")
                     self._log.debug(err)
@@ -1147,7 +1151,6 @@ class Interval:
             response: InitializeHostReturns | None = await self._send(
                 "INITIALIZE_HOST",
                 InitializeHostInputs(
-                    api_key=self._api_key,
                     actions=self._action_definitions,
                     groups=self._page_definitions,
                     sdk_name=SDK_NAME,

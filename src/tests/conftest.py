@@ -76,4 +76,4 @@ def transactions(page: Page) -> Transaction:
 
 @pytest.fixture(scope="session")
 def event_loop() -> asyncio.AbstractEventLoop:
-    return asyncio.new_event_loop()
+    return asyncio.get_event_loop()

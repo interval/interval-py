@@ -16,7 +16,7 @@ ResponderSchemaMethodName = TypeVar(
 id_count = 0
 
 
-def generate_id():
+def generate_id() -> str:
     global id_count  # pylint: disable=global-statement
     id_count += 1
     return str(id_count)
@@ -29,8 +29,8 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
     _communicator: ISocket
     _can_call: dict[CallerSchemaMethodName, RPCMethod]
     _can_respond_to: dict[ResponderSchemaMethodName, RPCMethod]
-    _handlers: dict[ResponderSchemaMethodName, RPCHandler] = {}
-    _pending_calls: dict[str, Future[Any]] = {}
+    _handlers: dict[ResponderSchemaMethodName, RPCHandler]
+    _pending_calls: dict[str, Future[Any]]
 
     def __init__(
         self,
@@ -44,6 +44,7 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
         self._can_call = can_call
         self._can_respond_to = can_respond_to
         self._handlers = handlers
+        self._pending_calls = {}
 
         self.set_communicator(communicator)
 
