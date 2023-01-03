@@ -673,6 +673,10 @@ class Interval:
                 self._intentionally_closed = False
                 return
 
+            self._log.prod(
+                f"Lost connection to Interval (code {code}). Reason: {reason}"
+            )
+
             if not self._is_connected:
                 return
 
@@ -681,11 +685,7 @@ class Interval:
                 # producer/consumer loops will continue forever.
                 await self._isocket.close()
 
-            self._log.prod(
-                f"Lost connection to Interval (code {code}). Reason: {reason}"
-            )
             self._log.prod("Reconnecting...")
-
             self._is_connected = False
 
             while not self._is_connected:

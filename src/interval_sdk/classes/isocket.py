@@ -106,6 +106,8 @@ class ISocket:
                     if self.on_message:
                         asyncio.ensure_future(self.on_message(meta.data))
         except websockets.exceptions.ConnectionClosed as e:
+            if not self.on_authenticated.done():
+                self.on_authenticated.cancel()
             if self.on_close:
                 await self.on_close(e.code, e.reason)
         except Exception as e:
