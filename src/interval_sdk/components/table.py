@@ -14,8 +14,12 @@ from typing import (
 )
 import math
 
+from pydantic import parse_obj_as
+
 from ..io_schema import (
     InternalTableColumn,
+    TableMenuItem,
+    TableMenuItemModel,
     TableRow,
     TableColumnDef,
     InternalTableRow,
@@ -58,10 +62,11 @@ TableDataFetcher: TypeAlias = Callable[
 
 def serialize_table_row(
     key: str,
-    row: TableRow | Any,
+    row: TR,
     columns: Iterable[TableColumnDef],
+    menu_builder: Callable[[TR], list[TableMenuItem]] | None = None,
 ) -> InternalTableRow:
-    row = cast(TableRow, serialize_dates(cast(SerializableRecord, row)))
+    row = cast(TR, serialize_dates(cast(SerializableRecord, row)))
     rendered_row: TableRowModel = {}
     filter_values: list[str] = []
 
@@ -104,6 +109,9 @@ def serialize_table_row(
         key=key,
         data=rendered_row,
         filterValue=" ".join(filter_values).lower(),
+        menu=parse_obj_as(list[TableMenuItemModel], menu_builder(row))
+        if menu_builder is not None
+        else [],
     )
 
 

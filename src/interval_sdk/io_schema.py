@@ -304,7 +304,16 @@ class TableRowValueModel(BaseModel):
 TableRowModel: TypeAlias = dict[str, TableRowValueModel | None]
 
 
-class TableMenuItem(BaseModel):
+class TableMenuItem(TypedDict):
+    label: str
+    theme: NotRequired[Literal["danger"]]
+    disabled: NotRequired[bool]
+    route: NotRequired[str]
+    params: NotRequired[SerializableRecord]
+    url: NotRequired[str]
+
+
+class TableMenuItemModel(BaseModel):
     label: str
     theme: Literal["danger"] | None
     disabled: bool = False
@@ -316,7 +325,7 @@ class TableMenuItem(BaseModel):
 class InternalTableRow(BaseModel):
     key: str
     data: TableRowModel
-    menu: list[TableMenuItem] = Field(default_factory=list)
+    menu: list[TableMenuItemModel] = Field(default_factory=list)
     filterValue: str | None = None
 
 

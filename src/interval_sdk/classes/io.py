@@ -28,6 +28,7 @@ from ..io_schema import (
     InputRichTextProps,
     InputUrlProps,
     DateModel,
+    TableMenuItem,
     TimeModel,
     DateTimeModel,
     InputDateProps,
@@ -448,6 +449,7 @@ class IO:
             label: str,
             *,
             data: list[TR],
+            row_menu_items: Callable[[TR], list[TableMenuItem]] | None = None,
             help_text: str | None = None,
             columns: list[TableColumnDef | str] | None = None,
             min_selections: int | None = None,
@@ -459,7 +461,12 @@ class IO:
         ) -> InputIOPromise[Literal["SELECT_TABLE"], list[TR]]:
             normalized_columns = columns_builder(data=data, columns=columns)
             serialized_rows = [
-                serialize_table_row(key=str(i), row=row, columns=normalized_columns)
+                serialize_table_row(
+                    key=str(i),
+                    row=row,
+                    columns=normalized_columns,
+                    menu_builder=row_menu_items,
+                )
                 for (i, row) in enumerate(data)
             ]
 
@@ -878,6 +885,7 @@ class IO:
             *,
             data: list[TR],
             get_data: TableDataFetcher | None = None,
+            row_menu_items: Callable[[TR], list[TableMenuItem]] | None = None,
             help_text: str | None = None,
             columns: list[TableColumnDef | str] | None = None,
             default_page_size: int | None = None,
@@ -893,6 +901,7 @@ class IO:
             *,
             data: list[TR] | None = None,
             get_data: TableDataFetcher,
+            row_menu_items: Callable[[TR], list[TableMenuItem]] | None = None,
             help_text: str | None = None,
             columns: list[TableColumnDef | str] | None = None,
             default_page_size: int | None = None,
@@ -907,6 +916,7 @@ class IO:
             *,
             data: list[TR] | None = None,
             get_data: TableDataFetcher | None = None,
+            row_menu_items: Callable[[TR], list[TableMenuItem]] | None = None,
             help_text: str | None = None,
             columns: list[TableColumnDef | str] | None = None,
             default_page_size: int | None = None,
@@ -916,7 +926,12 @@ class IO:
             normalized_columns = columns_builder(data=data, columns=columns)
             serialized_rows = (
                 [
-                    serialize_table_row(key=str(i), row=row, columns=normalized_columns)
+                    serialize_table_row(
+                        key=str(i),
+                        row=row,
+                        columns=normalized_columns,
+                        menu_builder=row_menu_items,
+                    )
                     for (i, row) in enumerate(data)
                 ]
                 if data is not None
@@ -935,7 +950,10 @@ class IO:
                     built_columns = columns_builder(data=fetched.data, columns=columns)
                     props.data = [
                         serialize_table_row(
-                            key=str(i + state.offset), row=row, columns=built_columns
+                            key=str(i + state.offset),
+                            row=row,
+                            columns=built_columns,
+                            menu_builder=row_menu_items,
                         )
                         for (i, row) in enumerate(fetched.data)
                     ]

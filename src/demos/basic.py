@@ -484,6 +484,18 @@ async def asynchronous():
     await io.display.table(
         "Async",
         get_data=get_data,
+        row_menu_items=lambda row: [
+            {
+                "label": "Link",
+                "url": "https://interval.com",
+            },
+            {
+                "label": "Danger action",
+                "theme": "danger",
+                "route": "context",
+                "params": {"message": f"Hi from {row['a']}!"},
+            },
+        ],
         is_sortable=False,
         is_filterable=False,
     )
@@ -516,6 +528,18 @@ async def table_test(io: IO):
             },
             "c",
             {"label": "D", "accessorKey": "d"},
+        ],
+        row_menu_items=lambda row: [
+            {
+                "label": "Link",
+                "url": "https://interval.com",
+            },
+            {
+                "label": "Danger action",
+                "theme": "danger",
+                "route": "context",
+                "params": {"message": f"Hi from {row['a']}!"},
+            },
         ],
     )
 
