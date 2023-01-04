@@ -124,7 +124,8 @@ class ISocket:
                     def on_complete(task: asyncio.Task):
                         try:
                             task.result()
-                        except TimeoutError | IntervalError | IOError as err:
+                        except TimeoutError | IntervalError | IOError:
+                            # we'll resend again separately
                             pass
                         except BaseException as err:
                             print(
