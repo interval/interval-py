@@ -1,5 +1,17 @@
+from dataclasses import dataclass
 from datetime import date, datetime, time
-from typing import Callable, Iterable, Literal, TypeAlias, cast, Any
+from typing import (
+    Awaitable,
+    Callable,
+    Generic,
+    Iterable,
+    Literal,
+    NamedTuple,
+    TypeAlias,
+    TypeVar,
+    cast,
+    Any,
+)
 import math
 
 from ..io_schema import (
@@ -18,6 +30,28 @@ from ..util import (
 )
 
 TABLE_DATA_BUFFER_SIZE = 500
+
+
+@dataclass
+class TableDataFetcherState:
+    query_term: str | None
+    sort_column: str | None
+    sort_direction: Literal["asc", "desc"] | None
+    offset: int
+    page_size: int
+
+
+TR = TypeVar("TR", bound=TableRow)
+
+
+class FetchedTableData(NamedTuple, Generic[TR]):
+    data: list[TR]
+    total_records: int | None = None
+
+
+TableDataFetcher: TypeAlias = Callable[
+    [TableDataFetcherState], Awaitable[FetchedTableData]
+]
 
 
 def serialize_table_row(

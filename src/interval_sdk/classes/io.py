@@ -14,13 +14,14 @@ from typing import (
 )
 from urllib.parse import ParseResult, urlparse
 
+from pydantic import parse_obj_as
+
 from ..io_schema import (
     DisplayTableState,
     InputTextProps,
     InternalTableRow,
     SelectTableReturnModel,
     SelectTableState,
-    TableRow,
     InputEmailProps,
     InputNumberProps,
     InputBooleanProps,
@@ -83,7 +84,11 @@ from .component import (
 )
 from .interval_file import IntervalFile
 from ..components.table import (
+    TR,
     TABLE_DATA_BUFFER_SIZE,
+    FetchedTableData,
+    TableDataFetcher,
+    TableDataFetcherState,
     columns_builder,
     filter_rows,
     serialize_table_row,
@@ -101,8 +106,6 @@ _T6 = TypeVar("_T6")
 _T7 = TypeVar("_T7")
 _T8 = TypeVar("_T8")
 _T9 = TypeVar("_T9")
-
-TR = TypeVar("TR", bound=TableRow)
 
 MAX_FILE_SIZE_MB = 50
 
@@ -842,35 +845,87 @@ class IO:
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
+        @overload
         def table(
             self,
             label: str,
+            *,
             data: list[TR],
+            get_data: TableDataFetcher | None = None,
+            help_text: str | None = None,
+            columns: list[TableColumnDef | str] | None = None,
+        ) -> DisplayIOPromise[Literal["DISPLAY_TABLE"], None]:
+            ...
+
+        @overload
+        def table(
+            self,
+            label: str,
+            *,
+            data: list[TR] | None = None,
+            get_data: TableDataFetcher,
+            help_text: str | None = None,
+            columns: list[TableColumnDef | str] | None = None,
+        ) -> DisplayIOPromise[Literal["DISPLAY_TABLE"], None]:
+            ...
+
+        def table(
+            self,
+            label: str,
+            *,
+            data: list[TR] | None = None,
+            get_data: TableDataFetcher | None = None,
             help_text: str | None = None,
             columns: list[TableColumnDef | str] | None = None,
         ) -> DisplayIOPromise[Literal["DISPLAY_TABLE"], None]:
             normalized_columns = columns_builder(data=data, columns=columns)
-            serialized_rows = [
-                serialize_table_row(key=str(i), row=row, columns=normalized_columns)
-                for (i, row) in enumerate(data)
-            ]
+            serialized_rows = (
+                [
+                    serialize_table_row(key=str(i), row=row, columns=normalized_columns)
+                    for (i, row) in enumerate(data)
+                ]
+                if data is not None
+                else []
+            )
 
             async def handle_state_change(
                 state: DisplayTableState,
                 props: DisplayTableProps,
             ) -> DisplayTableProps:
-                new_sorted: list[InternalTableRow] = sort_rows(
-                    filter_rows(serialized_rows, state.query_term),
-                    state.sort_column,
-                    state.sort_direction,
-                )
-                props.data = [
-                    InternalTableRowModel.parse_obj(row)
-                    for row in new_sorted[
-                        state.offset : state.offset
-                        + min(state.page_size * 3, TABLE_DATA_BUFFER_SIZE)
+                if get_data is not None:
+                    fetched = parse_obj_as(
+                        FetchedTableData,
+                        await get_data(TableDataFetcherState(**state.dict())),
+                    )
+                    built_columns = columns_builder(data=fetched.data, columns=columns)
+                    serialized_fetched = [
+                        serialize_table_row(
+                            key=str(i + state.offset), row=row, columns=built_columns
+                        )
+                        for (i, row) in enumerate(fetched.data)
                     ]
-                ]
+                    props.columns = [
+                        InternalTableColumnModel.parse_obj(col) for col in built_columns
+                    ]
+                    props.data = [
+                        InternalTableRowModel.parse_obj(row)
+                        for row in serialized_fetched
+                    ]
+                    props.total_records = fetched.total_records
+                else:
+                    new_sorted: list[InternalTableRow] = sort_rows(
+                        filter_rows(serialized_rows, state.query_term),
+                        state.sort_column,
+                        state.sort_direction,
+                    )
+                    props.data = [
+                        InternalTableRowModel.parse_obj(row)
+                        for row in new_sorted[
+                            state.offset : state.offset
+                            + min(state.page_size * 3, TABLE_DATA_BUFFER_SIZE)
+                        ]
+                    ]
+                    props.total_records = len(new_sorted)
 
                 return props
 
@@ -887,7 +942,8 @@ class IO:
                         InternalTableRowModel.parse_obj(row)
                         for row in serialized_rows[:TABLE_DATA_BUFFER_SIZE]
                     ],
-                    total_records=len(serialized_rows),
+                    total_records=len(data) if data is not None else None,
+                    is_async=get_data is not None,
                 ).dict(),
                 handle_state_change=handle_state_change,
             )

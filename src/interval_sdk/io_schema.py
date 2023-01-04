@@ -516,8 +516,8 @@ class DisplayTableProps(BaseModel):
     data: list[InternalTableRowModel]
     columns: list[InternalTableColumnModel]
     default_page_size: int | None = None
-    total_records: int
-    is_async: bool = False
+    total_records: int | None = None
+    is_async: bool
 
 
 class DisplayTableState(BaseModel):

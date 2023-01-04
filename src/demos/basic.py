@@ -7,6 +7,7 @@ from interval_sdk import Interval, IO, io_var, ctx_var
 from interval_sdk.classes.action import Action
 from interval_sdk.classes.layout import Layout
 from interval_sdk.classes.page import Page
+from interval_sdk.components.table import FetchedTableData, TableDataFetcherState
 from interval_sdk.internal_rpc_schema import ActionContext
 from interval_sdk.io_schema import (
     RichSelectOption,
@@ -466,7 +467,24 @@ async def spreadsheet_test(io: IO):
     print(sheet)
 
 
-@interval.action
+tables = Page("Tables")
+
+interval.routes.add("tables", tables)
+
+
+@tables.action
+async def asynchronous():
+    io = io_var.get()
+
+    async def get_data(state: TableDataFetcherState) -> FetchedTableData:
+        return FetchedTableData(
+            [{"a": i + state.offset, "b": i * 10} for i in range(state.page_size)], 100
+        )
+
+    await io.display.table("Async", get_data=get_data)
+
+
+@tables.action
 async def table_test(io: IO):
     data = [
         {"a": i, "b": 2 * i, "c": 3 * i, "d": [i, i, i], "e": {"i": i}}
