@@ -20,7 +20,7 @@ async def hello_interval():
     return {"hello": "from python!"}
 
 # Add an action using a custom slug (can contain periods and hyphens)
-@interval.action_with_slug('echo-message')
+@interval.action(slug='echo-message')
 async def echo_message(io: IO):
     [message] = await io.group(io.input.text("Hello!", help_text="From python!"))
 
