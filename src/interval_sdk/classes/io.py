@@ -118,6 +118,7 @@ class IO:
         def text(
             self,
             label: str,
+            *,
             help_text: str | None = None,
             default_value: str | None = None,
             multiline: bool | None = None,
@@ -142,6 +143,7 @@ class IO:
         def email(
             self,
             label: str,
+            *,
             help_text: str | None = None,
             default_value: str | None = None,
             disabled: bool | None = None,
@@ -163,6 +165,7 @@ class IO:
         def number(
             self,
             label: str,
+            *,
             min: float | int | None = None,
             max: float | int | None = None,
             prepend: str | None = None,
@@ -178,6 +181,7 @@ class IO:
         def number(
             self,
             label: str,
+            *,
             min: float | int | None = None,
             max: float | int | None = None,
             prepend: str | None = None,
@@ -192,6 +196,7 @@ class IO:
         def number(
             self,
             label: str,
+            *,
             min: float | int | None = None,
             max: float | int | None = None,
             prepend: str | None = None,
@@ -227,6 +232,7 @@ class IO:
         def boolean(
             self,
             label: str,
+            *,
             help_text: str | None = None,
             default_value: str | None = None,
             disabled: bool | None = None,
@@ -245,6 +251,7 @@ class IO:
         def rich_text(
             self,
             label: str,
+            *,
             help_text: str | None = None,
             disabled: bool | None = None,
             placeholder: str | None = None,
@@ -263,6 +270,7 @@ class IO:
         def url(
             self,
             label: str,
+            *,
             help_text: str | None = None,
             allowed_protocols: list[str] | None = None,
             default_value: str | None = None,
@@ -289,6 +297,7 @@ class IO:
         def date(
             self,
             label: str,
+            *,
             help_text: str | None = None,
             default_value: date | None = None,
             disabled: bool | None = None,
@@ -318,6 +327,7 @@ class IO:
         def time(
             self,
             label: str,
+            *,
             help_text: str | None = None,
             default_value: time | None = None,
             disabled: bool | None = None,
@@ -346,6 +356,7 @@ class IO:
         def datetime(
             self,
             label: str,
+            *,
             help_text: str | None = None,
             default_value: datetime | None = None,
             disabled: bool | None = None,
@@ -377,6 +388,7 @@ class IO:
         def file(
             self,
             label: str,
+            *,
             allowed_extensions: list[str] | None = None,
             help_text: str | None = None,
             generate_presigned_urls: Callable[
@@ -435,6 +447,7 @@ class IO:
         def table(
             self,
             label: str,
+            *,
             data: list[TR],
             help_text: str | None = None,
             columns: list[TableColumnDef | str] | None = None,
@@ -507,6 +520,7 @@ class IO:
         def single(
             self,
             label: str,
+            *,
             options: Iterable[PassthroughRichSelectOption],
             help_text: str | None = None,
             default_value: RichSelectOption | str | None = None,
@@ -519,6 +533,7 @@ class IO:
         def single(
             self,
             label: str,
+            *,
             options: Iterable[RichSelectOption],
             help_text: str | None = None,
             default_value: RichSelectOption | None = None,
@@ -531,6 +546,7 @@ class IO:
         def single(
             self,
             label: str,
+            *,
             options: Iterable[str],
             help_text: str | None = None,
             default_value: str | None = None,
@@ -543,6 +559,7 @@ class IO:
         def single(
             self,
             label: str,
+            *,
             options: Iterable[RichSelectOption | str],
             help_text: str | None = None,
             default_value: RichSelectOption | str | None = None,
@@ -554,6 +571,7 @@ class IO:
         def single(
             self,
             label: str,
+            *,
             options: Iterable[PassthroughRichSelectOption],
             help_text: str | None = None,
             default_value: RichSelectOption | str | None = None,
@@ -606,6 +624,7 @@ class IO:
         def multiple(
             self,
             label: str,
+            *,
             options: Iterable[PassthroughLabelValue],
             help_text: str | None = None,
             default_value: Iterable[LabelValue | str] | None = None,
@@ -619,6 +638,7 @@ class IO:
         def multiple(
             self,
             label: str,
+            *,
             options: Iterable[LabelValue],
             help_text: str | None = None,
             default_value: Iterable[LabelValue] | None = None,
@@ -632,6 +652,7 @@ class IO:
         def multiple(
             self,
             label: str,
+            *,
             options: Iterable[str],
             help_text: str | None = None,
             default_value: Iterable[str] | None = None,
@@ -645,6 +666,7 @@ class IO:
         def multiple(
             self,
             label: str,
+            *,
             options: Iterable[LabelValue | str],
             help_text: str | None = None,
             default_value: Iterable[LabelValue | str] | None = None,
@@ -657,6 +679,7 @@ class IO:
         def multiple(
             self,
             label: str,
+            *,
             options: Iterable[PassthroughLabelValue],
             help_text: str | None = None,
             default_value: Iterable[LabelValue | str] | None = None,
@@ -721,6 +744,7 @@ class IO:
         def code(
             self,
             label: str,
+            *,
             code: str,
             language: str | None = None,
         ) -> DisplayIOPromise[Literal["DISPLAY_CODE"], None]:
@@ -748,6 +772,7 @@ class IO:
         def link(
             self,
             label: str,
+            *,
             action: str | None = None,
             params: dict[str, Any] | None = None,
             theme: LinkTheme = "default",
@@ -779,6 +804,7 @@ class IO:
         def metadata(
             self,
             label: str,
+            *,
             data: KeyValueObject,
             layout: MetadataLayout = "grid",
         ) -> DisplayIOPromise[Literal["DISPLAY_METADATA"], None]:
@@ -795,6 +821,7 @@ class IO:
         def object(
             self,
             label: str,
+            *,
             data: KeyValueObject,
         ) -> DisplayIOPromise[Literal["DISPLAY_OBJECT"], None]:
             c = Component(
@@ -809,6 +836,7 @@ class IO:
         def image(
             self,
             label: str,
+            *,
             url: str | None = None,
             bytes: bytes | None = None,
             alt: str | None = None,
