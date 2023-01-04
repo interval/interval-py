@@ -517,7 +517,7 @@ async def table_test(io: IO):
     print(selected)
 
 
-@interval.action
+@tables.action
 async def big_table(io: IO):
     data = [
         {"a": i, "b": 2 * i, "c": 3 * i, "d": [i, i, i], "e": {"i": i}}
@@ -530,7 +530,7 @@ async def big_table(io: IO):
     )
 
 
-@interval.action
+@tables.action
 async def big_select_table(io: IO):
     data = [
         {"a": i, "b": 2 * i, "c": 3 * i, "d": [i, i, i], "e": {"i": i}}
