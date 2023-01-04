@@ -104,7 +104,7 @@ class IOClient:
                 validation_error_message = None
 
                 if any(invalidities):
-                    asyncio.create_task(render())
+                    loop.create_task(render())
                     return
 
                 if group_validator is not None:
@@ -114,7 +114,7 @@ class IOClient:
                     )
 
                     if validation_error_message is not None:
-                        asyncio.create_task(render())
+                        loop.create_task(render())
                         return
 
                 is_returned = True
@@ -129,7 +129,7 @@ class IOClient:
 
                     if new_state != prev_state:
                         await components[index].set_state(new_state)
-                asyncio.create_task(render())
+                loop.create_task(render())
 
         self._on_response_handler = on_response_handler
 
@@ -137,7 +137,7 @@ class IOClient:
             c.on_state_change = render
 
         # initial render
-        asyncio.create_task(render())
+        loop.create_task(render())
 
         return_futures = [component.return_value for component in components]
 

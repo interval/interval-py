@@ -1202,9 +1202,9 @@ class IO:
         **kw_io_promises: GroupableIOPromise[MethodName, Any],
     ):
         return IOGroupPromise(
+            renderer=self._renderer,
             io_promises=io_promises,
             kw_io_promises=kw_io_promises,
-            renderer=self._renderer,
         )
 
     def search(

@@ -45,20 +45,18 @@ async def host(
 
     @interval.action("io.display.object")
     async def display_object(io: IO):
-        await io.group(
-            io.display.object(
-                "Here's an object",
-                data={
-                    "isTrue": True,
-                    "isFalse": False,
-                    "number": 15,
-                    "none_value": None,
-                    "nested": {
-                        "name": "Interval",
-                    },
-                    "longList": [f"Item {i}" for i in range(100)],
+        await io.display.object(
+            "Here's an object",
+            data={
+                "isTrue": True,
+                "isFalse": False,
+                "number": 15,
+                "none_value": None,
+                "nested": {
+                    "name": "Interval",
                 },
-            )
+                "longList": [f"Item {i}" for i in range(100)],
+            },
         )
 
     @interval.action("io.display.table")

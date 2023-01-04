@@ -98,6 +98,7 @@ class ISocket:
     async def _consumer_handler(
         self, ws: websockets.client.WebSocketClientProtocol
     ) -> None:
+        loop = asyncio.get_running_loop()
         try:
             async for message in ws:
                 meta = Message.parse_raw(message)
@@ -116,7 +117,7 @@ class ISocket:
                         self.on_authenticated.set_result(None)
                         continue
 
-                    task = asyncio.create_task(self._handle_message(meta.data))
+                    task = loop.create_task(self._handle_message(meta.data))
 
                     def on_complete(task: asyncio.Task):
                         self._message_tasks.remove(task)

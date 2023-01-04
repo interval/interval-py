@@ -134,7 +134,7 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
         fut = loop.create_future()
         self._pending_calls[id] = fut
 
-        asyncio.create_task(self._communicator.send(message.json()), name="send")
+        loop.create_task(self._communicator.send(message.json()), name="send")
 
         raw_response_text = await fut
         parsed = parse_obj_as(self._can_call[method_name].returns, raw_response_text)

@@ -731,6 +731,8 @@ class Interval:
         await self._initialize_host()
 
     def _create_rpc_client(self):
+        loop = asyncio.get_running_loop()
+
         if self._isocket is None:
             raise NotInitializedError("ISocket not initialized")
 
@@ -861,7 +863,7 @@ class Interval:
                     except KeyError:
                         pass
 
-            _ = asyncio.create_task(handle_action(), name="handle_action")
+            _ = loop.create_task(handle_action(), name="handle_action")
 
         async def io_response(inputs: IOResponseInputs) -> None:
             self._log.debug("Got IO response", inputs)
@@ -997,7 +999,7 @@ class Interval:
                                 errors.append(page_error(err, "title"))
 
                         if iscoroutine(page.title):
-                            fut = asyncio.create_task(page.title)
+                            fut = loop.create_task(page.title)
 
                             def handle_title(task: asyncio.Task[str]):
                                 try:
@@ -1010,7 +1012,7 @@ class Interval:
 
                                 try:
                                     page.title = task.result()
-                                    asyncio.create_task(send_page())
+                                    loop.create_task(send_page())
                                 except Exception as err:
                                     errors.append(page_error(err, "description"))
 
@@ -1026,7 +1028,7 @@ class Interval:
                                 errors.append(page_error(err, "description"))
 
                         if iscoroutine(page.description):
-                            fut = asyncio.create_task(page.description)
+                            fut = loop.create_task(page.description)
 
                             def handle_title(task: asyncio.Task[str]):
                                 try:
@@ -1039,7 +1041,7 @@ class Interval:
 
                                 try:
                                     page.description = task.result()
-                                    asyncio.create_task(send_page())
+                                    loop.create_task(send_page())
                                 except Exception as err:
                                     errors.append(page_error(err, "description"))
 
@@ -1052,7 +1054,7 @@ class Interval:
                         ]
 
                     if page.children is not None:
-                        fut = asyncio.create_task(
+                        fut = loop.create_task(
                             client.render_components(
                                 [p._component for p in page.children]
                             )
@@ -1079,11 +1081,11 @@ class Interval:
                                 else:
                                     errors.append(page_error(err, "children"))
 
-                                asyncio.create_task(send_page())
+                                loop.create_task(send_page())
                             except Exception as err:
                                 self._logger.error(err)
                                 errors.append(page_error(err, layout_key="children"))
-                                asyncio.create_task(send_page())
+                                loop.create_task(send_page())
 
                         fut.add_done_callback(handle_children)
                         self._page_futures[fut.get_name()] = fut
@@ -1102,7 +1104,7 @@ class Interval:
                     io_var.reset(io_token)
                     ctx_var.reset(ctx_token)
 
-            fut = asyncio.create_task(handle_page())
+            fut = loop.create_task(handle_page())
             self._page_futures[inputs.page_key] = fut
 
             return OpenPageReturnsSuccess(page_key=inputs.page_key)

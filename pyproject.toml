@@ -6,7 +6,7 @@ authors = ["Interval"]
 
 [tool.poe.tasks]
 demo = { script = 'demos:main' }
-test = "pytest"
+test = "pytest -n 1"
 check = "pyright"
 lint = "pylint src/"
 ruff = "ruff src/"
