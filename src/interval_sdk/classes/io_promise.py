@@ -149,7 +149,7 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
         ...
 
     def __await__(self) -> Generator[Any, None, tuple[Unpack[GroupOutput]] | KeyedIONamespace]:  # type: ignore
-        if self._kw_io_promises is not None:
+        if self._kw_io_promises is not None and len(self._kw_io_promises) > 0:
             res = yield from self._renderer(
                 [p._component for p in self._kw_io_promises.values()], self._validator
             ).__await__()
