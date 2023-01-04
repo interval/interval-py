@@ -451,6 +451,9 @@ class SelectTableProps(BaseModel):
     total_records: int
     selected_keys: list[str] | None = None
     disabled: Optional[bool]
+    default_page_size: int | None = None
+    is_sortable: bool = True
+    is_filterable: bool = True
 
 
 class SelectSingleProps(BaseModel):
@@ -516,6 +519,9 @@ class DisplayTableProps(BaseModel):
     data: list[InternalTableRowModel]
     columns: list[InternalTableColumnModel]
     default_page_size: int | None = None
+    is_sortable: bool = True
+    is_filterable: bool = True
+    # private props
     total_records: int | None = None
     is_async: bool
 

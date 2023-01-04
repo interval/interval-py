@@ -454,6 +454,9 @@ class IO:
             min_selections: int | None = None,
             max_selections: int | None = None,
             disabled: bool | None = None,
+            default_page_size: int | None = None,
+            is_sortable: bool = True,
+            is_filterable: bool = True,
         ) -> InputIOPromise[Literal["SELECT_TABLE"], list[TR]]:
             normalized_columns = columns_builder(data=data, columns=columns)
             serialized_rows = [
@@ -505,6 +508,9 @@ class IO:
                     max_selections=max_selections,
                     total_records=len(serialized_rows),
                     disabled=disabled,
+                    default_page_size=default_page_size,
+                    is_sortable=is_sortable,
+                    is_filterable=is_filterable,
                 ).dict(),
                 handle_state_change=handle_state_change,
             )
@@ -882,6 +888,9 @@ class IO:
             get_data: TableDataFetcher | None = None,
             help_text: str | None = None,
             columns: list[TableColumnDef | str] | None = None,
+            default_page_size: int | None = None,
+            is_sortable: bool = True,
+            is_filterable: bool = True,
         ) -> DisplayIOPromise[Literal["DISPLAY_TABLE"], None]:
             ...
 
@@ -894,6 +903,9 @@ class IO:
             get_data: TableDataFetcher,
             help_text: str | None = None,
             columns: list[TableColumnDef | str] | None = None,
+            default_page_size: int | None = None,
+            is_sortable: bool = True,
+            is_filterable: bool = True,
         ) -> DisplayIOPromise[Literal["DISPLAY_TABLE"], None]:
             ...
 
@@ -905,6 +917,9 @@ class IO:
             get_data: TableDataFetcher | None = None,
             help_text: str | None = None,
             columns: list[TableColumnDef | str] | None = None,
+            default_page_size: int | None = None,
+            is_sortable: bool = True,
+            is_filterable: bool = True,
         ) -> DisplayIOPromise[Literal["DISPLAY_TABLE"], None]:
             normalized_columns = columns_builder(data=data, columns=columns)
             serialized_rows = (
@@ -971,6 +986,9 @@ class IO:
                         for row in serialized_rows[:TABLE_DATA_BUFFER_SIZE]
                     ],
                     total_records=len(data) if data is not None else None,
+                    default_page_size=default_page_size,
+                    is_sortable=is_sortable,
+                    is_filterable=is_filterable,
                     is_async=get_data is not None,
                 ).dict(),
                 handle_state_change=handle_state_change,

@@ -481,7 +481,12 @@ async def asynchronous():
             [{"a": i + state.offset, "b": i * 10} for i in range(state.page_size)], 100
         )
 
-    await io.display.table("Async", get_data=get_data)
+    await io.display.table(
+        "Async",
+        get_data=get_data,
+        is_sortable=False,
+        is_filterable=False,
+    )
 
 
 @tables.action
@@ -527,6 +532,7 @@ async def big_table(io: IO):
     await io.display.table(
         "Table",
         data=data,
+        default_page_size=50,
     )
 
 
@@ -540,6 +546,8 @@ async def big_select_table(io: IO):
     selected = await io.select.table(
         "Table",
         data=data,
+        default_page_size=50,
+        is_sortable=False,
     )
 
     print(selected)
