@@ -781,10 +781,7 @@ def resolves_immediately(method_name: MethodName) -> bool:
     return io_schema[method_name].immediate
 
 
-def json_dumps_io_render(io_render: dict[str, Any], *args, **kwargs) -> str:
-    """
-    We don't want to clobber any user-provided keys in props.
-    """
+def dump_io_render(io_render: dict[str, Any]) -> dict[str, Any]:
     obj = {}
     for key, val in io_render.items():
         if key == "to_render":
@@ -800,7 +797,14 @@ def json_dumps_io_render(io_render: dict[str, Any], *args, **kwargs) -> str:
         else:
             obj[snake_to_camel(key)] = val
 
-    return json.dumps(obj, *args, **kwargs)
+    return obj
+
+
+def json_dumps_io_render(io_render: dict[str, Any], *args, **kwargs) -> str:
+    """
+    We don't want to clobber any user-provided keys in props.
+    """
+    return json.dumps(dump_io_render(io_render), *args, **kwargs)
 
 
 class IORender(BaseModel):
