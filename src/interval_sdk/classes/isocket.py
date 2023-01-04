@@ -139,7 +139,6 @@ class ISocket:
         while True:
             try:
                 message = await self._out_queue.get()
-                print(f"[{self.id}] producing", message)
                 try:
                     await ws.send(message.json())
                 except websockets.exceptions.ConnectionClosed as e:
