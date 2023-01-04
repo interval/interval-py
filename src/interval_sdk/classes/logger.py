@@ -1,3 +1,4 @@
+import asyncio
 import sys, traceback
 from typing import TypeAlias, Literal
 
@@ -87,3 +88,9 @@ class Logger:
         self.info("\t- See what's new at:", CHANGELOG_URL)
 
         self.info_no_prefix()
+
+    def handle_task_exceptions(self, task: asyncio.Task):
+        try:
+            task.result()
+        except BaseException as err:
+            self.error(err)

@@ -134,7 +134,14 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
         fut = loop.create_future()
         self._pending_calls[id] = fut
 
-        loop.create_task(self._communicator.send(message.json()), name="send")
+        def handle_exceptions(task: asyncio.Task):
+            try:
+                task.result()
+            except BaseException as err:
+                print("[DuplexRPCClient] Error sending message", err, file=sys.stderr)
+
+        task = loop.create_task(self._communicator.send(message.json()), name="send")
+        task.add_done_callback(handle_exceptions)
 
         raw_response_text = await fut
         parsed = parse_obj_as(self._can_call[method_name].returns, raw_response_text)

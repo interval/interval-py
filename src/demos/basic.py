@@ -6,6 +6,7 @@ from typing_extensions import NotRequired
 from interval_sdk import Interval, IO, io_var, ctx_var
 from interval_sdk.classes.action import Action
 from interval_sdk.classes.layout import Layout
+from interval_sdk.classes.logger import Logger
 from interval_sdk.classes.page import Page
 from interval_sdk.components.table import FetchedTableData, TableDataFetcherState
 from interval_sdk.internal_rpc_schema import ActionContext
@@ -844,7 +845,12 @@ async def disabled_inputs(io: IO):
     return "All done!"
 
 
+logger = Logger(log_level="debug")
+
 loop = asyncio.get_event_loop()
-loop.create_task(prod.listen_async())
-loop.create_task(interval.listen_async())
+task = loop.create_task(prod.listen_async())
+task.add_done_callback(logger.handle_task_exceptions)
+task = loop.create_task(interval.listen_async())
+task.add_done_callback(logger.handle_task_exceptions)
+
 loop.run_forever()

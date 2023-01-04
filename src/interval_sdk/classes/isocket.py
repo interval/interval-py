@@ -8,6 +8,8 @@ from uuid import UUID, uuid4
 import websockets, websockets.client, websockets.exceptions
 from pydantic import BaseModel
 
+from ..types import IntervalError
+
 
 class Message(BaseModel):
     data: Any
@@ -120,7 +122,16 @@ class ISocket:
                     task = loop.create_task(self._handle_message(meta.data))
 
                     def on_complete(task: asyncio.Task):
-                        self._message_tasks.remove(task)
+                        try:
+                            task.result()
+                        except TimeoutError | IntervalError | IOError as err:
+                            pass
+                        except BaseException as err:
+                            print(
+                                "[ISocket] Error sending message", err, file=sys.stderr
+                            )
+                        finally:
+                            self._message_tasks.remove(task)
 
                     task.add_done_callback(on_complete)
                     self._message_tasks.add(task)

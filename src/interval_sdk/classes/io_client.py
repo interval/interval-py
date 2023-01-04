@@ -106,7 +106,8 @@ class IOClient:
                 validation_error_message = None
 
                 if any(invalidities):
-                    loop.create_task(render())
+                    task = loop.create_task(render())
+                    task.add_done_callback(self._logger.handle_task_exceptions)
                     return
 
                 if group_validator is not None:
@@ -116,7 +117,8 @@ class IOClient:
                     )
 
                     if validation_error_message is not None:
-                        loop.create_task(render())
+                        task = loop.create_task(render())
+                        task.add_done_callback(self._logger.handle_task_exceptions)
                         return
 
                 is_returned = True
@@ -131,7 +133,8 @@ class IOClient:
 
                     if new_state != prev_state:
                         await components[index].set_state(new_state)
-                loop.create_task(render())
+                task = loop.create_task(render())
+                task.add_done_callback(self._logger.handle_task_exceptions)
 
         self._on_response_handler = on_response_handler
 
@@ -139,7 +142,8 @@ class IOClient:
             c.on_state_change = render
 
         # initial render
-        loop.create_task(render())
+        task = loop.create_task(render())
+        task.add_done_callback(self._logger.handle_task_exceptions)
 
         return_futures = [component.return_value for component in components]
 

@@ -468,9 +468,11 @@ class Interval:
         if not response:
             raise IntervalError("Failed sending redirect")
 
-    def listen(self):
+    def listen(self, done_callback: Callable[[asyncio.Task[None]], None] | None = None):
         loop = asyncio.get_event_loop()
-        loop.create_task(self.listen_async())
+        task = loop.create_task(self.listen_async())
+        if done_callback is not None:
+            task.add_done_callback(done_callback)
         loop.run_forever()
 
     async def listen_async(self):
@@ -863,7 +865,9 @@ class Interval:
                     except KeyError:
                         pass
 
-            _ = loop.create_task(handle_action(), name="handle_action")
+            task = loop.create_task(handle_action(), name="handle_action")
+            # this should never be hit, exceptions handled in function
+            task.add_done_callback(self._logger.handle_task_exceptions)
 
         async def io_response(inputs: IOResponseInputs) -> None:
             self._log.debug("Got IO response", inputs)
@@ -999,11 +1003,11 @@ class Interval:
                                 errors.append(page_error(err, "title"))
 
                         if iscoroutine(page.title):
-                            fut = loop.create_task(page.title)
+                            title_task = loop.create_task(page.title)
 
                             def handle_title(task: asyncio.Task[str]):
                                 try:
-                                    del self._page_futures[fut.get_name()]
+                                    del self._page_futures[task.get_name()]
                                 except:
                                     pass
 
@@ -1016,8 +1020,8 @@ class Interval:
                                 except Exception as err:
                                     errors.append(page_error(err, "description"))
 
-                            fut.add_done_callback(handle_title)
-                            self._page_futures[fut.get_name()] = fut
+                            title_task.add_done_callback(handle_title)
+                            self._page_futures[title_task.get_name()] = title_task
 
                     if page.description is not None:
                         if isfunction(page.description):
@@ -1028,11 +1032,11 @@ class Interval:
                                 errors.append(page_error(err, "description"))
 
                         if iscoroutine(page.description):
-                            fut = loop.create_task(page.description)
+                            desc_task = loop.create_task(page.description)
 
-                            def handle_title(task: asyncio.Task[str]):
+                            def handle_desc(task: asyncio.Task[str]):
                                 try:
-                                    del self._page_futures[fut.get_name()]
+                                    del self._page_futures[task.get_name()]
                                 except:
                                     pass
 
@@ -1045,8 +1049,8 @@ class Interval:
                                 except Exception as err:
                                     errors.append(page_error(err, "description"))
 
-                            fut.add_done_callback(handle_title)
-                            self._page_futures[fut.get_name()] = fut
+                            desc_task.add_done_callback(handle_desc)
+                            self._page_futures[desc_task.get_name()] = desc_task
 
                     if page.menu_items:
                         menu_items = [
@@ -1054,7 +1058,7 @@ class Interval:
                         ]
 
                     if page.children is not None:
-                        fut = loop.create_task(
+                        render_task = loop.create_task(
                             client.render_components(
                                 [p._component for p in page.children]
                             )
@@ -1062,7 +1066,7 @@ class Interval:
 
                         def handle_children(task: asyncio.Task):
                             try:
-                                del self._page_futures[fut.get_name()]
+                                del self._page_futures[task.get_name()]
                             except:
                                 pass
 
@@ -1081,14 +1085,20 @@ class Interval:
                                 else:
                                     errors.append(page_error(err, "children"))
 
-                                loop.create_task(send_page())
+                                send_task = loop.create_task(send_page())
+                                send_task.add_done_callback(
+                                    self._logger.handle_task_exceptions
+                                )
                             except Exception as err:
                                 self._logger.error(err)
                                 errors.append(page_error(err, layout_key="children"))
-                                loop.create_task(send_page())
+                                send_task = loop.create_task(send_page())
+                                send_task.add_done_callback(
+                                    self._logger.handle_task_exceptions
+                                )
 
-                        fut.add_done_callback(handle_children)
-                        self._page_futures[fut.get_name()] = fut
+                        render_task.add_done_callback(handle_children)
+                        self._page_futures[render_task.get_name()] = render_task
                 except Exception as err:
                     self._logger.error("Error in page:", err)
                     page_layout = BasicLayoutModel(kind="BASIC", errors=errors)
@@ -1104,8 +1114,17 @@ class Interval:
                     io_var.reset(io_token)
                     ctx_var.reset(ctx_token)
 
-            fut = loop.create_task(handle_page())
-            self._page_futures[inputs.page_key] = fut
+            def handle_page_error(task: asyncio.Task):
+                try:
+                    task.result()
+                except asyncio.CancelledError:
+                    pass
+                except BaseException as err:
+                    errors.append(page_error(err, layout_key="children"))
+
+            task = loop.create_task(handle_page(), name="handle_page")
+            task.add_done_callback(handle_page_error)
+            self._page_futures[inputs.page_key] = task
 
             return OpenPageReturnsSuccess(page_key=inputs.page_key)
 
