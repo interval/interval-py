@@ -34,8 +34,7 @@ from ..io_schema import (
     InputTimeProps,
     InputDateTimeProps,
     TableColumnDef,
-    InternalTableRowModel,
-    InternalTableColumnModel,
+    InternalTableColumn,
     SelectTableProps,
     PassthroughRichSelectOption,
     RichSelectOption,
@@ -477,14 +476,11 @@ class IO:
                 selected_keys = []
 
                 if state.is_select_all:
-                    selected_keys = [row["key"] for row in new_sorted]
+                    selected_keys = [row.key for row in new_sorted]
 
-                props.data = [
-                    InternalTableRowModel.parse_obj(row)
-                    for row in new_sorted[
-                        state.offset : state.offset
-                        + min(state.page_size * 3, TABLE_DATA_BUFFER_SIZE)
-                    ]
+                props.data = new_sorted[
+                    state.offset : state.offset
+                    + min(state.page_size * 3, TABLE_DATA_BUFFER_SIZE)
                 ]
                 props.selected_keys = selected_keys
                 props.total_records = len(new_sorted)
@@ -497,13 +493,9 @@ class IO:
                 initial_props=SelectTableProps(
                     help_text=help_text,
                     columns=[
-                        InternalTableColumnModel.parse_obj(col)
-                        for col in normalized_columns
+                        InternalTableColumn.parse_obj(col) for col in normalized_columns
                     ],
-                    data=[
-                        InternalTableRowModel.parse_obj(row)
-                        for row in serialized_rows[:TABLE_DATA_BUFFER_SIZE]
-                    ],
+                    data=serialized_rows[:TABLE_DATA_BUFFER_SIZE],
                     min_selections=min_selections,
                     max_selections=max_selections,
                     total_records=len(serialized_rows),
@@ -941,18 +933,14 @@ class IO:
                         await get_data(TableDataFetcherState(**state.dict())),
                     )
                     built_columns = columns_builder(data=fetched.data, columns=columns)
-                    serialized_fetched = [
+                    props.data = [
                         serialize_table_row(
                             key=str(i + state.offset), row=row, columns=built_columns
                         )
                         for (i, row) in enumerate(fetched.data)
                     ]
                     props.columns = [
-                        InternalTableColumnModel.parse_obj(col) for col in built_columns
-                    ]
-                    props.data = [
-                        InternalTableRowModel.parse_obj(row)
-                        for row in serialized_fetched
+                        InternalTableColumn.parse_obj(col) for col in built_columns
                     ]
                     props.total_records = fetched.total_records
                 else:
@@ -962,7 +950,7 @@ class IO:
                         state.sort_direction,
                     )
                     props.data = [
-                        InternalTableRowModel.parse_obj(row)
+                        InternalTableRow.parse_obj(row)
                         for row in new_sorted[
                             state.offset : state.offset
                             + min(state.page_size * 3, TABLE_DATA_BUFFER_SIZE)
@@ -978,11 +966,10 @@ class IO:
                 initial_props=DisplayTableProps(
                     help_text=help_text,
                     columns=[
-                        InternalTableColumnModel.parse_obj(col)
-                        for col in normalized_columns
+                        InternalTableColumn.parse_obj(col) for col in normalized_columns
                     ],
                     data=[
-                        InternalTableRowModel.parse_obj(row)
+                        InternalTableRow.parse_obj(row)
                         for row in serialized_rows[:TABLE_DATA_BUFFER_SIZE]
                     ],
                     total_records=len(data) if data is not None else None,

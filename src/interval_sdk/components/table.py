@@ -19,6 +19,8 @@ from ..io_schema import (
     TableRow,
     TableColumnDef,
     InternalTableRow,
+    TableRowModel,
+    TableRowValueModel,
     TableRowValueObject,
 )
 from ..util import (
@@ -60,7 +62,7 @@ def serialize_table_row(
     columns: Iterable[TableColumnDef],
 ) -> InternalTableRow:
     row = cast(TableRow, serialize_dates(cast(SerializableRecord, row)))
-    rendered_row: TableRow = {}
+    rendered_row: TableRowModel = {}
     filter_values: list[str] = []
 
     for i, col in enumerate(columns):
@@ -96,14 +98,13 @@ def serialize_table_row(
             else:
                 filter_values.append(str(val))
 
-        rendered_row[accessor_key] = val
+        rendered_row[accessor_key] = TableRowValueModel.parse_obj(val)
 
-    return {
-        "key": key,
-        "data": rendered_row,
-        "filterValue": " ".join(filter_values).lower(),
-        # TODO: menu
-    }
+    return InternalTableRow(
+        key=key,
+        data=rendered_row,
+        filterValue=" ".join(filter_values).lower(),
+    )
 
 
 def columns_builder(
@@ -156,7 +157,7 @@ def filter_rows(
     return [
         row
         for row in data
-        if "filterValue" not in row or query_term.lower() in row["filterValue"]
+        if row.filterValue is None or query_term.lower() in row.filterValue
     ]
 
 
@@ -166,9 +167,8 @@ SortableValue: TypeAlias = str | int | float | date | time | datetime
 def get_sortable_value(row: InternalTableRow, sort_by_column: str) -> SortableValue:
     sort_val = None
 
-    if row is not None and "data" in row:
-        if sort_by_column in row["data"]:
-            sort_val = row["data"][sort_by_column]
+    if row is not None and row.data is not None and sort_by_column in row.data:
+        sort_val = row.data[sort_by_column]
 
     if sort_val is not None and isinstance(sort_val, dict):
         if "value" in sort_val and sort_val["value"] is not None:
@@ -187,7 +187,7 @@ def sort_rows(
     direction: Literal["asc", "desc"] | None,
 ) -> list[InternalTableRow]:
     if column is None or direction is None:
-        return sorted(data, key=lambda row: int(row["key"]))
+        return sorted(data, key=lambda row: int(row.key))
 
     return sorted(
         data,

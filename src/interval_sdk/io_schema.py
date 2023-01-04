@@ -20,6 +20,7 @@ import io, json, sys
 from typing_extensions import NotRequired
 from pydantic import (
     BaseModel as PydanticBaseModel,
+    Field,
     StrictBool,
     StrictInt,
     StrictFloat,
@@ -300,15 +301,23 @@ class TableRowValueModel(BaseModel):
     __root__: TableRowValuePrimitive | TableRowValueObjectModel
 
 
-class InternalTableRow(TypedDict):
-    key: str
-    data: TableRow
-    filterValue: NotRequired[str]
+TableRowModel: TypeAlias = dict[str, TableRowValueModel | None]
 
 
-class InternalTableRowModel(BaseModel):
+class TableMenuItem(BaseModel):
+    label: str
+    theme: Literal["danger"] | None
+    disabled: bool = False
+    route: str | None = None
+    params: SerializableRecord | None = None
+    url: str | None = None
+
+
+class InternalTableRow(BaseModel):
     key: str
-    data: dict[str, TableRowValueModel | None]
+    data: TableRowModel
+    menu: list[TableMenuItem] = Field(default_factory=list)
+    filterValue: str | None = None
 
 
 class SelectTableReturnModel(BaseModel):
@@ -321,12 +330,7 @@ class TableColumnDef(TypedDict):
     accessorKey: NotRequired[str]
 
 
-class InternalTableColumn(TypedDict):
-    label: str
-    accessorKey: NotRequired[str]
-
-
-class InternalTableColumnModel(BaseModel):
+class InternalTableColumn(BaseModel):
     label: str
     accessorKey: Optional[str] = None
 
@@ -443,9 +447,9 @@ class ConfirmIdentityProps(BaseModel):
 
 
 class SelectTableProps(BaseModel):
-    data: list[InternalTableRowModel]
+    data: list[InternalTableRow]
     help_text: Optional[str]
-    columns: list[InternalTableColumnModel]
+    columns: list[InternalTableColumn]
     min_selections: Optional[int]
     max_selections: Optional[int]
     total_records: int
@@ -516,8 +520,8 @@ class DisplayImageProps(BaseModel):
 
 class DisplayTableProps(BaseModel):
     help_text: Optional[str] = None
-    data: list[InternalTableRowModel]
-    columns: list[InternalTableColumnModel]
+    data: list[InternalTableRow]
+    columns: list[InternalTableColumn]
     default_page_size: int | None = None
     is_sortable: bool = True
     is_filterable: bool = True
