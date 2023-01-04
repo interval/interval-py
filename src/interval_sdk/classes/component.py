@@ -16,6 +16,7 @@ from typing_extensions import TypeVarTuple, Unpack
 from pydantic import parse_obj_as, ValidationError, BaseModel as PydanticBaseModel
 
 from ..io_schema import (
+    ButtonConfig,
     MethodDef,
     MN,
     io_schema,
@@ -165,5 +166,6 @@ class Component(Generic[MN]):
 
 
 ComponentRenderer: TypeAlias = Callable[
-    [list[Component], IOPromiseValidator | None], Awaitable[list[Any]]
+    [list[Component], IOPromiseValidator | None, ButtonConfig | None],
+    Awaitable[list[Any]],
 ]

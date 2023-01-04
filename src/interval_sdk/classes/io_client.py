@@ -3,7 +3,7 @@ import inspect
 from typing import cast, Awaitable, TypeAlias, Callable, TypeVar, Any
 from uuid import uuid4
 
-from ..io_schema import MethodName, IORender, IOResponse
+from ..io_schema import ButtonConfig, MethodName, IORender, IOResponse
 from .component import Component, IOPromiseValidator
 from .io_error import IOError
 from .io import IO
@@ -43,6 +43,7 @@ class IOClient:
         self,
         components: list[Component],
         group_validator: IOPromiseValidator | None = None,
+        continue_button: ButtonConfig | None = None,
     ) -> list[Any]:
         if self._is_canceled:
             raise IOError("TRANSACTION_CLOSED")
@@ -59,6 +60,7 @@ class IOClient:
                 to_render=[inst.render_info for inst in components],
                 kind="RENDER",
                 validation_error_message=validation_error_message,
+                continue_button=continue_button,
             )
 
             await self._send(packed)

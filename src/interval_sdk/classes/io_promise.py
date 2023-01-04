@@ -1,6 +1,7 @@
 import inspect
 from typing import (
     Generic,
+    Literal,
     TypeVar,
     Callable,
     Any,
@@ -18,7 +19,7 @@ from .component import (
     Output_co,
     IOPromiseValidator,
 )
-from ..io_schema import DisplayMethodName, InputMethodName, MethodName
+from ..io_schema import ButtonConfig, DisplayMethodName, InputMethodName, MethodName
 
 MN_co = TypeVar("MN_co", bound=MethodName, covariant=True)
 Display_MN_co = TypeVar("Display_MN_co", bound=DisplayMethodName, covariant=True)
@@ -42,7 +43,9 @@ class IOPromise(Generic[MN_co, Output_co]):
         self._value_getter = get_value
 
     def __await__(self) -> Generator[Any, None, Output_co]:
-        res = yield from self._renderer([self._component], self._validator).__await__()
+        res = yield from self._renderer(
+            [self._component], self._validator, None
+        ).__await__()
         return self._get_value(res[0])
 
     def _get_value(self, val: Any) -> Output_co:
@@ -93,7 +96,9 @@ class OptionalIOPromise(InputIOPromise[Input_MN_co, Output_co]):
 
     @override
     def __await__(self) -> Generator[Any, None, Output_co | None]:
-        res = yield from self._renderer([self._component], self._validator).__await__()
+        res = yield from self._renderer(
+            [self._component], self._validator, None
+        ).__await__()
         return self._get_value(res[0])
 
     def _get_value(self, val: Any) -> Output_co | None:
@@ -121,6 +126,7 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
     _kw_io_promises: dict[str, GroupableIOPromise[MethodName, Any]] | None = None
     _renderer: ComponentRenderer
     _validator: IOGroupPromiseValidator[Unpack[GroupOutput]] | None = None
+    _continue_button: ButtonConfig | None = None
 
     def __init__(
         self,
@@ -151,7 +157,9 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
     def __await__(self) -> Generator[Any, None, tuple[Unpack[GroupOutput]] | KeyedIONamespace]:  # type: ignore
         if self._kw_io_promises is not None and len(self._kw_io_promises) > 0:
             res = yield from self._renderer(
-                [p._component for p in self._kw_io_promises.values()], self._validator
+                [p._component for p in self._kw_io_promises.values()],
+                self._validator,
+                self._continue_button,
             ).__await__()
             res_dict = {
                 key: res[i] for i, key in enumerate(self._kw_io_promises.keys())
@@ -159,19 +167,14 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
             return KeyedIONamespace(res_dict)
         else:
             res = yield from self._renderer(
-                [p._component for p in self._io_promises], self._validator
+                [p._component for p in self._io_promises],
+                self._validator,
+                self._continue_button,
             ).__await__()
             return cast(
                 tuple[Unpack[GroupOutput]],
                 [self._io_promises[i]._get_value(val) for (i, val) in enumerate(res)],
             )
-
-    def validate(
-        self: "IOGroupPromise[Unpack[GroupOutput]]",
-        validator: IOGroupPromiseValidator[Unpack[GroupOutput]] | None,
-    ) -> "IOGroupPromise[Unpack[GroupOutput]]":
-        self._validator = validator
-        return self
 
     async def _handle_validation(self, return_values: list[Any]) -> str | None:
         if self._validator is None:
@@ -183,3 +186,18 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
         ]
         ret = self._validator(*values)  # type: ignore
         return cast(str | None, await ret if inspect.isawaitable(ret) else ret)
+
+    def validate(
+        self: "IOGroupPromise[Unpack[GroupOutput]]",
+        validator: IOGroupPromiseValidator[Unpack[GroupOutput]] | None,
+    ) -> "IOGroupPromise[Unpack[GroupOutput]]":
+        self._validator = validator
+        return self
+
+    def continue_button_options(
+        self: "IOGroupPromise[Unpack[GroupOutput]]",
+        label: str | None = None,
+        theme: Literal["primary", "secondary", "danger"] | None = None,
+    ) -> "IOGroupPromise[Unpack[GroupOutput]]":
+        self._continue_button = ButtonConfig(label=label, theme=theme)
+        return self

@@ -52,6 +52,14 @@ async def group_types(io: IO):
     print(resp)
 
 
+@interval.action()
+async def group(io: IO):
+    await io.group(
+        io.display.markdown("1. First item"),
+        io.display.markdown("2. Second item"),
+    ).continue_button_options(label="Hey!", theme="danger")
+
+
 @interval.action(name="Hello, Interval!", description="From a Python decorator!")
 async def hello_interval():
     return {"hello": "from python!"}

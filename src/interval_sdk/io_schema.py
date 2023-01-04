@@ -109,6 +109,11 @@ TypeValue = Literal[
 ]
 
 
+class ButtonConfig(BaseModel):
+    label: str | None = None
+    theme: Literal["primary", "secondary", "danger"] | None = None
+
+
 class RichSelectOption(TypedDict):
     label: ObjectLiteral
     value: ObjectLiteral
@@ -788,6 +793,10 @@ def json_dumps_io_render(io_render: dict[str, Any], *args, **kwargs) -> str:
             ]
         elif key == "validation_error_message" and val is None:
             pass
+        elif key == "continue_button":
+            if val is None:
+                continue
+            obj[snake_to_camel(key)] = dict_keys_to_camel(dict_strip_none(val))
         else:
             obj[snake_to_camel(key)] = val
 
@@ -800,6 +809,7 @@ class IORender(BaseModel):
     to_render: list[ComponentRenderInfo]
     kind: Literal["RENDER"] = "RENDER"
     validation_error_message: str | None = None
+    continue_button: ButtonConfig | None = None
 
     class Config:
         json_dumps = json_dumps_io_render
