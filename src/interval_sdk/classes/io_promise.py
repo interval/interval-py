@@ -1,5 +1,6 @@
 import inspect
 from typing import (
+    Awaitable,
     Generic,
     Literal,
     TypeVar,
@@ -125,7 +126,7 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
     _io_promises: tuple[GroupableIOPromise[MethodName, Any], ...]
     _kw_io_promises: dict[str, GroupableIOPromise[MethodName, Any]] | None = None
     _renderer: ComponentRenderer
-    _validator: IOGroupPromiseValidator[Unpack[GroupOutput]] | None = None
+    _validator: "IOGroupPromiseValidator[Unpack[GroupOutput]] | None" = None
     _continue_button: ButtonConfig | None = None
 
     def __init__(
@@ -158,7 +159,7 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
         if self._kw_io_promises is not None and len(self._kw_io_promises) > 0:
             res = yield from self._renderer(
                 [p._component for p in self._kw_io_promises.values()],
-                self._validator,
+                self._handle_validation,
                 self._continue_button,
             ).__await__()
             res_dict = {
@@ -168,7 +169,7 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
         else:
             res = yield from self._renderer(
                 [p._component for p in self._io_promises],
-                self._validator,
+                self._handle_validation,
                 self._continue_button,
             ).__await__()
             return cast(
@@ -180,16 +181,39 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
         if self._validator is None:
             return None
 
-        io_promises = self._io_promises
-        values = [
-            io_promises[index]._get_value(v) for index, v in enumerate(return_values)
-        ]
-        ret = self._validator(*values)  # type: ignore
+        if self._kw_io_promises is not None and len(self._kw_io_promises) > 0:
+            io_promises = list(self._kw_io_promises.values())
+            values = {
+                key: io_promises[index]._get_value(return_values[index])
+                for index, key in enumerate(self._kw_io_promises.keys())
+            }
+            ret = self._validator(**values)  # type: ignore
+        else:
+            io_promises = self._io_promises
+            values = [
+                io_promises[index]._get_value(v)
+                for index, v in enumerate(return_values)
+            ]
+            ret = self._validator(*values)  # type: ignore
         return cast(str | None, await ret if inspect.isawaitable(ret) else ret)
 
+    @overload
+    def validate(
+        self: "IOGroupPromise[KeyedIONamespace]",
+        validator: "Callable[..., str | None | Awaitable[str | None]] | None",
+    ) -> "IOGroupPromise[Unpack[GroupOutput]]":
+        ...
+
+    @overload
     def validate(
         self: "IOGroupPromise[Unpack[GroupOutput]]",
-        validator: IOGroupPromiseValidator[Unpack[GroupOutput]] | None,
+        validator: "IOGroupPromiseValidator[Unpack[GroupOutput]] | None",
+    ) -> "IOGroupPromise[Unpack[GroupOutput]]":
+        ...
+
+    def validate(  # type: ignore
+        self: "IOGroupPromise[Unpack[GroupOutput]]",
+        validator: "IOGroupPromiseValidator[Unpack[GroupOutput]] | None",
     ) -> "IOGroupPromise[Unpack[GroupOutput]]":
         self._validator = validator
         return self

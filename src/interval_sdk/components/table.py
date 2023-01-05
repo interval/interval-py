@@ -6,7 +6,6 @@ from typing import (
     Generic,
     Iterable,
     Literal,
-    NamedTuple,
     TypeAlias,
     TypeVar,
     cast,
@@ -50,7 +49,8 @@ class TableDataFetcherState:
 TR = TypeVar("TR", bound=TableRow)
 
 
-class FetchedTableData(NamedTuple, Generic[TR]):
+@dataclass
+class FetchedTableData(Generic[TR]):
     data: list[TR]
     total_records: int | None = None
 
