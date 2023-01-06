@@ -8,9 +8,11 @@ from interval_sdk.classes.action import Action
 from interval_sdk.classes.layout import Layout
 from interval_sdk.classes.logger import Logger
 from interval_sdk.classes.page import Page
-from interval_sdk.components.table import FetchedTableData, TableDataFetcherState
+from interval_sdk.components.grid import GridDataFetcherState
+from interval_sdk.components.table import TableDataFetcherState
 from interval_sdk.internal_rpc_schema import ActionContext
 from interval_sdk.io_schema import (
+    GridItem,
     RichSelectOption,
     RenderableSearchResult,
 )
@@ -26,6 +28,64 @@ interval = Interval(
     endpoint="ws://localhost:3000/websocket",
     log_level="debug",
 )
+
+
+states = [
+    "Alabama",
+    "Alaska",
+    "Arizona",
+    "Arkansas",
+    "California",
+    "Colorado",
+    "Connecticut",
+    "Delaware",
+    "Florida",
+    "Georgia",
+    "Hawaii",
+    "Idaho",
+    "Illinois",
+    "Indiana",
+    "Iowa",
+    "Kansas",
+    "Kentucky",
+    "Louisiana",
+    "Maine",
+    "Maryland",
+    "Massachusetts",
+    "Michigan",
+    "Minnesota",
+    "Mississippi",
+    "Missouri",
+    "Montana",
+    "Nebraska",
+    "Nevada",
+    "New Hampshire",
+    "New Jersey",
+    "New Mexico",
+    "New York",
+    "North Carolina",
+    "North Dakota",
+    "Ohio",
+    "Oklahoma",
+    "Oregon",
+    "Pennsylvania",
+    "Rhode Island",
+    "South Carolina",
+    "South Dakota",
+    "Tennessee",
+    "Texas",
+    "Utah",
+    "Vermont",
+    "Virginia",
+    "Washington",
+    "West Virginia",
+    "Wisconsin",
+    "Wyoming",
+]
+
+
+def get_state_image(state: str) -> str:
+    return f"https://geology.com/state-map/maps/{str(state).lower().replace(' ', '-')}-county-map.gif"
 
 
 @interval.action
@@ -485,10 +545,10 @@ interval.routes.add("tables", tables)
 async def asynchronous():
     io = io_var.get()
 
-    async def get_data(state: TableDataFetcherState) -> FetchedTableData:
-        return FetchedTableData(
-            [{"a": i + state.offset, "b": i * 10} for i in range(state.page_size)], 100
-        )
+    async def get_data(state: TableDataFetcherState):
+        return [
+            {"a": i + state.offset, "b": i * 10} for i in range(state.page_size)
+        ], 100
 
     await io.display.table(
         "Async",
@@ -532,7 +592,7 @@ async def table_test(io: IO):
                 "renderCell": lambda row: {
                     "value": row["b"],
                     "label": f"Item {row['b']}",
-                    "href": f"https://example.com/{row['b']}",
+                    "url": f"https://example.com/{row['b']}",
                     "image": {
                         "url": f"https://avatars.dicebear.com/api/pixel-art/{row['b']}.svg?scale=96&translateY=10",
                         "size": "small",
@@ -590,6 +650,67 @@ async def big_select_table(io: IO):
     print(selected)
 
     return {row["a"]: True for row in selected}
+
+
+grids = Page("Grids")
+
+
+@grids.action
+async def data():
+    io = io_var.get()
+    await io.display.grid(
+        "Basic",
+        help_text="With static data",
+        data=list(range(100)),
+        render_item=lambda x: {
+            "title": f"Item {x}",
+        },
+        default_page_size=10,
+        is_filterable=False,
+    )
+
+
+@grids.action
+async def get_data():
+    io = io_var.get()
+
+    def render_item(state: str) -> GridItem:
+        return {
+            "title": state,
+            "description": f"The great state of {state}",
+            "image": {
+                "url": get_state_image(state),
+                "alt": state,
+                "aspectRatio": 1,
+                "fit": "contain",
+            },
+            "menu": [
+                {
+                    "label": "Learn more",
+                    "url": f"https://wikipedia.org/wiki/{state}",
+                }
+            ],
+            "url": f"https://www.{state.lower()}.gov",
+        }
+
+    async def get_data(state: GridDataFetcherState):
+        if state.query_term is None or state.query_term == "":
+            data = states
+        else:
+            data = [s for s in states if state.query_term.lower() in s.lower()]
+
+        return data[state.offset : state.offset + state.page_size], len(data)
+
+    await io.display.grid(
+        "Async",
+        help_text="With get_data",
+        get_data=get_data,
+        render_item=render_item,
+        ideal_column_width=200,
+    )
+
+
+interval.routes.add("grids", grids)
 
 
 @interval.action
@@ -658,59 +779,6 @@ async def optional_values(io: IO):
 
 @interval.action("io.search")
 async def io_search(io: IO):
-    states = [
-        "Alabama",
-        "Alaska",
-        "Arizona",
-        "Arkansas",
-        "California",
-        "Colorado",
-        "Connecticut",
-        "Delaware",
-        "Florida",
-        "Georgia",
-        "Hawaii",
-        "Idaho",
-        "Illinois",
-        "Indiana",
-        "Iowa",
-        "Kansas",
-        "Kentucky",
-        "Louisiana",
-        "Maine",
-        "Maryland",
-        "Massachusetts",
-        "Michigan",
-        "Minnesota",
-        "Mississippi",
-        "Missouri",
-        "Montana",
-        "Nebraska",
-        "Nevada",
-        "New Hampshire",
-        "New Jersey",
-        "New Mexico",
-        "New York",
-        "North Carolina",
-        "North Dakota",
-        "Ohio",
-        "Oklahoma",
-        "Oregon",
-        "Pennsylvania",
-        "Rhode Island",
-        "South Carolina",
-        "South Dakota",
-        "Tennessee",
-        "Texas",
-        "Utah",
-        "Vermont",
-        "Virginia",
-        "Washington",
-        "West Virginia",
-        "Wisconsin",
-        "Wyoming",
-    ]
-
     async def on_search(query: str):
         return [state for state in states if query.lower() in str(state).lower()]
 
@@ -718,7 +786,7 @@ async def io_search(io: IO):
         return {
             "label": state,
             "image": {
-                "url": f"https://geology.com/state-map/maps/{str(state).lower()}-county-map.gif",
+                "url": get_state_image(state),
             },
         }
 

@@ -14,10 +14,11 @@ from typing import (
 )
 from urllib.parse import ParseResult, urlparse
 
-from pydantic import parse_obj_as
-
 from ..io_schema import (
+    DisplayGridProps,
+    DisplayGridState,
     DisplayTableState,
+    GridItem,
     InputTextProps,
     InternalTableRow,
     SelectTableReturnModel,
@@ -94,6 +95,16 @@ from ..components.table import (
     serialize_table_row,
     sort_rows,
 )
+from ..components.grid import (
+    GI,
+    FetchedGridData,
+    GridDataFetcher,
+    GridDataFetcherState,
+    filter_items,
+    serialize_grid_item,
+)
+
+
 from ..util import KeyValueObject
 
 
@@ -941,10 +952,12 @@ class IO:
                 props: DisplayTableProps,
             ) -> DisplayTableProps:
                 if get_data is not None:
-                    fetched = parse_obj_as(
-                        FetchedTableData,
-                        await get_data(TableDataFetcherState(**state.dict())),
-                    )
+                    fetched = await get_data(TableDataFetcherState(**state.dict()))
+                    if isinstance(fetched, list):
+                        fetched = FetchedTableData(fetched)
+                    elif isinstance(fetched, tuple):
+                        fetched = FetchedTableData(*fetched)
+
                     built_columns = columns_builder(data=fetched.data, columns=columns)
                     props.data = [
                         serialize_table_row(
@@ -958,19 +971,17 @@ class IO:
                     props.columns = [
                         InternalTableColumn.parse_obj(col) for col in built_columns
                     ]
-                    props.total_records = fetched.total_records
+                    if fetched.total_records is not None:
+                        props.total_records = fetched.total_records
                 else:
                     new_sorted: list[InternalTableRow] = sort_rows(
                         filter_rows(serialized_rows, state.query_term),
                         state.sort_column,
                         state.sort_direction,
                     )
-                    props.data = [
-                        InternalTableRow.parse_obj(row)
-                        for row in new_sorted[
-                            state.offset : state.offset
-                            + min(state.page_size * 3, TABLE_DATA_BUFFER_SIZE)
-                        ]
+                    props.data = new_sorted[
+                        state.offset : state.offset
+                        + min(state.page_size * 3, TABLE_DATA_BUFFER_SIZE)
                     ]
                     props.total_records = len(new_sorted)
 
@@ -984,14 +995,109 @@ class IO:
                     columns=[
                         InternalTableColumn.parse_obj(col) for col in normalized_columns
                     ],
-                    data=[
-                        InternalTableRow.parse_obj(row)
-                        for row in serialized_rows[:TABLE_DATA_BUFFER_SIZE]
-                    ],
+                    data=serialized_rows[:TABLE_DATA_BUFFER_SIZE],
                     total_records=len(data) if data is not None else None,
                     default_page_size=default_page_size,
                     is_sortable=is_sortable,
                     is_filterable=is_filterable,
+                    is_async=get_data is not None,
+                ).dict(),
+                handle_state_change=handle_state_change,
+            )
+            return DisplayIOPromise(c, renderer=self._renderer)
+
+        @overload
+        def grid(
+            self,
+            label: str,
+            *,
+            data: list[GI],
+            get_data: GridDataFetcher | None = None,
+            render_item: Callable[[GI], GridItem],
+            help_text: str | None = None,
+            ideal_column_width: int | None = None,
+            default_page_size: int | None = None,
+            is_filterable: bool = True,
+        ) -> DisplayIOPromise[Literal["DISPLAY_GRID"], None]:
+            ...
+
+        @overload
+        def grid(
+            self,
+            label: str,
+            *,
+            data: list[GI] | None = None,
+            get_data: GridDataFetcher,
+            render_item: Callable[[GI], GridItem],
+            help_text: str | None = None,
+            ideal_column_width: int | None = None,
+            default_page_size: int | None = None,
+            is_filterable: bool = True,
+        ) -> DisplayIOPromise[Literal["DISPLAY_GRID"], None]:
+            ...
+
+        def grid(
+            self,
+            label: str,
+            *,
+            data: list[GI] | None = None,
+            get_data: GridDataFetcher | None = None,
+            render_item: Callable[[GI], GridItem],
+            help_text: str | None = None,
+            ideal_column_width: int | None = None,
+            default_page_size: int | None = None,
+            is_filterable: bool = True,
+        ) -> DisplayIOPromise[Literal["DISPLAY_GRID"], None]:
+            serialized_items = (
+                [
+                    serialize_grid_item(key=str(i), item=item, render_item=render_item)
+                    for (i, item) in enumerate(data)
+                ]
+                if data is not None
+                else []
+            )
+
+            async def handle_state_change(
+                state: DisplayGridState,
+                props: DisplayGridProps,
+            ) -> DisplayGridProps:
+                if get_data is not None:
+                    fetched = await get_data(GridDataFetcherState(**state.dict()))
+                    if isinstance(fetched, list):
+                        fetched = FetchedGridData(fetched)
+                    elif isinstance(fetched, tuple):
+                        fetched = FetchedGridData(*fetched)
+
+                    props.data = [
+                        serialize_grid_item(
+                            key=str(i + state.offset),
+                            item=item,
+                            render_item=render_item,
+                        )
+                        for (i, item) in enumerate(fetched.data)
+                    ]
+                    if fetched.total_records is not None:
+                        props.total_records = fetched.total_records
+                else:
+                    new_filtered = filter_items(serialized_items, state.query_term)
+                    props.data = new_filtered[
+                        state.offset : state.offset
+                        + min(state.page_size * 3, TABLE_DATA_BUFFER_SIZE)
+                    ]
+                    props.total_records = len(new_filtered)
+
+                return props
+
+            c = Component(
+                method_name="DISPLAY_GRID",
+                label=label,
+                initial_props=DisplayGridProps(
+                    help_text=help_text,
+                    data=serialized_items[:TABLE_DATA_BUFFER_SIZE],
+                    default_page_size=default_page_size,
+                    ideal_column_width=ideal_column_width,
+                    is_filterable=is_filterable,
+                    total_records=len(data) if data is not None else None,
                     is_async=get_data is not None,
                 ).dict(),
                 handle_state_change=handle_state_change,

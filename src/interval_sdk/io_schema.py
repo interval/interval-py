@@ -12,12 +12,11 @@ from typing import (
     TypeVar,
     Mapping,
     Type,
-    TypedDict,
 )
 from datetime import date, time, datetime
 from uuid import UUID
 import io, json, sys
-from typing_extensions import NotRequired
+from typing_extensions import NotRequired, TypedDict
 from pydantic import (
     BaseModel as PydanticBaseModel,
     Field,
@@ -26,6 +25,7 @@ from pydantic import (
     StrictFloat,
 )
 from pydantic.fields import ModelField
+
 from .types import (
     BaseModel,
     GenericModel,
@@ -74,6 +74,7 @@ DisplayMethodName = Literal[
     "DISPLAY_MARKDOWN",
     "DISPLAY_METADATA",
     "DISPLAY_OBJECT",
+    "DISPLAY_GRID",
     "DISPLAY_TABLE",
     "DISPLAY_VIDEO",
     "DISPLAY_PROGRESS_STEPS",
@@ -340,15 +341,58 @@ class SelectTableReturnModel(BaseModel):
     key: str
 
 
-class TableColumnDef(TypedDict):
+TR = TypeVar("TR", bound=TableRow)
+
+
+class TableColumnDef(TypedDict, Generic[TR]):
     label: str
-    renderCell: NotRequired[Callable[[Any], TableRowValue]]
+    renderCell: NotRequired[Callable[[TR], TableRowValue]]
     accessorKey: NotRequired[str]
 
 
 class InternalTableColumn(BaseModel):
     label: str
     accessorKey: Optional[str] = None
+
+
+class GridItemImage(TypedDict):
+    url: NotRequired[str | None]
+    alt: NotRequired[str]
+    fit: NotRequired[Literal["cover", "contain"]]
+    aspectRatio: NotRequired[float]
+
+
+class GridItemImageModel(BaseModel):
+    url: str | None = None
+    alt: str | None = None
+    fit: Literal["cover", "contain"] | None = None
+    aspectRatio: float | None = None
+
+
+class GridItem(TypedDict):
+    title: NotRequired[str | None]
+    description: NotRequired[str | None]
+    image: NotRequired[GridItemImage | None]
+    menu: NotRequired[list[TableMenuItem]]
+    url: NotRequired[str]
+    route: NotRequired[str]
+    params: NotRequired[SerializableRecord]
+
+
+class GridItemModel(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    image: GridItemImageModel | None = None
+    menu: list[TableMenuItemModel] | None = None
+    url: str | None = None
+    route: str | None = None
+    params: SerializableRecord | None = None
+
+
+class InternalGridItem(BaseModel):
+    key: str
+    data: GridItemModel
+    filterValue: str | None = None
 
 
 PropsType = TypeVar("PropsType", bound=Type)
@@ -546,6 +590,23 @@ class DisplayImageProps(BaseModel):
     width: Optional[ImageSize]
 
 
+class DisplayGridProps(BaseModel):
+    help_text: Optional[str] = None
+    data: list[InternalGridItem]
+    ideal_column_width: int | None = None
+    default_page_size: int | None = None
+    is_filterable: bool = True
+    # private props
+    total_records: int | None = None
+    is_async: bool
+
+
+class DisplayGridState(BaseModel):
+    query_term: Optional[str] = None
+    offset: int = 0
+    page_size: int
+
+
 class DisplayTableProps(BaseModel):
     help_text: Optional[str] = None
     data: list[InternalTableRow]
@@ -616,6 +677,7 @@ class SearchState(BaseModel):
     query_term: str
 
 
+# be sure to add any new methods to InputMethodName type above
 input_schema: dict[InputMethodName, MethodDef] = {
     "INPUT_TEXT": MethodDef(
         props=InputTextProps,
@@ -706,6 +768,7 @@ input_schema: dict[InputMethodName, MethodDef] = {
     ),
 }
 
+# be sure to add any new methods to DisplayMethodName type above
 display_schema: dict[DisplayMethodName, MethodDef] = {
     "DISPLAY_CODE": MethodDef(
         props=DisplayCodeProps,
@@ -740,6 +803,11 @@ display_schema: dict[DisplayMethodName, MethodDef] = {
     "DISPLAY_OBJECT": MethodDef(
         props=DisplayObjectProps,
         state=None,
+        returns=None,
+    ),
+    "DISPLAY_GRID": MethodDef(
+        props=DisplayGridProps,
+        state=DisplayGridState,
         returns=None,
     ),
     "DISPLAY_TABLE": MethodDef(
@@ -815,9 +883,7 @@ def dump_io_render(io_render: dict[str, Any]) -> dict[str, Any]:
 
 
 def json_dumps_io_render(io_render: dict[str, Any], *args, **kwargs) -> str:
-    """
-    We don't want to clobber any user-provided keys in props.
-    """
+    # we don't want to clobber any user-provided keys in props
     return json.dumps(dump_io_render(io_render), *args, **kwargs)
 
 

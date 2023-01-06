@@ -56,7 +56,8 @@ class FetchedTableData(Generic[TR]):
 
 
 TableDataFetcher: TypeAlias = Callable[
-    [TableDataFetcherState], Awaitable[FetchedTableData]
+    [TableDataFetcherState],
+    Awaitable[FetchedTableData | list[TR] | tuple[list[TR], int]],
 ]
 
 
