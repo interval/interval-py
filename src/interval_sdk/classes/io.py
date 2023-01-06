@@ -845,9 +845,7 @@ class IO:
             url: str | None = None,
             bytes: bytes | None = None,
             alt: str | None = None,
-            height: ImageSize | None = None,
             size: ImageSize | None = None,
-            width: ImageSize | None = None,
         ) -> DisplayIOPromise[Literal["DISPLAY_IMAGE"], None]:
             if bytes is not None and url is None:
                 if sys.getsizeof(bytes) > MAX_FILE_SIZE_MB * 1000 * 1000:
@@ -872,8 +870,8 @@ class IO:
                 initial_props=DisplayImageProps(
                     url=url,
                     alt=alt,
-                    height=height if height is not None else size,
-                    width=width if width is not None else size,
+                    height=size,
+                    width=size,
                 ).dict(),
             )
             return DisplayIOPromise(c, renderer=self._renderer)

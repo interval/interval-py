@@ -80,8 +80,6 @@ def serialize_table_row(
             else None
         )
 
-        # TODO: image
-
         if val is not None:
             if isinstance(val, dict):
                 val = cast(TableRowValueObject, val)

@@ -288,6 +288,7 @@ class TableRowValueObject(TypedDict):
     url: NotRequired[str]
     route: NotRequired[str]
     params: NotRequired[SerializableRecord]
+    image: NotRequired[ImageDefinition]
 
 
 class TableRowValueObjectModel(BaseModel):
@@ -296,6 +297,7 @@ class TableRowValueObjectModel(BaseModel):
     url: str | None = None
     route: str | None = None
     params: SerializableRecordModel | None = None
+    image: ImageDefinitionModel | None = None
 
 
 TableRowValue: TypeAlias = TableRowValueObject | TableRowValuePrimitive
@@ -523,6 +525,18 @@ class DisplayObjectProps(BaseModel):
 
 
 ImageSize: TypeAlias = Literal["thumbnail", "small", "medium", "large"]
+
+
+class ImageDefinition(TypedDict):
+    url: str
+    alt: Optional[str]
+    size: Optional[ImageSize]
+
+
+class ImageDefinitionModel(BaseModel):
+    url: str
+    alt: str | None = None
+    size: ImageSize | None = None
 
 
 class DisplayImageProps(BaseModel):

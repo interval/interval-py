@@ -533,6 +533,10 @@ async def table_test(io: IO):
                     "value": row["b"],
                     "label": f"Item {row['b']}",
                     "href": f"https://example.com/{row['b']}",
+                    "image": {
+                        "url": f"https://avatars.dicebear.com/api/pixel-art/{row['b']}.svg?scale=96&translateY=10",
+                        "size": "small",
+                    },
                 },
             },
             "c",
