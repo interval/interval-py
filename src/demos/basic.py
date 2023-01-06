@@ -3,7 +3,7 @@ from datetime import date, datetime
 from typing import cast
 from typing_extensions import NotRequired
 
-from interval_sdk import Interval, IO, io_var, ctx_var
+from interval_sdk import Interval, IO, io_var, ctx_var, action_ctx_var
 from interval_sdk.classes.action import Action
 from interval_sdk.classes.layout import Layout
 from interval_sdk.classes.logger import Logger
@@ -124,7 +124,7 @@ async def keyed_group(io: IO):
 
 @interval.action
 async def log_test():
-    ctx = cast(ActionContext, ctx_var.get())
+    ctx = action_ctx_var.get()
     for i in range(10):
         await ctx.log("hi!", i)
 
@@ -132,7 +132,7 @@ async def log_test():
 @prod.action()
 @interval.action()
 async def loading_test():
-    ctx = cast(ActionContext, ctx_var.get())
+    ctx = action_ctx_var.get()
     await ctx.loading.start("Fetching users...")
 
     await asyncio.sleep(1)

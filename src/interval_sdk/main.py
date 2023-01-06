@@ -92,8 +92,13 @@ class QueuedAction:
 SDK_NAME = "interval-py"
 sdk_version = "???"
 
-io_var: ContextVar[IO] = ContextVar("io")
-ctx_var: ContextVar[ActionContext | PageContext] = ContextVar("ctx")
+io_var: ContextVar[IO] = ContextVar("io_var")
+action_ctx_var: ContextVar[ActionContext] = ContextVar("action_ctx_var")
+page_ctx_var: ContextVar[PageContext] = ContextVar("page_ctx_var")
+ctx_var: ContextVar[ActionContext | PageContext] = ContextVar("ctx_var")
+interval_context_var: ContextVar[tuple[IO, ActionContext | PageContext]] = ContextVar(
+    "interval_context_var"
+)
 
 try:
     sdk_version = importlib.metadata.version(__package__)
@@ -799,7 +804,11 @@ class Interval:
                 try:
                     result: ActionResult
                     io_token = io_var.set(client.io)
+                    action_ctx_token = action_ctx_var.set(action_ctx)
                     ctx_token = ctx_var.set(action_ctx)
+                    interval_context_token = interval_context_var.set(
+                        (client.io, action_ctx)
+                    )
 
                     try:
 
@@ -836,7 +845,9 @@ class Interval:
                         )
                     finally:
                         io_var.reset(io_token)
+                        action_ctx_var.reset(action_ctx_token)
                         ctx_var.reset(ctx_token)
+                        interval_context_var.reset(interval_context_token)
                     await self._send(
                         "MARK_TRANSACTION_COMPLETE",
                         MarkTransactionCompleteInputs(
@@ -977,7 +988,9 @@ class Interval:
             async def handle_page():
                 nonlocal page, menu_items
                 io_token = io_var.set(client.io)
+                page_ctx_token = page_ctx_var.set(page_ctx)
                 ctx_token = ctx_var.set(page_ctx)
+                interval_context_token = interval_context_var.set((client.io, page_ctx))
                 try:
                     sig = signature(page_handler)
                     params = sig.parameters
@@ -1113,6 +1126,8 @@ class Interval:
                 finally:
                     io_var.reset(io_token)
                     ctx_var.reset(ctx_token)
+                    page_ctx_var.reset(page_ctx_token)
+                    interval_context_var.reset(interval_context_token)
 
             def handle_page_error(task: asyncio.Task):
                 try:
