@@ -1,8 +1,6 @@
 import os
-from typing import cast
 
-from interval_sdk import Interval, IO, ctx_var
-from interval_sdk.internal_rpc_schema import ActionContext
+from interval_sdk import Interval, IO, action_ctx_var
 
 import whisper
 import numpy as np
@@ -35,7 +33,7 @@ async def transcribe_audio(io: IO):
         "Upload a file to transcribe", allowed_extensions=[".wav", ".mp3"]
     )
 
-    ctx = cast(ActionContext, ctx_var.get())
+    ctx = action_ctx_var.get()
     await ctx.loading.start("Transcribing audio...")
 
     audio = audio_from_bytes(file.read())

@@ -1,13 +1,12 @@
 Install Interval SDK + deps:
 
 ```
-pip install git+https://github.com/openai/whisper.git
-pip install ffmpeg-python
-pip install numpy
+pip install ../.. # temporary until published on pypi
+pip install -r requirements.txt
 ```
 
 Run:
 
 ```
-python main.py
+INTERVAL_API_KEY=<your key here> python main.py
 ```

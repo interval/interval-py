@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "transcribe-audio"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+packages = [{include = "transcribe_audio"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+whisper = {git = "https://github.com/openai/whisper.git"}
+ffmpeg-python = "^0.2.0"
+numpy = "^1.24.1"
+torch = "^1.13.1"
+tqdm = "^4.64.1"
+more-itertools = "^9.0.0"
+transformers = ">=4.19.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
