@@ -928,12 +928,42 @@ async def disabled_inputs(io: IO):
     return "All done!"
 
 
+dynamic_group = Page(name="Dynamic")
+
+
+@dynamic_group.action
+async def placeholder():
+    # Just here to prevent this group from disappearing when self_destructing removes itself
+    pass
+
+
+@dynamic_group.action
+async def self_destructing():
+    dynamic_group.remove("self_destructing")
+    return "Goodbye!"
+
+
+def on_listened(task: asyncio.Task):
+    try:
+        task.result()
+
+        @interval.action
+        async def after_listen():
+            return "Hello, from the future!"
+
+        interval.routes.add("dynamic_group", dynamic_group)
+    except:
+        pass
+
+
 logger = Logger(log_level="debug")
 
 loop = asyncio.get_event_loop()
-task = loop.create_task(prod.listen_async())
-task.add_done_callback(logger.handle_task_exceptions)
-task = loop.create_task(interval.listen_async())
-task.add_done_callback(logger.handle_task_exceptions)
+prod_task = loop.create_task(prod.listen_async())
+prod_task.add_done_callback(logger.handle_task_exceptions)
+
+dev_task = loop.create_task(interval.listen_async())
+dev_task.add_done_callback(logger.handle_task_exceptions)
+dev_task.add_done_callback(on_listened)
 
 loop.run_forever()

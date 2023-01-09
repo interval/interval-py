@@ -114,13 +114,20 @@ class Interval:
             self._interval = interval
 
         def add(self, slug: str, action_or_page: Action | Page):
-            # TODO: Support updates after listen()
+            if isinstance(action_or_page, Page):
+                action_or_page._on_change = self._interval._handle_routes_change
+
             self._interval._routes[slug] = action_or_page
+            self._interval._handle_routes_change()
 
         def remove(self, slug: str):
-            # TODO: Support updates after listen()
             try:
+                action_or_page = self._interval._routes[slug]
+                if isinstance(action_or_page, Page):
+                    action_or_page._on_change = None
+
                 del self._interval._routes[slug]
+                self._interval._handle_routes_change()
             except KeyError:
                 pass
 
@@ -1232,3 +1239,25 @@ class Interval:
         self.organization = response.organization
 
         return response
+
+    _reinitialize_task: asyncio.Task | None = None
+
+    async def _reinitialize_routes(self):
+        await asyncio.sleep(self._reinitialize_batch_timeout_seconds)
+        await self._initialize_host()
+
+    def _handle_routes_change(self):
+        if not self._is_initialized or self._reinitialize_task is not None:
+            return
+
+        def on_complete(task: asyncio.Task):
+            try:
+                task.result()
+                self._reinitialize_task = None
+            except BaseException as e:
+                self._logger.error("Failed reinitializing routes:", e)
+
+        loop = asyncio.get_running_loop()
+
+        self._reinitialize_task = loop.create_task(self._reinitialize_routes())
+        self._reinitialize_task.add_done_callback(on_complete)
