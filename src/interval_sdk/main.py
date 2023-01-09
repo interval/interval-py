@@ -927,7 +927,16 @@ class Interval:
 
             MAX_PAGE_RETRIES = 5
 
-            # TODO: Coalesce multiple calls into one somehow
+            send_page_task: asyncio.Task | None = None
+
+            def on_page_sent(task: asyncio.Task):
+                nonlocal send_page_task
+                try:
+                    task.result()
+                    send_page_task = None
+                except BaseException as e:
+                    self._logger.error(e)
+
             async def send_page():
                 if page is not None:
                     page_layout = BasicLayoutModel(
@@ -976,7 +985,8 @@ class Interval:
             async def handle_send(instruction: IORender):
                 nonlocal render_instruction
                 render_instruction = instruction
-                await send_page()
+                if send_page_task is None:
+                    await send_page()
 
             client = IOClient(logger=self._logger, send=handle_send)
 
@@ -993,7 +1003,7 @@ class Interval:
                 )
 
             async def handle_page():
-                nonlocal page, menu_items
+                nonlocal page, menu_items, send_page_task
                 io_token = io_var.set(client.io)
                 page_ctx_token = page_ctx_var.set(page_ctx)
                 ctx_token = ctx_var.set(page_ctx)
@@ -1026,6 +1036,7 @@ class Interval:
                             title_task = loop.create_task(page.title)
 
                             def handle_title(task: asyncio.Task[str]):
+                                nonlocal send_page_task
                                 try:
                                     del self._page_futures[task.get_name()]
                                 except:
@@ -1036,9 +1047,12 @@ class Interval:
 
                                 try:
                                     page.title = task.result()
-                                    loop.create_task(send_page())
                                 except Exception as err:
                                     errors.append(page_error(err, "description"))
+
+                                if send_page_task is None:
+                                    send_page_task = loop.create_task(send_page())
+                                    send_page_task.add_done_callback(on_page_sent)
 
                             title_task.add_done_callback(handle_title)
                             self._page_futures[title_task.get_name()] = title_task
@@ -1055,6 +1069,7 @@ class Interval:
                             desc_task = loop.create_task(page.description)
 
                             def handle_desc(task: asyncio.Task[str]):
+                                nonlocal send_page_task
                                 try:
                                     del self._page_futures[task.get_name()]
                                 except:
@@ -1065,9 +1080,11 @@ class Interval:
 
                                 try:
                                     page.description = task.result()
-                                    loop.create_task(send_page())
                                 except Exception as err:
                                     errors.append(page_error(err, "description"))
+                                if send_page_task is None:
+                                    send_page_task = loop.create_task(send_page())
+                                    send_page_task.add_done_callback(on_page_sent)
 
                             desc_task.add_done_callback(handle_desc)
                             self._page_futures[desc_task.get_name()] = desc_task
@@ -1085,6 +1102,7 @@ class Interval:
                         )
 
                         def handle_children(task: asyncio.Task):
+                            nonlocal send_page_task
                             try:
                                 del self._page_futures[task.get_name()]
                             except:
@@ -1105,17 +1123,15 @@ class Interval:
                                 else:
                                     errors.append(page_error(err, "children"))
 
-                                send_task = loop.create_task(send_page())
-                                send_task.add_done_callback(
-                                    self._logger.handle_task_exceptions
-                                )
+                                if send_page_task is None:
+                                    send_page_task = loop.create_task(send_page())
+                                    send_page_task.add_done_callback(on_page_sent)
                             except Exception as err:
                                 self._logger.error(err)
                                 errors.append(page_error(err, layout_key="children"))
-                                send_task = loop.create_task(send_page())
-                                send_task.add_done_callback(
-                                    self._logger.handle_task_exceptions
-                                )
+                                if send_page_task is None:
+                                    send_page_task = loop.create_task(send_page())
+                                    send_page_task.add_done_callback(on_page_sent)
 
                         render_task.add_done_callback(handle_children)
                         self._page_futures[render_task.get_name()] = render_task

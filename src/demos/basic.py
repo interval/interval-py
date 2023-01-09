@@ -147,6 +147,7 @@ async def handler(display: IO.Display):
 
     async def description():
         await asyncio.sleep(0.5)
+        raise Exception("Bad description!")
         return "Description??"
 
     return Layout(
