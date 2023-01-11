@@ -1,6 +1,6 @@
 import asyncio, json
 from datetime import date, datetime
-from typing import cast
+from typing import Iterable, cast
 from typing_extensions import NotRequired
 
 from interval_sdk import Interval, IO, io_var, ctx_var, action_ctx_var
@@ -778,7 +778,10 @@ async def optional_values(io: IO):
     }
 
 
-@interval.action("io.search")
+search = Page("Search")
+
+
+@search.action("io.search")
 async def io_search(io: IO):
     async def on_search(query: str):
         return [state for state in states if query.lower() in str(state).lower()]
@@ -796,9 +799,46 @@ async def io_search(io: IO):
         on_search=on_search,
         render_result=render_result,
         initial_results=states,
-    )
+    ).optional()
 
     return {"selected_state": state}
+
+
+@search.action
+async def multi_search(io: IO):
+    async def on_search(query: str):
+        return [state for state in states if query.lower() in str(state).lower()]
+
+    def render_result(state: str) -> RenderableSearchResult:
+        return {
+            "label": state,
+            "image": {
+                "url": get_state_image(state),
+            },
+        }
+
+    def check_for_illinois(states: Iterable[str] | None) -> str | None:
+        if states is None:
+            return None
+
+        return "Illinois is not allowed." if "Illinois" in states else None
+
+    selected = (
+        await io.search(
+            "Search for state (no Illinois)",
+            on_search=on_search,
+            render_result=render_result,
+            initial_results=states,
+        )
+        .multiple()
+        .optional()
+        .validate(check_for_illinois)
+    )
+
+    return {"selected_state": ", ".join(selected) if selected is not None else None}
+
+
+interval.routes.add("search", search)
 
 
 @interval.action

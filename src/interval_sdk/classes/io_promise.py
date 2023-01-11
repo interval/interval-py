@@ -1,7 +1,8 @@
-import inspect
+import inspect, sys
 from typing import (
     Awaitable,
     Generic,
+    Iterable,
     Literal,
     TypeVar,
     Callable,
@@ -12,6 +13,10 @@ from typing import (
 )
 from typing_extensions import Unpack, override
 
+from pydantic import ValidationError, parse_obj_as
+
+from interval_sdk.types import BaseModel
+
 from .component import (
     Component,
     ComponentRenderer,
@@ -20,11 +25,22 @@ from .component import (
     Output_co,
     IOPromiseValidator,
 )
-from ..io_schema import ButtonConfig, DisplayMethodName, InputMethodName, MethodName
+from ..io_schema import (
+    ComponentMultipleProps,
+    input_schema,
+    ButtonConfig,
+    DisplayMethodName,
+    InputMethodName,
+    MethodName,
+    MultipleableMethodName,
+)
 
 MN_co = TypeVar("MN_co", bound=MethodName, covariant=True)
 Display_MN_co = TypeVar("Display_MN_co", bound=DisplayMethodName, covariant=True)
 Input_MN_co = TypeVar("Input_MN_co", bound=InputMethodName, covariant=True)
+Multipleable_MN_co = TypeVar(
+    "Multipleable_MN_co", bound=MultipleableMethodName, covariant=True
+)
 
 
 class IOPromise(Generic[MN_co, Output_co]):
@@ -44,9 +60,7 @@ class IOPromise(Generic[MN_co, Output_co]):
         self._value_getter = get_value
 
     def __await__(self) -> Generator[Any, None, Output_co]:
-        res = yield from self._renderer(
-            [self._component], self._validator, None
-        ).__await__()
+        res = yield from self._renderer([self._component], None, None).__await__()
         return self._get_value(res[0])
 
     def _get_value(self, val: Any) -> Output_co:
@@ -74,14 +88,30 @@ InputIOPromiseSelf = TypeVar("InputIOPromiseSelf", bound="InputIOPromise")
 class InputIOPromise(GroupableIOPromise[Input_MN_co, Output_co]):
     def optional(self) -> "OptionalIOPromise[Input_MN_co, Output_co | None]":
         return OptionalIOPromise[Input_MN_co, Output_co | None](
-            self._component, self._renderer, self._value_getter
+            self._component,
+            self._renderer,
+            self._value_getter,
         )
 
     def validate(
         self: InputIOPromiseSelf, validator: IOPromiseValidator[Output_co] | None
     ) -> InputIOPromiseSelf:
-        self._validator = validator
-        self._component.validator = validator
+        if validator is None:
+            self._component.validator = None
+        else:
+            if self._value_getter is not None:
+
+                async def handle_validation(return_value: Any) -> str | None:
+                    ret = validator(self._get_value(return_value))
+                    if inspect.isawaitable(ret):
+                        return await ret
+
+                    return cast(str | None, ret)
+
+                self._component.validator = handle_validation
+            else:
+                self._component.validator = validator
+
         return self
 
 
@@ -93,13 +123,16 @@ class OptionalIOPromise(InputIOPromise[Input_MN_co, Output_co]):
         get_value: Callable[[Any], Output_co] | None = None,
     ):
         component.instance.is_optional = True
-        super().__init__(component, renderer, get_value)
+        component.validator = None
+        super().__init__(
+            component=component,
+            renderer=renderer,
+            get_value=get_value,
+        )
 
     @override
     def __await__(self) -> Generator[Any, None, Output_co | None]:
-        res = yield from self._renderer(
-            [self._component], self._validator, None
-        ).__await__()
+        res = yield from self._renderer([self._component], None, None).__await__()
         return self._get_value(res[0])
 
     def _get_value(self, val: Any) -> Output_co | None:
@@ -107,6 +140,143 @@ class OptionalIOPromise(InputIOPromise[Input_MN_co, Output_co]):
             return None
 
         return super()._get_value(val)
+
+
+DefaultValue = TypeVar("DefaultValue")
+
+
+class MultipleableIOPromise(
+    Generic[Multipleable_MN_co, Output_co, DefaultValue],
+    InputIOPromise[Multipleable_MN_co, Output_co],
+):
+    _default_value_getter: Callable[[Any], Any] | None = None
+
+    def __init__(
+        self,
+        component: Component,
+        renderer: ComponentRenderer,
+        get_value: Callable[[Any], Output_co] | None = None,
+        get_default_value: Callable[[Any], Any] | None = None,
+    ):
+        self._default_value_getter = get_default_value
+        super().__init__(
+            component=component,
+            renderer=renderer,
+            get_value=get_value,
+        )
+
+    def multiple(self, *, default_value: Iterable[DefaultValue] | None = None):
+        transformed_default_value = None
+        if default_value is not None:
+            potential_default_value = (
+                [self._default_value_getter(i) for i in default_value]
+                if self._default_value_getter is not None
+                else default_value
+            )
+            try:
+                props_schema: BaseModel = input_schema[
+                    self._component.instance.method_name
+                ].props
+                default_value_field = props_schema.__fields__["defaultValue"]
+                transformed_default_value = parse_obj_as(
+                    list[default_value_field.type_], potential_default_value
+                )
+            except ValidationError as e:
+                print(
+                    f"[Interval] Invalid default value found for multiple IO call with label {self._component.instance.label}: {default_value}. This default value will be ignored.",
+                    file=sys.stderr,
+                )
+                print(e, file=sys.stderr)
+                transformed_default_value = None
+
+        return MultipleIOPromise(
+            component=self._component,
+            renderer=self._renderer,
+            get_value=self._value_getter,
+            default_value=transformed_default_value,
+        )
+
+
+MultipleIOPromiseSelf = TypeVar("MultipleIOPromiseSelf", bound="MultipleIOPromise")
+
+
+class MultipleIOPromise(
+    Generic[Multipleable_MN_co, Output_co, DefaultValue],
+    InputIOPromise[Multipleable_MN_co, Iterable[Output_co]],
+):
+    _single_value_getter: Callable[[Any], Output_co] | None = None
+
+    def __init__(
+        self,
+        component: Component,
+        renderer: ComponentRenderer,
+        get_value: Callable[[Any], Output_co] | None = None,
+        default_value: list[Any] | None = None,
+    ):
+        self._single_value_getter = get_value
+        value_getter = None
+        if get_value is not None:
+            getter = get_value
+
+            def multiple_value_getter(return_values: Iterable[Any]) -> list[Output_co]:
+                return [getter(v) for v in return_values]
+
+            value_getter = multiple_value_getter
+
+        component.set_multiple(True)
+        component.validator = None
+        if default_value is not None:
+            component.instance.multiple_props = ComponentMultipleProps(
+                default_value=default_value
+            )
+        super().__init__(
+            component=component,
+            renderer=renderer,
+            get_value=value_getter,
+        )
+
+    @override
+    def __await__(self) -> Generator[Any, None, list[Output_co]]:
+        res = yield from self._renderer([self._component], None, None).__await__()
+        return self._get_value(res[0])
+
+    def _get_value(self, val: list[Any]) -> list[Output_co]:
+        if self._single_value_getter is not None:
+            return [self._single_value_getter(v) for v in val]
+
+        return cast(list[Output_co], val)
+
+    def validate(
+        self: MultipleIOPromiseSelf,
+        validator: IOPromiseValidator[Iterable[Output_co]] | None,
+    ) -> MultipleIOPromiseSelf:
+        if validator is None:
+            self._component.validator = None
+        else:
+            if self._value_getter is not None:
+                value_getter = self._value_getter
+
+                async def handle_validation(return_values: Iterable[Any]) -> str | None:
+                    ret = validator(value_getter(return_values))
+                    if inspect.isawaitable(ret):
+                        return await ret
+
+                    return cast(str | None, ret)
+
+                self._component.validator = handle_validation
+            else:
+                self._component.validator = validator
+
+        return self
+
+    def optional(
+        self,
+    ) -> OptionalIOPromise[Multipleable_MN_co, Iterable[Output_co] | None]:
+        return OptionalIOPromise[Multipleable_MN_co, Iterable[Output_co] | None](
+            component=self._component,
+            renderer=self._renderer,
+            get_value=self._value_getter,
+        )
 
 
 IOGroupPromiseSelf = TypeVar("IOGroupPromiseSelf", bound="IOGroupPromise")

@@ -1,6 +1,7 @@
 import json, re
 from typing import Any, Iterable, Mapping, Tuple, Callable, TypeAlias, cast
 from datetime import date, time, datetime
+from typing_extensions import TypeVar
 
 from pydantic import StrictBool, StrictFloat, StrictInt
 
@@ -28,11 +29,20 @@ def dict_keys_to_camel(d: dict[str, Any]) -> dict[str, Any]:
     return {snake_to_camel(key): val for (key, val) in d.items()}
 
 
-def dict_keys_to_snake(d: dict[str, Any]) -> dict[str, Any]:
-    if not isinstance(d, dict):
+T = TypeVar("T")
+
+
+def dict_keys_to_snake(d: T) -> T:
+    if d is None:
         return d
 
-    return {camel_to_snake(key): val for (key, val) in d.items()}
+    if isinstance(d, list):
+        return cast(T, [dict_keys_to_snake(i) for i in d])
+
+    if isinstance(d, dict):
+        return cast(T, {camel_to_snake(key): val for (key, val) in d.items()})
+
+    return d
 
 
 def load_snake_pairs(pairs: list[Tuple[str, Any]]) -> dict[str, Any]:

@@ -17,6 +17,7 @@ from pydantic import parse_obj_as, ValidationError, BaseModel as PydanticBaseMod
 
 from ..io_schema import (
     ButtonConfig,
+    ComponentMultipleProps,
     MethodDef,
     MN,
     io_schema,
@@ -44,7 +45,9 @@ class ComponentInstance(GenericModel, Generic[MN]):
     state: dict[str, Any] | None = None
     is_stateful: bool = False
     is_optional: bool = False
+    is_multiple: bool = False
     validation_error_message: str | None = None
+    multiple_props: ComponentMultipleProps | None = None
 
 
 StateModel_co = TypeVar("StateModel_co", bound=PydanticBaseModel, covariant=True)
@@ -103,6 +106,8 @@ class Component(Generic[MN]):
 
     def set_return_value(self, value: Any):
         return_schema = self.schema.returns
+        if self.instance.is_multiple:
+            return_schema = list[return_schema]
         if self.instance.is_optional:
             return_schema = return_schema | None
 
@@ -149,6 +154,9 @@ class Component(Generic[MN]):
     def set_optional(self, optional: bool):
         self.instance.is_optional = optional
 
+    def set_multiple(self, multiple: bool):
+        self.instance.is_multiple = multiple
+
     @property
     def return_value(self) -> Future[Any]:
         return self._fut
@@ -161,7 +169,9 @@ class Component(Generic[MN]):
             props=dict_keys_to_camel(self.instance.props),
             is_stateful=self.instance.is_stateful,
             is_optional=self.instance.is_optional,
+            is_multiple=self.instance.is_multiple,
             validation_error_message=self.instance.validation_error_message,
+            multiple_props=self.instance.multiple_props,
         )
 
 

@@ -66,6 +66,8 @@ InputMethodName = Literal[
     "UPLOAD_FILE",
 ]
 
+MultipleableMethodName = Literal["SEARCH"]
+
 DisplayMethodName = Literal[
     "DISPLAY_CODE",
     "DISPLAY_HEADING",
@@ -87,13 +89,19 @@ MethodName = InputMethodName | DisplayMethodName
 MN = TypeVar("MN", bound=MethodName)
 
 
+class ComponentMultipleProps(BaseModel):
+    default_value: list[Any] | None = None
+
+
 class ComponentRenderInfo(GenericModel, Generic[MN]):
     method_name: MN
     label: str
     props: Any
     is_stateful: bool
     is_optional: bool
+    is_multiple: bool
     validation_error_message: str | None = None
+    multiple_props: ComponentMultipleProps | None = None
 
     class Config:
         json_loads = json_loads_snake_strip_none
@@ -407,6 +415,7 @@ class MethodDef(Generic[PropsType, StateType, ReturnType]):
     returns: ReturnType
     immediate: bool = False
     exclusive: bool = False
+    supports_multiple: bool = False
 
 
 class InputTextProps(BaseModel):
@@ -669,6 +678,7 @@ class DisplayProgressThroughListProps(BaseModel):
 class SearchProps(BaseModel):
     help_text: Optional[str]
     results: list[InnerRenderableSearchResultModel]
+    default_value: Optional[str]
     disabled: Optional[bool]
     placeholder: Optional[str]
 
@@ -760,6 +770,7 @@ input_schema: dict[InputMethodName, MethodDef] = {
         props=SearchProps,
         state=SearchState,
         returns=SearchResultValue,
+        supports_multiple=True,
     ),
     "UPLOAD_FILE": MethodDef(
         props=FileUploadProps,

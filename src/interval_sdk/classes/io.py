@@ -78,6 +78,7 @@ from .io_promise import (
     ExclusiveIOPromise,
     InputIOPromise,
     KeyedIONamespace,
+    MultipleableIOPromise,
 )
 from .component import (
     Component,
@@ -1107,6 +1108,7 @@ class IO:
         def video(
             self,
             label: str,
+            *,
             url: str | None = None,
             alt: str | None = None,
             bytes: bytes | None = None,
@@ -1332,6 +1334,7 @@ class IO:
     def search(
         self,
         label: str,
+        *,
         on_search: Callable[
             [str],
             Awaitable[list[PassthroughSearchResultValue]],
@@ -1342,13 +1345,19 @@ class IO:
         ],
         help_text: str | None = None,
         initial_results: Iterable[PassthroughSearchResultValue] | None = None,
+        default_value: PassthroughSearchResultValue | None = None,
         disabled: bool | None = None,
         placeholder: str | None = None,
-    ) -> InputIOPromise[Literal["SEARCH"], PassthroughSearchResultValue]:
+    ) -> MultipleableIOPromise[
+        Literal["SEARCH"], PassthroughSearchResultValue, PassthroughSearchResultValue
+    ]:
         if initial_results is None:
             initial_results = []
 
-        result_map: list[list[PassthroughSearchResultValue]] = [list(initial_results)]
+        result_batch_index: int = 0
+        result_map: dict[str, list[PassthroughSearchResultValue]] = {
+            "0": list(initial_results)
+        }
 
         def render_result_wrapper(
             result: PassthroughSearchResultValue,
@@ -1370,11 +1379,34 @@ class IO:
         def render_results(results: Iterable[PassthroughSearchResultValue]):
             return [render_result_wrapper(r, i) for i, r in enumerate(results)]
 
+        results = render_results(initial_results)
+
+        def get_default_value(default_value: PassthroughSearchResultValue) -> str:
+            if "default" not in result_map:
+                result_map["default"] = []
+
+            r = render_result(default_value)
+            value = f"default:{len(result_map['default'])}"
+            result_map["default"].append(default_value)
+
+            if isinstance(r, Mapping):
+                results.append(
+                    InnerRenderableSearchResultModel.parse_obj({**r, "value": value})
+                )
+            else:
+                results.append(
+                    InnerRenderableSearchResultModel(value=value, label=str(r))
+                )
+
+            return value
+
         async def handle_state_change(
             state: SearchState, props: SearchProps
         ) -> SearchProps:
+            nonlocal result_batch_index
             results = await on_search(state.query_term)
-            result_map.append(results)
+            result_batch_index += 1
+            result_map[str(result_batch_index)] = results
 
             props.results = render_results(results)
             return props
@@ -1384,9 +1416,12 @@ class IO:
             label=label,
             initial_props=SearchProps(
                 help_text=help_text,
-                results=render_results(initial_results),
+                results=results,
                 disabled=disabled,
                 placeholder=placeholder,
+                default_value=get_default_value(default_value)
+                if default_value is not None
+                else None,
             ).dict(),
             handle_state_change=handle_state_change,
         )
@@ -1395,9 +1430,14 @@ class IO:
             batch_index, index = val.split(":")
 
             try:
-                batch = result_map[int(batch_index)]
+                batch = result_map[batch_index]
                 return batch[int(index)]
             except KeyError as err:
                 raise ValueError("BAD_RESPONSE") from err
 
-        return InputIOPromise(c, renderer=self._renderer, get_value=get_value)
+        return MultipleableIOPromise(
+            c,
+            renderer=self._renderer,
+            get_value=get_value,
+            get_default_value=get_default_value,
+        )
