@@ -86,11 +86,39 @@ InputIOPromiseSelf = TypeVar("InputIOPromiseSelf", bound="InputIOPromise")
 
 
 class InputIOPromise(GroupableIOPromise[Input_MN_co, Output_co]):
-    def optional(self) -> "OptionalIOPromise[Input_MN_co, Output_co | None]":
-        return OptionalIOPromise[Input_MN_co, Output_co | None](
-            self._component,
-            self._renderer,
-            self._value_getter,
+    @overload
+    def optional(
+        self,
+        optional: Literal[True] = True,
+    ) -> "OptionalIOPromise[Input_MN_co, Output_co | None]":
+        ...
+
+    @overload
+    def optional(
+        self: InputIOPromiseSelf,
+        optional: Literal[False],
+    ) -> InputIOPromiseSelf:
+        ...
+
+    @overload
+    def optional(
+        self: InputIOPromiseSelf,
+        optional: bool,
+    ) -> "OptionalIOPromise[Input_MN_co, Output_co | None]" | InputIOPromiseSelf:
+        ...
+
+    def optional(
+        self: InputIOPromiseSelf,
+        optional: bool = True,
+    ) -> "OptionalIOPromise[Input_MN_co, Output_co | None]" | InputIOPromiseSelf:
+        return (
+            OptionalIOPromise[Input_MN_co, Output_co | None](
+                self._component,
+                self._renderer,
+                self._value_getter,
+            )
+            if optional
+            else self
         )
 
     def validate(
@@ -269,13 +297,43 @@ class MultipleIOPromise(
 
         return self
 
+    @overload
     def optional(
         self,
+        optional: Literal[True] = True,
     ) -> OptionalIOPromise[Multipleable_MN_co, Iterable[Output_co] | None]:
-        return OptionalIOPromise[Multipleable_MN_co, Iterable[Output_co] | None](
-            component=self._component,
-            renderer=self._renderer,
-            get_value=self._value_getter,
+        ...
+
+    @overload
+    def optional(
+        self: MultipleIOPromiseSelf,
+        optional: Literal[False],
+    ) -> MultipleIOPromiseSelf:
+        ...
+
+    @overload
+    def optional(
+        self: MultipleIOPromiseSelf,
+        optional: bool,
+    ) -> OptionalIOPromise[
+        Multipleable_MN_co, Iterable[Output_co] | None
+    ] | MultipleIOPromiseSelf:
+        ...
+
+    def optional(
+        self: MultipleIOPromiseSelf,
+        optional: bool = True,
+    ) -> OptionalIOPromise[
+        Multipleable_MN_co, Iterable[Output_co] | None
+    ] | MultipleIOPromiseSelf:
+        return (
+            OptionalIOPromise[Multipleable_MN_co, Iterable[Output_co] | None](
+                component=self._component,
+                renderer=self._renderer,
+                get_value=self._value_getter,
+            )
+            if optional
+            else self
         )
 
 
