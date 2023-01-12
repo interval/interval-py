@@ -1003,4 +1003,4 @@ def dump_all_methods():
             print(dump_method(method_name))
         except Exception as err:
             print(f"Failed to dump method for {method_name}:", err, file=sys.stderr)
-            traceback.print_exception(err, file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)

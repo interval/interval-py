@@ -1,7 +1,7 @@
 import asyncio, sys
 from asyncio.futures import Future
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional
 from uuid import UUID, uuid4
 
 

@@ -1,6 +1,6 @@
 import asyncio, json
 from datetime import date, datetime
-from typing import Iterable, cast
+from typing import Iterable, Optional, cast
 from typing_extensions import NotRequired
 
 from interval_sdk import Interval, IO, io_var, ctx_var, action_ctx_var
@@ -258,7 +258,7 @@ async def redirect(io: IO, ctx: ActionContext):
         io.input.text("Params", multiline=True).optional(),
     )
 
-    params: dict | None = None
+    params: Optional[dict] = None
     if url is not None:
         await ctx.redirect(url=url.geturl())
     elif route is not None:
@@ -397,7 +397,7 @@ async def select_multiple(io: IO):
 
     selected_values = [o["value"] for o in selected]
 
-    ret: dict[str, bool | None] = {}
+    ret: dict[str, Optional[bool]] = {}
 
     for option in options:
         ret[str(option["label"])] = option["value"] in selected_values
@@ -817,7 +817,7 @@ async def multi_search(io: IO):
             },
         }
 
-    def check_for_illinois(states: Iterable[str] | None) -> str | None:
+    def check_for_illinois(states: Optional[Iterable[str]]) -> Optional[str]:
         if states is None:
             return None
 
@@ -844,7 +844,7 @@ interval.routes.add("search", search)
 @interval.action
 async def validity_tester(io: IO):
     async def validate(
-        name: str, email: str, age: int | None, include_drink_tickets: bool
+        name: str, email: str, age: Optional[int], include_drink_tickets: bool
     ):
         await asyncio.sleep(0.1)
         if (age is None or age < 21) and include_drink_tickets:
