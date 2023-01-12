@@ -3,22 +3,14 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import datetime
 from inspect import iscoroutine, signature, isfunction
-from typing import Any, Optional, Callable, cast
+from typing import Any, Optional, Callable, cast, Union
 from urllib.parse import urlparse, urlunparse
 from uuid import uuid4, UUID
 
 import aiohttp
 import websockets, websockets.client, websockets.exceptions
 from pydantic import parse_raw_as
-from interval_sdk.classes.io import IO
 
-from interval_sdk.classes.layout import (
-    BasicLayoutModel,
-    Layout,
-    PageError,
-    PageLayoutKey,
-)
-from interval_sdk.classes.transaction_loading_state import TransactionLoadingState
 
 from .io_schema import (
     ActionResult,
@@ -26,12 +18,20 @@ from .io_schema import (
     IOFunctionReturnModel,
     SerializableRecord,
 )
+from .classes.io import IO
 from .classes.action import Action
 from .classes.page import Page
 from .classes.isocket import ISocket
 from .classes.logger import Logger, LogLevel
 from .classes.io_client import IOClient, IOError, IORender, IOResponse
 from .classes.rpc import DuplexRPCClient
+from .classes.layout import (
+    BasicLayoutModel,
+    Layout,
+    PageError,
+    PageLayoutKey,
+)
+from .classes.transaction_loading_state import TransactionLoadingState
 from .internal_rpc_schema import (
     AccessControlDefinition,
     ActionContext,
@@ -83,8 +83,8 @@ from .types import IntervalError, NotInitializedError
 @dataclass
 class QueuedAction:
     id: str
-    assignee: str | None
-    params: SerializableRecord | None
+    assignee: Optional[str]
+    params: Optional[SerializableRecord]
 
 
 # Intentionally different from the pypi package name,
@@ -95,10 +95,10 @@ sdk_version = "???"
 io_var: ContextVar[IO] = ContextVar("io_var")
 action_ctx_var: ContextVar[ActionContext] = ContextVar("action_ctx_var")
 page_ctx_var: ContextVar[PageContext] = ContextVar("page_ctx_var")
-ctx_var: ContextVar[ActionContext | PageContext] = ContextVar("ctx_var")
-interval_context_var: ContextVar[tuple[IO, ActionContext | PageContext]] = ContextVar(
-    "interval_context_var"
-)
+ctx_var: ContextVar[Union[ActionContext, PageContext]] = ContextVar("ctx_var")
+interval_context_var: ContextVar[
+    tuple[IO, Union[ActionContext, PageContext]]
+] = ContextVar("interval_context_var")
 
 try:
     sdk_version = importlib.metadata.version(__package__)
@@ -113,7 +113,7 @@ class Interval:
         def __init__(self, interval: "Interval"):
             self._interval = interval
 
-        def add(self, slug: str, action_or_page: Action | Page):
+        def add(self, slug: str, action_or_page: Union[Action, Page]):
             if isinstance(action_or_page, Page):
                 action_or_page._on_change = self._interval._handle_routes_change
 
@@ -134,8 +134,8 @@ class Interval:
         async def enqueue(
             self,
             slug: str,
-            assignee_email: str | None = None,
-            params: SerializableRecord | None = None,
+            assignee_email: Optional[str] = None,
+            params: Optional[SerializableRecord] = None,
         ) -> QueuedAction:
             try:
                 params = cast(DeserializableRecord, serialize_dates(params))
@@ -237,20 +237,20 @@ class Interval:
     _pending_io_calls: dict[str, str]
     _transaction_loading_states: dict[str, LoadingState]
 
-    _isocket: ISocket | None = None
-    _server_rpc: DuplexRPCClient[
-        WSServerSchemaMethodName, HostSchemaMethodName
-    ] | None = None
+    _isocket: Optional[ISocket] = None
+    _server_rpc: Optional[
+        DuplexRPCClient[WSServerSchemaMethodName, HostSchemaMethodName]
+    ] = None
     _intentionally_closed = False
     _is_connected = False
     _is_initialized = False
 
     routes: Routes
 
-    organization: OrganizationDef | None = None
-    environment: ActionEnvironment | None = None
+    organization: Optional[OrganizationDef] = None
+    environment: Optional[ActionEnvironment] = None
 
-    _routes: dict[str, Action | Page]
+    _routes: dict[str, Union[Action, Page]]
     _action_definitions: list[ActionDefinition]
     _page_definitions: list[PageDefinition]
     _action_handlers: dict[str, IntervalActionHandler]
@@ -360,14 +360,14 @@ class Interval:
 
     def action(
         self,
-        handler_or_slug: IntervalActionHandler | str | None = None,
+        handler_or_slug: Optional[Union[IntervalActionHandler, str]] = None,
         *,
-        slug: str | None = None,
-        name: str | None = None,
-        description: str | None = None,
+        slug: Optional[str] = None,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
         backgroundable: bool = False,
         unlisted: bool = False,
-        access: AccessControlDefinition | None = None,
+        access: Optional[AccessControlDefinition] = None,
     ) -> Callable[[IntervalActionHandler], IntervalActionHandler]:
         def action_adder(handler: IntervalActionHandler):
             self.routes.add(
@@ -395,10 +395,10 @@ class Interval:
     def page(
         self,
         name: str,
-        slug: str | None = None,
-        description: str | None = None,
+        slug: Optional[str] = None,
+        description: Optional[str] = None,
         unlisted: bool = False,
-        access: AccessControlDefinition | None = None,
+        access: Optional[AccessControlDefinition] = None,
     ) -> Callable[[IntervalPageHandler], IntervalPageHandler]:
         def page_adder(handler: IntervalPageHandler):
             self.routes.add(
@@ -415,8 +415,8 @@ class Interval:
 
         return page_adder
 
-    # def route(self, slug: str | None = None) -> Callable[[Action | Page], None]:
-    #     def adder(action_or_page: Action | Page):
+    # def route(self, slug: Optional[str] = None) -> Callable[[Union[Action, Page]], None]:
+    #     def adder(action_or_page: Union[Action, Page]):
     #         inner_slug = slug if slug is not None else action_or_page.__name__
     #         self._add_route(inner_slug, action_or_page)
     #
@@ -480,7 +480,9 @@ class Interval:
         if not response:
             raise IntervalError("Failed sending redirect")
 
-    def listen(self, done_callback: Callable[[asyncio.Task[None]], None] | None = None):
+    def listen(
+        self, done_callback: Optional[Callable[[asyncio.Task[None]], None]] = None
+    ):
         loop = asyncio.get_event_loop()
         task = loop.create_task(self.listen_async())
         if done_callback is not None:
@@ -504,10 +506,10 @@ class Interval:
     async def notify(
         self,
         message: str,
-        title: str | None = None,
-        delivery: list[DeliveryInstruction] | None = None,
-        transaction_id: str | None = None,
-        idempotency_key: str | None = None,
+        title: Optional[str] = None,
+        delivery: Optional[list[DeliveryInstruction]] = None,
+        transaction_id: Optional[str] = None,
+        idempotency_key: Optional[str] = None,
     ):
         await self._notify(
             NotifyInputs(
@@ -552,7 +554,7 @@ class Interval:
                         f"There was a problem sending the notification: {response.message}"
                     )
 
-    async def _resend_pending_io_calls(self, ids_to_resend: list[str] | None = None):
+    async def _resend_pending_io_calls(self, ids_to_resend: Optional[list[str]] = None):
         if not self._is_connected:
             return
 
@@ -619,7 +621,7 @@ class Interval:
                 await asyncio.sleep(self._retry_interval_seconds)
 
     async def _resend_transaction_loading_states(
-        self, ids_to_resend: list[str] | None = None
+        self, ids_to_resend: Optional[list[str]] = None
     ):
         if not self._is_connected:
             return
@@ -920,14 +922,14 @@ class Interval:
                 page=inputs.page,
             )
 
-            page: Layout | None = None
-            menu_items: list[ButtonItemModel] | None = None
-            render_instruction: IORender | None = None
+            page: Optional[Layout] = None
+            menu_items: Optional[list[ButtonItemModel]] = None
+            render_instruction: Optional[IORender] = None
             errors: list[PageError] = []
 
             MAX_PAGE_RETRIES = 5
 
-            send_page_task: asyncio.Task | None = None
+            send_page_task: Optional[asyncio.Task] = None
 
             def on_page_sent(task: asyncio.Task):
                 nonlocal send_page_task
@@ -1207,7 +1209,7 @@ class Interval:
         self._walk_routes()
 
         try:
-            response: InitializeHostReturns | None = await self._send(
+            response: Optional[InitializeHostReturns] = await self._send(
                 "INITIALIZE_HOST",
                 InitializeHostInputs(
                     actions=self._action_definitions,
@@ -1256,7 +1258,7 @@ class Interval:
 
         return response
 
-    _reinitialize_task: asyncio.Task | None = None
+    _reinitialize_task: Optional[asyncio.Task] = None
 
     async def _reinitialize_routes(self):
         await asyncio.sleep(self._reinitialize_batch_timeout_seconds)

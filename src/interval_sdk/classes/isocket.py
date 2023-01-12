@@ -1,10 +1,11 @@
 import asyncio, sys
 from asyncio.futures import Future
 from dataclasses import dataclass
-from typing import Any, Callable, Literal, Awaitable
+from typing import Any, Callable, Optional, Union
 from uuid import UUID, uuid4
 
 
+from typing_extensions import Literal, Awaitable
 import websockets, websockets.client, websockets.exceptions
 from pydantic import BaseModel
 
@@ -34,28 +35,28 @@ class ISocket:
     _is_authenticated: bool
 
     id: UUID
-    on_message: Callable[[str], Awaitable[None]] | None
-    on_open: Callable[[], Awaitable[None]] | None
-    on_error: Callable[[Exception], Awaitable[None]] | None
-    on_close: Callable[[int, str], Awaitable[None]] | None
+    on_message: Optional[Callable[[str], Awaitable[None]]]
+    on_open: Optional[Callable[[], Awaitable[None]]]
+    on_error: Optional[Callable[[Exception], Awaitable[None]]]
+    on_close: Optional[Callable[[int, str], Awaitable[None]]]
     on_authenticated: Future[None]
     is_closed: bool
 
     _out_queue: asyncio.Queue[Message]
     _pending_messages: dict[UUID, PendingMessage]
     _message_tasks: set[asyncio.Task]
-    _connection_future: Future | None
+    _connection_future: Optional[Future]
 
     def __init__(
         self,
         ws: websockets.client.WebSocketClientProtocol,
-        id: UUID | None = None,
+        id: Optional[UUID] = None,
         send_timeout: float = 3,
         connect_timeout: float = 10,
-        on_message: Callable[[str], Awaitable[None]] | None = None,
-        on_open: Callable[[], Awaitable[None]] | None = None,
-        on_error: Callable[[Exception], Awaitable[None]] | None = None,
-        on_close: Callable[[int, str], Awaitable[None]] | None = None,
+        on_message: Optional[Callable[[str], Awaitable[None]]] = None,
+        on_open: Optional[Callable[[], Awaitable[None]]] = None,
+        on_error: Optional[Callable[[Exception], Awaitable[None]]] = None,
+        on_close: Optional[Callable[[int, str], Awaitable[None]]] = None,
     ):
         self._ws = ws
         self.id = id if id is not None else uuid4()
@@ -124,7 +125,7 @@ class ISocket:
                     def on_complete(task: asyncio.Task):
                         try:
                             task.result()
-                        except TimeoutError | IntervalError | IOError:
+                        except (TimeoutError, IntervalError, IOError):
                             # we'll resend again separately
                             pass
                         except BaseException as err:

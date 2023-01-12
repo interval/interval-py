@@ -1,14 +1,15 @@
-from typing import Awaitable, Callable, TypeAlias
+from typing import Callable, Optional
+from typing_extensions import Awaitable, TypeAlias
 
 from .logger import Logger
 from ..types import BaseModel
 
 
 class LoadingState(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    items_in_queue: int | None = None
-    items_completed: int | None = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    items_in_queue: Optional[int] = None
+    items_completed: Optional[int] = None
 
 
 class TransactionLoadingState:
@@ -16,7 +17,7 @@ class TransactionLoadingState:
 
     _logger: Logger
     _sender: Sender
-    _state: LoadingState | None = None
+    _state: Optional[LoadingState] = None
 
     def __init__(self, logger: Logger, sender: Sender):
         self._logger = logger
@@ -33,15 +34,15 @@ class TransactionLoadingState:
             self._logger.debug(err)
 
     @property
-    def state(self) -> LoadingState | None:
+    def state(self) -> Optional[LoadingState]:
         if self._state is not None:
             return self._state.copy()
 
     async def start(
         self,
-        title: str | None = None,
-        description: str | None = None,
-        items_in_queue: int | None = None,
+        title: Optional[str] = None,
+        description: Optional[str] = None,
+        items_in_queue: Optional[int] = None,
     ):
         self._state = LoadingState()
         if title is not None:
@@ -56,9 +57,9 @@ class TransactionLoadingState:
 
     async def update(
         self,
-        title: str | None = None,
-        description: str | None = None,
-        items_in_queue: int | None = None,
+        title: Optional[str] = None,
+        description: Optional[str] = None,
+        items_in_queue: Optional[int] = None,
     ):
         if self._state is None:
             self._logger.warn("Please call `loading.start` before `loading.update`")

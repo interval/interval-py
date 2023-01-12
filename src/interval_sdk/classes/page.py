@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from inspect import isfunction
-from typing import Callable
+from typing import Callable, Optional, Union
 
 from .action import Action
 from ..internal_rpc_schema import AccessControlDefinition
@@ -10,15 +10,15 @@ from ..handlers import IntervalActionHandler, IntervalPageHandler
 @dataclass
 class Page:
     name: str
-    description: str | None = None
+    description: Optional[str] = None
     unlisted: bool = False
-    routes: dict[str, "Action | Page"] = field(default_factory=dict)
-    handler: IntervalPageHandler | None = None
-    access: AccessControlDefinition | None = None
+    routes: dict[str, "Union[Action, Page]"] = field(default_factory=dict)
+    handler: Optional[IntervalPageHandler] = None
+    access: Optional[AccessControlDefinition] = None
 
-    _on_change: Callable[[], None] | None = None
+    _on_change: Optional[Callable[[], None]] = None
 
-    def add(self, slug: str, route: "Action | Page"):
+    def add(self, slug: str, route: "Union[Action, Page]"):
         self.routes[slug] = route
         if isinstance(route, Page):
             route._on_change = self._handle_change
@@ -46,14 +46,14 @@ class Page:
 
     def action(
         self,
-        handler_or_slug: IntervalActionHandler | str | None = None,
+        handler_or_slug: Optional[Union[IntervalActionHandler, str]] = None,
         *,
-        slug: str | None = None,
-        name: str | None = None,
-        description: str | None = None,
+        slug: Optional[str] = None,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
         backgroundable: bool = False,
         unlisted: bool = False,
-        access: AccessControlDefinition | None = None,
+        access: Optional[AccessControlDefinition] = None,
     ) -> Callable[[IntervalActionHandler], None]:
         def action_adder(handler: IntervalActionHandler):
             self.routes[
@@ -79,10 +79,10 @@ class Page:
     def page(
         self,
         name: str,
-        slug: str | None = None,
-        description: str | None = None,
+        slug: Optional[str] = None,
+        description: Optional[str] = None,
         unlisted: bool = False,
-        access: AccessControlDefinition | None = None,
+        access: Optional[AccessControlDefinition] = None,
     ) -> Callable[[IntervalPageHandler], None]:
         def page_adder(handler: IntervalPageHandler):
             self.routes[slug if slug is not None else handler.__name__] = Page(

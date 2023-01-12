@@ -1,6 +1,7 @@
 import asyncio
 import sys, traceback
-from typing import TypeAlias, Literal
+from typing import Optional
+from typing_extensions import TypeAlias, Literal
 
 from ..types import BaseModel
 
@@ -15,13 +16,13 @@ ERROR_EMOJI = "‼️"
 class SdkAlert(BaseModel):
     min_sdk_version: str
     severity: Literal["INFO", "WARNING", "ERROR"]
-    message: str | None = None
+    message: Optional[str] = None
 
 
 class Logger:
     log_level: LogLevel = "info"
 
-    def __init__(self, log_level: LogLevel | None = None):
+    def __init__(self, log_level: Optional[LogLevel] = None):
         if log_level is not None:
             self.log_level = log_level
 
@@ -59,7 +60,7 @@ class Logger:
 
     def print_exception(self, err: Exception):
         if self.log_level == "debug":
-            traceback.print_exception(err, file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
 
     def handle_sdk_alert(self, sdk_alert: SdkAlert):
         self.info_no_prefix()

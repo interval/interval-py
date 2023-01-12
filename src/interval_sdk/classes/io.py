@@ -5,6 +5,8 @@ from datetime import date, datetime, time
 from typing import (
     Iterable,
     Mapping,
+    Optional,
+    Union,
     overload,
     TypeVar,
     Literal,
@@ -131,12 +133,12 @@ class IO:
             self,
             label: str,
             *,
-            help_text: str | None = None,
-            default_value: str | None = None,
-            multiline: bool | None = None,
-            lines: int | None = None,
-            disabled: bool | None = None,
-            placeholder: str | None = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[str] = None,
+            multiline: Optional[bool] = None,
+            lines: Optional[int] = None,
+            disabled: Optional[bool] = None,
+            placeholder: Optional[str] = None,
         ) -> InputIOPromise[Literal["INPUT_TEXT"], str]:
             c = Component(
                 method_name="INPUT_TEXT",
@@ -156,10 +158,10 @@ class IO:
             self,
             label: str,
             *,
-            help_text: str | None = None,
-            default_value: str | None = None,
-            disabled: bool | None = None,
-            placeholder: str | None = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[str] = None,
+            disabled: Optional[bool] = None,
+            placeholder: Optional[str] = None,
         ) -> InputIOPromise[Literal["INPUT_EMAIL"], str]:
             c = Component(
                 method_name="INPUT_EMAIL",
@@ -178,14 +180,14 @@ class IO:
             self,
             label: str,
             *,
-            min: float | int | None = None,
-            max: float | int | None = None,
-            prepend: str | None = None,
-            help_text: str | None = None,
-            default_value: float | int | None = None,
+            min: Optional[Union[float, int]] = None,
+            max: Optional[Union[float, int]] = None,
+            prepend: Optional[str] = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[Union[float, int]] = None,
             decimals: None = None,
-            disabled: bool | None = None,
-            placeholder: str | None = None,
+            disabled: Optional[bool] = None,
+            placeholder: Optional[str] = None,
         ) -> InputIOPromise[Literal["INPUT_NUMBER"], int]:
             ...
 
@@ -194,14 +196,14 @@ class IO:
             self,
             label: str,
             *,
-            min: float | int | None = None,
-            max: float | int | None = None,
-            prepend: str | None = None,
-            help_text: str | None = None,
-            default_value: float | int | None = None,
+            min: Optional[Union[float, int]] = None,
+            max: Optional[Union[float, int]] = None,
+            prepend: Optional[str] = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[Union[float, int]] = None,
             decimals: int = 0,
-            disabled: bool | None = None,
-            placeholder: str | None = None,
+            disabled: Optional[bool] = None,
+            placeholder: Optional[str] = None,
         ) -> InputIOPromise[Literal["INPUT_NUMBER"], float]:
             ...
 
@@ -209,14 +211,14 @@ class IO:
             self,
             label: str,
             *,
-            min: float | int | None = None,
-            max: float | int | None = None,
-            prepend: str | None = None,
-            help_text: str | None = None,
-            default_value: float | int | None = None,
-            decimals: int | None = None,
-            disabled: bool | None = None,
-            placeholder: str | None = None,
+            min: Optional[Union[float, int]] = None,
+            max: Optional[Union[float, int]] = None,
+            prepend: Optional[str] = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[Union[float, int]] = None,
+            decimals: Optional[int] = None,
+            disabled: Optional[bool] = None,
+            placeholder: Optional[str] = None,
         ):
             c = Component(
                 method_name="INPUT_NUMBER",
@@ -245,9 +247,9 @@ class IO:
             self,
             label: str,
             *,
-            help_text: str | None = None,
-            default_value: str | None = None,
-            disabled: bool | None = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[str] = None,
+            disabled: Optional[bool] = None,
         ) -> InputIOPromise[Literal["INPUT_BOOLEAN"], bool]:
             c = Component(
                 method_name="INPUT_BOOLEAN",
@@ -264,9 +266,9 @@ class IO:
             self,
             label: str,
             *,
-            help_text: str | None = None,
-            disabled: bool | None = None,
-            placeholder: str | None = None,
+            help_text: Optional[str] = None,
+            disabled: Optional[bool] = None,
+            placeholder: Optional[str] = None,
         ) -> InputIOPromise[Literal["INPUT_RICH_TEXT"], str]:
             c = Component(
                 method_name="INPUT_RICH_TEXT",
@@ -283,11 +285,11 @@ class IO:
             self,
             label: str,
             *,
-            help_text: str | None = None,
-            allowed_protocols: list[str] | None = None,
-            default_value: str | None = None,
-            disabled: bool | None = None,
-            placeholder: str | None = None,
+            help_text: Optional[str] = None,
+            allowed_protocols: Optional[list[str]] = None,
+            default_value: Optional[str] = None,
+            disabled: Optional[bool] = None,
+            placeholder: Optional[str] = None,
         ) -> InputIOPromise[Literal["INPUT_URL"], ParseResult]:
             c = Component(
                 method_name="INPUT_URL",
@@ -310,9 +312,9 @@ class IO:
             self,
             label: str,
             *,
-            help_text: str | None = None,
-            default_value: date | None = None,
-            disabled: bool | None = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[date] = None,
+            disabled: Optional[bool] = None,
         ) -> InputIOPromise[Literal["INPUT_DATE"], date]:
             model_default = None
             if default_value is not None:
@@ -340,9 +342,9 @@ class IO:
             self,
             label: str,
             *,
-            help_text: str | None = None,
-            default_value: time | None = None,
-            disabled: bool | None = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[time] = None,
+            disabled: Optional[bool] = None,
         ) -> InputIOPromise[Literal["INPUT_TIME"], time]:
             model_default = None
             if default_value is not None:
@@ -369,9 +371,9 @@ class IO:
             self,
             label: str,
             *,
-            help_text: str | None = None,
-            default_value: datetime | None = None,
-            disabled: bool | None = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[datetime] = None,
+            disabled: Optional[bool] = None,
         ) -> InputIOPromise[Literal["INPUT_DATETIME"], datetime]:
             model_default = None
             if default_value is not None:
@@ -401,14 +403,15 @@ class IO:
             self,
             label: str,
             *,
-            allowed_extensions: list[str] | None = None,
-            help_text: str | None = None,
-            generate_presigned_urls: Callable[
-                [FileUploadState],
-                Awaitable[FileUploadProps],
-            ]
-            | None = None,
-            disabled: bool | None = None,
+            allowed_extensions: Optional[list[str]] = None,
+            help_text: Optional[str] = None,
+            generate_presigned_urls: Optional[
+                Callable[
+                    [FileUploadState],
+                    Awaitable[FileUploadProps],
+                ]
+            ] = None,
+            disabled: Optional[bool] = None,
         ) -> InputIOPromise[Literal["UPLOAD_FILE"], IntervalFile]:
             async def handle_state_change(
                 state: FileUploadState, props: FileUploadProps
@@ -461,13 +464,13 @@ class IO:
             label: str,
             *,
             data: list[TR],
-            row_menu_items: Callable[[TR], list[TableMenuItem]] | None = None,
-            help_text: str | None = None,
-            columns: list[TableColumnDef | str] | None = None,
-            min_selections: int | None = None,
-            max_selections: int | None = None,
-            disabled: bool | None = None,
-            default_page_size: int | None = None,
+            row_menu_items: Optional[Callable[[TR], list[TableMenuItem]]] = None,
+            help_text: Optional[str] = None,
+            columns: Optional[list[Union[TableColumnDef, str]]] = None,
+            min_selections: Optional[int] = None,
+            max_selections: Optional[int] = None,
+            disabled: Optional[bool] = None,
+            default_page_size: Optional[int] = None,
             is_sortable: bool = True,
             is_filterable: bool = True,
         ) -> InputIOPromise[Literal["SELECT_TABLE"], list[TR]]:
@@ -539,10 +542,10 @@ class IO:
             label: str,
             *,
             options: Iterable[PassthroughRichSelectOption],
-            help_text: str | None = None,
-            default_value: RichSelectOption | str | None = None,
-            searchable: bool | None = None,
-            disabled: bool | None = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[Union[RichSelectOption, str]] = None,
+            searchable: Optional[bool] = None,
+            disabled: Optional[bool] = None,
         ) -> InputIOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption]:
             ...
 
@@ -552,10 +555,10 @@ class IO:
             label: str,
             *,
             options: Iterable[RichSelectOption],
-            help_text: str | None = None,
-            default_value: RichSelectOption | None = None,
-            searchable: bool | None = None,
-            disabled: bool | None = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[RichSelectOption] = None,
+            searchable: Optional[bool] = None,
+            disabled: Optional[bool] = None,
         ) -> InputIOPromise[Literal["SELECT_SINGLE"], RichSelectOption]:
             ...
 
@@ -565,10 +568,10 @@ class IO:
             label: str,
             *,
             options: Iterable[str],
-            help_text: str | None = None,
-            default_value: str | None = None,
-            searchable: bool | None = None,
-            disabled: bool | None = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[str] = None,
+            searchable: Optional[bool] = None,
+            disabled: Optional[bool] = None,
         ) -> InputIOPromise[Literal["SELECT_SINGLE"], str]:
             ...
 
@@ -577,12 +580,12 @@ class IO:
             self,
             label: str,
             *,
-            options: Iterable[RichSelectOption | str],
-            help_text: str | None = None,
-            default_value: RichSelectOption | str | None = None,
-            searchable: bool | None = None,
-            disabled: bool | None = None,
-        ) -> InputIOPromise[Literal["SELECT_SINGLE"], RichSelectOption | str]:
+            options: Iterable[Union[RichSelectOption, str]],
+            help_text: Optional[str] = None,
+            default_value: Optional[Union[RichSelectOption, str]] = None,
+            searchable: Optional[bool] = None,
+            disabled: Optional[bool] = None,
+        ) -> InputIOPromise[Literal["SELECT_SINGLE"], Union[RichSelectOption, str]]:
             ...
 
         def single(
@@ -590,10 +593,10 @@ class IO:
             label: str,
             *,
             options: Iterable[PassthroughRichSelectOption],
-            help_text: str | None = None,
-            default_value: RichSelectOption | str | None = None,
-            searchable: bool | None = None,
-            disabled: bool | None = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[Union[RichSelectOption, str]] = None,
+            searchable: Optional[bool] = None,
+            disabled: Optional[bool] = None,
         ) -> InputIOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption]:
             normalized_options: list[RichSelectOption] = [
                 {"label": option, "value": option}
@@ -601,7 +604,7 @@ class IO:
                 else option
                 for option in options
             ]
-            normalized_default_value: RichSelectOption | None = (
+            normalized_default_value: Optional[RichSelectOption] = (
                 {"label": default_value, "value": default_value}
                 if isinstance(default_value, str)
                 else default_value
@@ -643,11 +646,11 @@ class IO:
             label: str,
             *,
             options: Iterable[PassthroughLabelValue],
-            help_text: str | None = None,
-            default_value: Iterable[LabelValue | str] | None = None,
-            min_selections: int | None = None,
-            max_selections: int | None = None,
-            disabled: bool | None = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[Iterable[Union[LabelValue, str]]] = None,
+            min_selections: Optional[int] = None,
+            max_selections: Optional[int] = None,
+            disabled: Optional[bool] = None,
         ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[PassthroughLabelValue]]:
             ...
 
@@ -657,11 +660,11 @@ class IO:
             label: str,
             *,
             options: Iterable[LabelValue],
-            help_text: str | None = None,
-            default_value: Iterable[LabelValue] | None = None,
-            min_selections: int | None = None,
-            max_selections: int | None = None,
-            disabled: bool | None = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[Iterable[LabelValue]] = None,
+            min_selections: Optional[int] = None,
+            max_selections: Optional[int] = None,
+            disabled: Optional[bool] = None,
         ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[LabelValue]]:
             ...
 
@@ -671,11 +674,11 @@ class IO:
             label: str,
             *,
             options: Iterable[str],
-            help_text: str | None = None,
-            default_value: Iterable[str] | None = None,
-            min_selections: int | None = None,
-            max_selections: int | None = None,
-            disabled: bool | None = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[Iterable[str]] = None,
+            min_selections: Optional[int] = None,
+            max_selections: Optional[int] = None,
+            disabled: Optional[bool] = None,
         ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[str]]:
             ...
 
@@ -684,13 +687,13 @@ class IO:
             self,
             label: str,
             *,
-            options: Iterable[LabelValue | str],
-            help_text: str | None = None,
-            default_value: Iterable[LabelValue | str] | None = None,
-            min_selections: int | None = None,
-            max_selections: int | None = None,
-            disabled: bool | None = None,
-        ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[LabelValue | str]]:
+            options: Iterable[Union[LabelValue, str]],
+            help_text: Optional[str] = None,
+            default_value: Optional[Iterable[Union[LabelValue, str]]] = None,
+            min_selections: Optional[int] = None,
+            max_selections: Optional[int] = None,
+            disabled: Optional[bool] = None,
+        ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[Union[LabelValue, str]]]:
             ...
 
         def multiple(
@@ -698,11 +701,11 @@ class IO:
             label: str,
             *,
             options: Iterable[PassthroughLabelValue],
-            help_text: str | None = None,
-            default_value: Iterable[LabelValue | str] | None = None,
-            min_selections: int | None = None,
-            max_selections: int | None = None,
-            disabled: bool | None = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[Iterable[Union[LabelValue, str]]] = None,
+            min_selections: Optional[int] = None,
+            max_selections: Optional[int] = None,
+            disabled: Optional[bool] = None,
         ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[PassthroughLabelValue]]:
             normalized_options: list[LabelValue] = [
                 {"label": option, "value": option}
@@ -710,7 +713,7 @@ class IO:
                 else option
                 for option in options
             ]
-            normalized_default_value: list[LabelValue] | None = (
+            normalized_default_value: Optional[list[LabelValue]] = (
                 [
                     {"label": value, "value": value}
                     if isinstance(value, str)
@@ -763,7 +766,7 @@ class IO:
             label: str,
             *,
             code: str,
-            language: str | None = None,
+            language: Optional[str] = None,
         ) -> DisplayIOPromise[Literal["DISPLAY_CODE"], None]:
             c = Component(
                 method_name="DISPLAY_CODE",
@@ -790,10 +793,10 @@ class IO:
             self,
             label: str,
             *,
-            action: str | None = None,
-            params: dict[str, Any] | None = None,
+            action: Optional[str] = None,
+            params: Optional[dict[str, Any]] = None,
             theme: LinkTheme = "default",
-            url: str | None = None,
+            url: Optional[str] = None,
         ) -> DisplayIOPromise[Literal["DISPLAY_LINK"], None]:
             c = Component(
                 method_name="DISPLAY_LINK",
@@ -854,10 +857,10 @@ class IO:
             self,
             label: str,
             *,
-            url: str | None = None,
-            bytes: bytes | None = None,
-            alt: str | None = None,
-            size: ImageSize | None = None,
+            url: Optional[str] = None,
+            bytes: Optional[bytes] = None,
+            alt: Optional[str] = None,
+            size: Optional[ImageSize] = None,
         ) -> DisplayIOPromise[Literal["DISPLAY_IMAGE"], None]:
             if bytes is not None and url is None:
                 if sys.getsizeof(bytes) > MAX_FILE_SIZE_MB * 1000 * 1000:
@@ -894,11 +897,11 @@ class IO:
             label: str,
             *,
             data: list[TR],
-            get_data: TableDataFetcher | None = None,
-            row_menu_items: Callable[[TR], list[TableMenuItem]] | None = None,
-            help_text: str | None = None,
-            columns: list[TableColumnDef | str] | None = None,
-            default_page_size: int | None = None,
+            get_data: Optional[TableDataFetcher] = None,
+            row_menu_items: Optional[Callable[[TR], list[TableMenuItem]]] = None,
+            help_text: Optional[str] = None,
+            columns: Optional[list[Union[TableColumnDef, str]]] = None,
+            default_page_size: Optional[int] = None,
             is_sortable: bool = True,
             is_filterable: bool = True,
         ) -> DisplayIOPromise[Literal["DISPLAY_TABLE"], None]:
@@ -909,12 +912,12 @@ class IO:
             self,
             label: str,
             *,
-            data: list[TR] | None = None,
+            data: Optional[list[TR]] = None,
             get_data: TableDataFetcher,
-            row_menu_items: Callable[[TR], list[TableMenuItem]] | None = None,
-            help_text: str | None = None,
-            columns: list[TableColumnDef | str] | None = None,
-            default_page_size: int | None = None,
+            row_menu_items: Optional[Callable[[TR], list[TableMenuItem]]] = None,
+            help_text: Optional[str] = None,
+            columns: Optional[list[Union[TableColumnDef, str]]] = None,
+            default_page_size: Optional[int] = None,
             is_sortable: bool = True,
             is_filterable: bool = True,
         ) -> DisplayIOPromise[Literal["DISPLAY_TABLE"], None]:
@@ -924,12 +927,12 @@ class IO:
             self,
             label: str,
             *,
-            data: list[TR] | None = None,
-            get_data: TableDataFetcher | None = None,
-            row_menu_items: Callable[[TR], list[TableMenuItem]] | None = None,
-            help_text: str | None = None,
-            columns: list[TableColumnDef | str] | None = None,
-            default_page_size: int | None = None,
+            data: Optional[list[TR]] = None,
+            get_data: Optional[TableDataFetcher] = None,
+            row_menu_items: Optional[Callable[[TR], list[TableMenuItem]]] = None,
+            help_text: Optional[str] = None,
+            columns: Optional[list[Union[TableColumnDef, str]]] = None,
+            default_page_size: Optional[int] = None,
             is_sortable: bool = True,
             is_filterable: bool = True,
         ) -> DisplayIOPromise[Literal["DISPLAY_TABLE"], None]:
@@ -1013,11 +1016,11 @@ class IO:
             label: str,
             *,
             data: list[GI],
-            get_data: GridDataFetcher | None = None,
+            get_data: Optional[GridDataFetcher] = None,
             render_item: Callable[[GI], GridItem],
-            help_text: str | None = None,
-            ideal_column_width: int | None = None,
-            default_page_size: int | None = None,
+            help_text: Optional[str] = None,
+            ideal_column_width: Optional[int] = None,
+            default_page_size: Optional[int] = None,
             is_filterable: bool = True,
         ) -> DisplayIOPromise[Literal["DISPLAY_GRID"], None]:
             ...
@@ -1027,12 +1030,12 @@ class IO:
             self,
             label: str,
             *,
-            data: list[GI] | None = None,
+            data: Optional[list[GI]] = None,
             get_data: GridDataFetcher,
             render_item: Callable[[GI], GridItem],
-            help_text: str | None = None,
-            ideal_column_width: int | None = None,
-            default_page_size: int | None = None,
+            help_text: Optional[str] = None,
+            ideal_column_width: Optional[int] = None,
+            default_page_size: Optional[int] = None,
             is_filterable: bool = True,
         ) -> DisplayIOPromise[Literal["DISPLAY_GRID"], None]:
             ...
@@ -1041,12 +1044,12 @@ class IO:
             self,
             label: str,
             *,
-            data: list[GI] | None = None,
-            get_data: GridDataFetcher | None = None,
+            data: Optional[list[GI]] = None,
+            get_data: Optional[GridDataFetcher] = None,
             render_item: Callable[[GI], GridItem],
-            help_text: str | None = None,
-            ideal_column_width: int | None = None,
-            default_page_size: int | None = None,
+            help_text: Optional[str] = None,
+            ideal_column_width: Optional[int] = None,
+            default_page_size: Optional[int] = None,
             is_filterable: bool = True,
         ) -> DisplayIOPromise[Literal["DISPLAY_GRID"], None]:
             serialized_items = (
@@ -1109,14 +1112,14 @@ class IO:
             self,
             label: str,
             *,
-            url: str | None = None,
-            alt: str | None = None,
-            bytes: bytes | None = None,
+            url: Optional[str] = None,
+            alt: Optional[str] = None,
+            bytes: Optional[bytes] = None,
             loop: bool = False,
             muted: bool = False,
-            size: ImageSize | None = None,
-            height: ImageSize | None = None,
-            width: ImageSize | None = None,
+            size: Optional[ImageSize] = None,
+            height: Optional[ImageSize] = None,
+            width: Optional[ImageSize] = None,
         ) -> DisplayIOPromise[Literal["DISPLAY_VIDEO"], None]:
             if bytes is not None and url is None:
                 if sys.getsizeof(bytes) > MAX_FILE_SIZE_MB * 1000 * 1000:
@@ -1157,7 +1160,7 @@ class IO:
             self,
             label: str,
             columns: dict[str, TypeValue],
-            help_text: str | None = None,
+            help_text: Optional[str] = None,
             # XXX: Don't think better type is possible here?
         ) -> InputIOPromise[Literal["INPUT_SPREADSHEET"], list]:
             c = Component(
@@ -1189,7 +1192,7 @@ class IO:
     def confirm(
         self,
         label: str,
-        help_text: str | None = None,
+        help_text: Optional[str] = None,
     ) -> ExclusiveIOPromise[Literal["CONFIRM"], bool]:
         c = Component(
             method_name="CONFIRM",
@@ -1203,7 +1206,7 @@ class IO:
     def confirm_identity(
         self,
         label: str,
-        grace_period_ms: int | None = None,
+        grace_period_ms: Optional[int] = None,
     ) -> ExclusiveIOPromise[Literal["CONFIRM_IDENTITY"], bool]:
         c = Component(
             method_name="CONFIRM_IDENTITY",
@@ -1343,11 +1346,11 @@ class IO:
             [PassthroughSearchResultValue],
             RenderableSearchResult,
         ],
-        help_text: str | None = None,
-        initial_results: Iterable[PassthroughSearchResultValue] | None = None,
-        default_value: PassthroughSearchResultValue | None = None,
-        disabled: bool | None = None,
-        placeholder: str | None = None,
+        help_text: Optional[str] = None,
+        initial_results: Optional[Iterable[PassthroughSearchResultValue]] = None,
+        default_value: Optional[PassthroughSearchResultValue] = None,
+        disabled: Optional[bool] = None,
+        placeholder: Optional[str] = None,
     ) -> MultipleableIOPromise[
         Literal["SEARCH"], PassthroughSearchResultValue, PassthroughSearchResultValue
     ]:

@@ -6,12 +6,14 @@ from typing import (
     Generic,
     Iterable,
     Literal,
-    TypeAlias,
-    TypeVar,
+    Optional,
+    Union,
     cast,
     Any,
 )
 import math
+
+from typing_extensions import TypeAlias, TypeVar
 
 from pydantic import parse_obj_as
 
@@ -39,9 +41,9 @@ TABLE_DATA_BUFFER_SIZE = 500
 
 @dataclass
 class TableDataFetcherState:
-    query_term: str | None
-    sort_column: str | None
-    sort_direction: Literal["asc", "desc"] | None
+    query_term: Optional[str]
+    sort_column: Optional[str]
+    sort_direction: Optional[Literal["asc", "desc"]]
     offset: int
     page_size: int
 
@@ -52,12 +54,12 @@ TR = TypeVar("TR", bound=TableRow)
 @dataclass
 class FetchedTableData(Generic[TR]):
     data: list[TR]
-    total_records: int | None = None
+    total_records: Optional[int] = None
 
 
 TableDataFetcher: TypeAlias = Callable[
     [TableDataFetcherState],
-    Awaitable[FetchedTableData | list[TR] | tuple[list[TR], int]],
+    Awaitable[Union[FetchedTableData, list[TR], tuple[list[TR], int]]],
 ]
 
 
@@ -65,7 +67,7 @@ def serialize_table_row(
     key: str,
     row: TR,
     columns: Iterable[TableColumnDef],
-    menu_builder: Callable[[TR], list[TableMenuItem]] | None = None,
+    menu_builder: Optional[Callable[[TR], list[TableMenuItem]]] = None,
 ) -> InternalTableRow:
     row = cast(TR, serialize_dates(cast(SerializableRecord, row)))
     rendered_row: TableRowModel = {}
@@ -115,9 +117,9 @@ def serialize_table_row(
 
 
 def columns_builder(
-    data: Iterable[TableRow | Any] | None = None,
-    columns: Iterable[TableColumnDef | str] | None = None,
-    log_missing_column: Callable[[str], None] | None = None,
+    data: Optional[Union[Iterable[TableRow], Any]] = None,
+    columns: Optional[Iterable[Union[TableColumnDef, str]]] = None,
+    log_missing_column: Optional[Callable[[str], None]] = None,
 ) -> list[TableColumnDef]:
     # using a dict instead of a set because dicts are ordered and sets aren't
     data_columns: dict[str, None] = (
@@ -126,7 +128,7 @@ def columns_builder(
 
     if columns:
 
-        def normalize_col(col: TableColumnDef | str) -> TableColumnDef:
+        def normalize_col(col: Union[TableColumnDef, str]) -> TableColumnDef:
             if isinstance(col, str):
                 col = cast(str, col)
 
@@ -156,7 +158,7 @@ def columns_builder(
 
 def filter_rows(
     data: Iterable[InternalTableRow],
-    query_term: str | None = None,
+    query_term: Optional[str] = None,
 ) -> list[InternalTableRow]:
     if query_term is None:
         return list(data)
@@ -168,7 +170,7 @@ def filter_rows(
     ]
 
 
-SortableValue: TypeAlias = str | int | float | date | time | datetime
+SortableValue: TypeAlias = Union[str, int, float, date, time, datetime]
 
 
 def get_sortable_value(row: InternalTableRow, sort_by_column: str) -> SortableValue:
@@ -190,8 +192,8 @@ def get_sortable_value(row: InternalTableRow, sort_by_column: str) -> SortableVa
 
 def sort_rows(
     data: Iterable[InternalTableRow],
-    column: str | None,
-    direction: Literal["asc", "desc"] | None,
+    column: Optional[str],
+    direction: Optional[Literal["asc", "desc"]],
 ) -> list[InternalTableRow]:
     if column is None or direction is None:
         return sorted(data, key=lambda row: int(row.key))

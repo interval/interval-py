@@ -4,10 +4,12 @@ from typing import (
     Generic,
     Iterable,
     Literal,
+    Optional,
     TypeVar,
     Callable,
     Any,
     Generator,
+    Union,
     cast,
     overload,
 )
@@ -46,14 +48,14 @@ Multipleable_MN_co = TypeVar(
 class IOPromise(Generic[MN_co, Output_co]):
     _component: Component
     _renderer: ComponentRenderer
-    _value_getter: Callable[[Any], Output_co] | None = None
-    _validator: IOPromiseValidator[Output_co] | None = None
+    _value_getter: Optional[Callable[[Any], Output_co]] = None
+    _validator: Optional[IOPromiseValidator[Output_co]] = None
 
     def __init__(
         self,
         component: Component,
         renderer: ComponentRenderer,
-        get_value: Callable[[Any], Output_co] | None = None,
+        get_value: Optional[Callable[[Any], Output_co]] = None,
     ):
         self._component = component
         self._renderer = renderer
@@ -90,7 +92,7 @@ class InputIOPromise(GroupableIOPromise[Input_MN_co, Output_co]):
     def optional(
         self,
         optional: Literal[True] = True,
-    ) -> "OptionalIOPromise[Input_MN_co, Output_co | None]":
+    ) -> "OptionalIOPromise[Input_MN_co, Optional[Output_co]]":
         ...
 
     @overload
@@ -104,15 +106,15 @@ class InputIOPromise(GroupableIOPromise[Input_MN_co, Output_co]):
     def optional(
         self: InputIOPromiseSelf,
         optional: bool,
-    ) -> "OptionalIOPromise[Input_MN_co, Output_co | None]" | InputIOPromiseSelf:
+    ) -> "Union[OptionalIOPromise[Input_MN_co, Optional[Output_co]], InputIOPromiseSelf]":
         ...
 
     def optional(
         self: InputIOPromiseSelf,
         optional: bool = True,
-    ) -> "OptionalIOPromise[Input_MN_co, Output_co | None]" | InputIOPromiseSelf:
+    ) -> "Union[OptionalIOPromise[Input_MN_co, Optional[Output_co]], InputIOPromiseSelf]":
         return (
-            OptionalIOPromise[Input_MN_co, Output_co | None](
+            OptionalIOPromise[Input_MN_co, Optional[Output_co]](
                 self._component,
                 self._renderer,
                 self._value_getter,
@@ -122,19 +124,19 @@ class InputIOPromise(GroupableIOPromise[Input_MN_co, Output_co]):
         )
 
     def validate(
-        self: InputIOPromiseSelf, validator: IOPromiseValidator[Output_co] | None
+        self: InputIOPromiseSelf, validator: Optional[IOPromiseValidator[Output_co]]
     ) -> InputIOPromiseSelf:
         if validator is None:
             self._component.validator = None
         else:
             if self._value_getter is not None:
 
-                async def handle_validation(return_value: Any) -> str | None:
+                async def handle_validation(return_value: Any) -> Optional[str]:
                     ret = validator(self._get_value(return_value))
                     if inspect.isawaitable(ret):
                         return await ret
 
-                    return cast(str | None, ret)
+                    return cast(Optional[str], ret)
 
                 self._component.validator = handle_validation
             else:
@@ -148,7 +150,7 @@ class OptionalIOPromise(InputIOPromise[Input_MN_co, Output_co]):
         self,
         component: Component,
         renderer: ComponentRenderer,
-        get_value: Callable[[Any], Output_co] | None = None,
+        get_value: Optional[Callable[[Any], Output_co]] = None,
     ):
         component.instance.is_optional = True
         component.validator = None
@@ -159,11 +161,11 @@ class OptionalIOPromise(InputIOPromise[Input_MN_co, Output_co]):
         )
 
     @override
-    def __await__(self) -> Generator[Any, None, Output_co | None]:
+    def __await__(self) -> Generator[Any, None, Optional[Output_co]]:
         res = yield from self._renderer([self._component], None, None).__await__()
         return self._get_value(res[0])
 
-    def _get_value(self, val: Any) -> Output_co | None:
+    def _get_value(self, val: Any) -> Optional[Output_co]:
         if val is None:
             return None
 
@@ -177,14 +179,14 @@ class MultipleableIOPromise(
     Generic[Multipleable_MN_co, Output_co, DefaultValue],
     InputIOPromise[Multipleable_MN_co, Output_co],
 ):
-    _default_value_getter: Callable[[Any], Any] | None = None
+    _default_value_getter: Optional[Callable[[Any], Any]] = None
 
     def __init__(
         self,
         component: Component,
         renderer: ComponentRenderer,
-        get_value: Callable[[Any], Output_co] | None = None,
-        get_default_value: Callable[[Any], Any] | None = None,
+        get_value: Optional[Callable[[Any], Output_co]] = None,
+        get_default_value: Optional[Callable[[Any], Any]] = None,
     ):
         self._default_value_getter = get_default_value
         super().__init__(
@@ -193,7 +195,7 @@ class MultipleableIOPromise(
             get_value=get_value,
         )
 
-    def multiple(self, *, default_value: Iterable[DefaultValue] | None = None):
+    def multiple(self, *, default_value: Optional[Iterable[DefaultValue]] = None):
         transformed_default_value = None
         if default_value is not None:
             potential_default_value = (
@@ -232,14 +234,14 @@ class MultipleIOPromise(
     Generic[Multipleable_MN_co, Output_co, DefaultValue],
     InputIOPromise[Multipleable_MN_co, Iterable[Output_co]],
 ):
-    _single_value_getter: Callable[[Any], Output_co] | None = None
+    _single_value_getter: Optional[Callable[[Any], Output_co]] = None
 
     def __init__(
         self,
         component: Component,
         renderer: ComponentRenderer,
-        get_value: Callable[[Any], Output_co] | None = None,
-        default_value: list[Any] | None = None,
+        get_value: Optional[Callable[[Any], Output_co]] = None,
+        default_value: Optional[list[Any]] = None,
     ):
         self._single_value_getter = get_value
         value_getter = None
@@ -276,7 +278,7 @@ class MultipleIOPromise(
 
     def validate(
         self: MultipleIOPromiseSelf,
-        validator: IOPromiseValidator[Iterable[Output_co]] | None,
+        validator: Optional[IOPromiseValidator[Iterable[Output_co]]],
     ) -> MultipleIOPromiseSelf:
         if validator is None:
             self._component.validator = None
@@ -284,12 +286,14 @@ class MultipleIOPromise(
             if self._value_getter is not None:
                 value_getter = self._value_getter
 
-                async def handle_validation(return_values: Iterable[Any]) -> str | None:
+                async def handle_validation(
+                    return_values: Iterable[Any],
+                ) -> Optional[str]:
                     ret = validator(value_getter(return_values))
                     if inspect.isawaitable(ret):
                         return await ret
 
-                    return cast(str | None, ret)
+                    return cast(Optional[str], ret)
 
                 self._component.validator = handle_validation
             else:
@@ -301,7 +305,7 @@ class MultipleIOPromise(
     def optional(
         self,
         optional: Literal[True] = True,
-    ) -> OptionalIOPromise[Multipleable_MN_co, Iterable[Output_co] | None]:
+    ) -> OptionalIOPromise[Multipleable_MN_co, Optional[Iterable[Output_co]]]:
         ...
 
     @overload
@@ -315,19 +319,21 @@ class MultipleIOPromise(
     def optional(
         self: MultipleIOPromiseSelf,
         optional: bool,
-    ) -> OptionalIOPromise[
-        Multipleable_MN_co, Iterable[Output_co] | None
-    ] | MultipleIOPromiseSelf:
+    ) -> Union[
+        OptionalIOPromise[Multipleable_MN_co, Optional[Iterable[Output_co]]],
+        MultipleIOPromiseSelf,
+    ]:
         ...
 
     def optional(
         self: MultipleIOPromiseSelf,
         optional: bool = True,
-    ) -> OptionalIOPromise[
-        Multipleable_MN_co, Iterable[Output_co] | None
-    ] | MultipleIOPromiseSelf:
+    ) -> Union[
+        OptionalIOPromise[Multipleable_MN_co, Optional[Iterable[Output_co]]],
+        MultipleIOPromiseSelf,
+    ]:
         return (
-            OptionalIOPromise[Multipleable_MN_co, Iterable[Output_co] | None](
+            OptionalIOPromise[Multipleable_MN_co, Optional[Iterable[Output_co]]](
                 component=self._component,
                 renderer=self._renderer,
                 get_value=self._value_getter,
@@ -352,16 +358,16 @@ class KeyedIONamespace:
 
 class IOGroupPromise(Generic[Unpack[GroupOutput]]):
     _io_promises: tuple[GroupableIOPromise[MethodName, Any], ...]
-    _kw_io_promises: dict[str, GroupableIOPromise[MethodName, Any]] | None = None
+    _kw_io_promises: Optional[dict[str, GroupableIOPromise[MethodName, Any]]] = None
     _renderer: ComponentRenderer
-    _validator: "IOGroupPromiseValidator[Unpack[GroupOutput]] | None" = None
-    _continue_button: ButtonConfig | None = None
+    _validator: "Optional[IOGroupPromiseValidator[Unpack[GroupOutput]]]" = None
+    _continue_button: Optional[ButtonConfig] = None
 
     def __init__(
         self,
         renderer: ComponentRenderer,
         io_promises: tuple[GroupableIOPromise[MethodName, Any], ...],
-        kw_io_promises: dict[str, GroupableIOPromise[MethodName, Any]] | None = None,
+        kw_io_promises: Optional[dict[str, GroupableIOPromise[MethodName, Any]]] = None,
     ):
         self._renderer = renderer
         self._io_promises = io_promises
@@ -383,7 +389,7 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
     def __await__(self) -> Generator[Any, None, tuple[Unpack[GroupOutput]]]:
         ...
 
-    def __await__(self) -> Generator[Any, None, tuple[Unpack[GroupOutput]] | KeyedIONamespace]:  # type: ignore
+    def __await__(self) -> Generator[Any, None, Union[tuple[Unpack[GroupOutput]], KeyedIONamespace]]:  # type: ignore
         if self._kw_io_promises is not None and len(self._kw_io_promises) > 0:
             res = yield from self._renderer(
                 [p._component for p in self._kw_io_promises.values()],
@@ -405,7 +411,7 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
                 [self._io_promises[i]._get_value(val) for (i, val) in enumerate(res)],
             )
 
-    async def _handle_validation(self, return_values: list[Any]) -> str | None:
+    async def _handle_validation(self, return_values: list[Any]) -> Optional[str]:
         if self._validator is None:
             return None
 
@@ -423,33 +429,33 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
                 for index, v in enumerate(return_values)
             ]
             ret = self._validator(*values)  # type: ignore
-        return cast(str | None, await ret if inspect.isawaitable(ret) else ret)
+        return cast(Optional[str], await ret if inspect.isawaitable(ret) else ret)
 
     @overload
     def validate(
         self: "IOGroupPromise[KeyedIONamespace]",
-        validator: "Callable[..., str | None | Awaitable[str | None]] | None",
+        validator: "Callable[..., Optional[Union[str, Awaitable[Optional[str]]]]]",
     ) -> "IOGroupPromise[Unpack[GroupOutput]]":
         ...
 
     @overload
     def validate(
         self: "IOGroupPromise[Unpack[GroupOutput]]",
-        validator: "IOGroupPromiseValidator[Unpack[GroupOutput]] | None",
+        validator: "Optional[IOGroupPromiseValidator[Unpack[GroupOutput]]]",
     ) -> "IOGroupPromise[Unpack[GroupOutput]]":
         ...
 
     def validate(  # type: ignore
         self: "IOGroupPromise[Unpack[GroupOutput]]",
-        validator: "IOGroupPromiseValidator[Unpack[GroupOutput]] | None",
+        validator: "Optional[IOGroupPromiseValidator[Unpack[GroupOutput]]]",
     ) -> "IOGroupPromise[Unpack[GroupOutput]]":
         self._validator = validator
         return self
 
     def continue_button_options(
         self: "IOGroupPromise[Unpack[GroupOutput]]",
-        label: str | None = None,
-        theme: Literal["primary", "secondary", "danger"] | None = None,
+        label: Optional[str] = None,
+        theme: Optional[Literal["primary", "secondary", "danger"]] = None,
     ) -> "IOGroupPromise[Unpack[GroupOutput]]":
         self._continue_button = ButtonConfig(label=label, theme=theme)
         return self

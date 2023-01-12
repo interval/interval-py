@@ -1,7 +1,8 @@
 import asyncio, sys
 from asyncio import Future
-from typing import Any, Callable, Generic, TypeVar, TypeAlias, Awaitable
+from typing import Any, Callable, Generic
 
+from typing_extensions import TypeVar, TypeAlias, Awaitable
 from pydantic import ValidationError, parse_obj_as
 
 from ..internal_rpc_schema import AnyRPCSchemaMethodName, DuplexMessage, RPCMethod

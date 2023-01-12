@@ -1,7 +1,7 @@
 import json, re
-from typing import Any, Iterable, Mapping, Tuple, Callable, TypeAlias, cast
+from typing import Any, Iterable, Mapping, Optional, Tuple, Callable, Union, cast
 from datetime import date, time, datetime
-from typing_extensions import TypeVar
+from typing_extensions import TypeAlias, TypeVar
 
 from pydantic import StrictBool, StrictFloat, StrictInt
 
@@ -107,7 +107,7 @@ def dump_snake_obj(obj: Any) -> Any:
 
 
 def dict_strip_none(
-    d: dict[str, Any], keys_to_consider: Iterable[str] | None = None
+    d: dict[str, Any], keys_to_consider: Optional[Iterable[str]] = None
 ) -> dict[str, Any]:
     ret = {}
 
@@ -165,21 +165,21 @@ def json_loads_snake_strip_none(*args, **kwargs) -> Any:
     return dict_keys_to_snake(dict_strip_none(obj))
 
 
-Deserializable: TypeAlias = int | float | bool | None | str
+Deserializable: TypeAlias = Union[int, float, bool, None, str]
 DeserializableRecord: TypeAlias = Mapping[str, Deserializable]
-Serializable: TypeAlias = bool | int | float | datetime | date | time | str | None
+Serializable: TypeAlias = Union[bool, int, float, datetime, date, time, str, None]
 SerializableRecord: TypeAlias = Mapping[str, Serializable]
 
-ObjectLiteral: TypeAlias = (
-    StrictInt | StrictFloat | StrictBool | datetime | date | time | None | str
-)
+ObjectLiteral: TypeAlias = Union[
+    StrictInt, StrictFloat, StrictBool, datetime, date, time, None, str
+]
 
-KeyValueObject: TypeAlias = (
-    ObjectLiteral | list["KeyValueObject"] | dict[str, "KeyValueObject"]
-)
+KeyValueObject: TypeAlias = Union[
+    ObjectLiteral, list["KeyValueObject"], dict[str, "KeyValueObject"]
+]
 
 
-def ensure_serialized(record: DeserializableRecord | Deserializable):
+def ensure_serialized(record: Union[DeserializableRecord, Deserializable]):
     if isinstance(record, dict):
         for val in record.values():
             if (
@@ -202,7 +202,7 @@ def ensure_serialized(record: DeserializableRecord | Deserializable):
 
 
 def deserialize_dates(
-    record: DeserializableRecord | SerializableRecord,
+    record: Union[DeserializableRecord, SerializableRecord],
 ) -> SerializableRecord:
     ret = {}
 
@@ -219,12 +219,12 @@ def deserialize_dates(
 
 
 def serialize_dates(
-    record: SerializableRecord | Serializable | None,
-) -> DeserializableRecord | Deserializable | None:
+    record: Union[SerializableRecord, Serializable, None],
+) -> Union[DeserializableRecord, Deserializable, None]:
     if record is None:
         return None
 
-    if isinstance(record, date | time):
+    if isinstance(record, (date, time)):
         return record.isoformat()
     if isinstance(record, datetime):
         return isoformat_datetime(record)
@@ -238,7 +238,7 @@ def serialize_dates(
     return cast(Deserializable, record)
 
 
-def format_datelike(d: date | time | datetime) -> str:
+def format_datelike(d: Union[date, time, datetime]) -> str:
     if isinstance(d, datetime):
         return format_datetime(d)
     if isinstance(d, date):

@@ -5,12 +5,11 @@ from typing import (
     Any,
     Callable,
     Generic,
-    TypeAlias,
-    Awaitable,
-    TypeVar,
+    Optional,
+    Union,
     cast,
 )
-from typing_extensions import TypeVarTuple, Unpack
+from typing_extensions import TypeVarTuple, Unpack, TypeAlias, Awaitable, TypeVar
 
 
 from pydantic import parse_obj_as, ValidationError, BaseModel as PydanticBaseModel
@@ -30,10 +29,10 @@ Output_co = TypeVar("Output_co", covariant=True)
 GroupOutput = TypeVarTuple("GroupOutput")
 
 IOPromiseValidator: TypeAlias = Callable[
-    [Output_co], Awaitable[str | None] | str | None
+    [Output_co], Union[Awaitable[Optional[str]], str, None]
 ]
 IOGroupPromiseValidator: TypeAlias = Callable[
-    [Unpack[GroupOutput]], Awaitable[str | None] | str | None
+    [Unpack[GroupOutput]], Union[Awaitable[Optional[str]], str, None]
 ]
 
 
@@ -42,12 +41,12 @@ class ComponentInstance(GenericModel, Generic[MN]):
     label: str
     # TODO: Try typing these
     props: dict[str, Any] = {}
-    state: dict[str, Any] | None = None
+    state: Optional[dict[str, Any]] = None
     is_stateful: bool = False
     is_optional: bool = False
     is_multiple: bool = False
-    validation_error_message: str | None = None
-    multiple_props: ComponentMultipleProps | None = None
+    validation_error_message: Optional[str] = None
+    multiple_props: Optional[ComponentMultipleProps] = None
 
 
 StateModel_co = TypeVar("StateModel_co", bound=PydanticBaseModel, covariant=True)
@@ -60,22 +59,22 @@ class Component(Generic[MN]):
         [StateModel_co, PropsModel_co], Awaitable[PydanticBaseModel]
     ]
 
-    _handle_state_change: StateChangeHandler | None = None
+    _handle_state_change: Optional[StateChangeHandler] = None
     _fut: Future[Any]
 
     schema: MethodDef
     instance: ComponentInstance
-    on_state_change: Callable[[], Awaitable[None]] | None = None
-    validator: IOPromiseValidator | None = None
+    on_state_change: Optional[Callable[[], Awaitable[None]]] = None
+    validator: Optional[IOPromiseValidator] = None
 
     def __init__(
         self,
         method_name: MN,
         label: str,
-        initial_props: dict[str, Any] | None,
-        handle_state_change: StateChangeHandler | None = None,
+        initial_props: Optional[dict[str, Any]],
+        handle_state_change: Optional[StateChangeHandler] = None,
         is_optional: bool = False,
-        validator: IOPromiseValidator | None = None,
+        validator: Optional[IOPromiseValidator] = None,
     ):
         if initial_props is None:
             initial_props = {}
@@ -95,11 +94,11 @@ class Component(Generic[MN]):
         loop = asyncio.get_running_loop()
         self._fut = loop.create_future()
 
-    async def handle_validation(self, return_value: Any) -> str | None:
+    async def handle_validation(self, return_value: Any) -> Optional[str]:
         if self.validator is not None:
             resp = self.validator(return_value)
             message = cast(
-                str | None, await resp if inspect.isawaitable(resp) else resp
+                Optional[str], await resp if inspect.isawaitable(resp) else resp
             )
             self.instance.validation_error_message = message
             return message
@@ -109,7 +108,7 @@ class Component(Generic[MN]):
         if self.instance.is_multiple:
             return_schema = list[return_schema]
         if self.instance.is_optional:
-            return_schema = return_schema | None
+            return_schema = Optional[return_schema]
 
         try:
             if value is None:
@@ -176,6 +175,6 @@ class Component(Generic[MN]):
 
 
 ComponentRenderer: TypeAlias = Callable[
-    [list[Component], IOPromiseValidator | None, ButtonConfig | None],
+    [list[Component], Optional[IOPromiseValidator], Optional[ButtonConfig]],
     Awaitable[list[Any]],
 ]

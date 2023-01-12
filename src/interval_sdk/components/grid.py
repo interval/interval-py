@@ -5,9 +5,11 @@ from typing import (
     Callable,
     Generic,
     Iterable,
-    TypeAlias,
+    Optional,
     TypeVar,
+    Union,
 )
+from typing_extensions import TypeAlias
 
 from ..io_schema import (
     GridItem,
@@ -23,7 +25,7 @@ TABLE_DATA_BUFFER_SIZE = 500
 
 @dataclass
 class GridDataFetcherState:
-    query_term: str | None
+    query_term: Optional[str]
     offset: int
     page_size: int
 
@@ -34,11 +36,12 @@ GI = TypeVar("GI")
 @dataclass
 class FetchedGridData(Generic[GI]):
     data: list[GI]
-    total_records: int | None = None
+    total_records: Optional[int] = None
 
 
 GridDataFetcher: TypeAlias = Callable[
-    [GridDataFetcherState], Awaitable[FetchedGridData | list[GI] | tuple[list[GI], int]]
+    [GridDataFetcherState],
+    Awaitable[Union[FetchedGridData, list[GI], tuple[list[GI], int]]],
 ]
 
 
@@ -52,7 +55,7 @@ def serialize_grid_item(
     if item is not None:
         if isinstance(item, dict):
             filter_values = [
-                format_datelike(v) if isinstance(v, date | time | datetime) else v
+                format_datelike(v) if isinstance(v, (date, time, datetime)) else v
                 for v in item.values()
             ]
 
@@ -65,7 +68,7 @@ def serialize_grid_item(
 
 def filter_items(
     data: Iterable[InternalGridItem],
-    query_term: str | None = None,
+    query_term: Optional[str] = None,
 ) -> list[InternalGridItem]:
     if query_term is None:
         return list(data)

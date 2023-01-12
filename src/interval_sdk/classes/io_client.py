@@ -1,7 +1,9 @@
 import asyncio
 import inspect
-from typing import cast, Awaitable, TypeAlias, Callable, TypeVar, Any
+from typing import Optional, cast, Callable
 from uuid import uuid4
+
+from typing_extensions import TypeAlias, TypeVar, Any, Awaitable
 
 from ..io_schema import ButtonConfig, MethodName, IORender, IOResponse
 from .component import Component, IOPromiseValidator
@@ -17,7 +19,7 @@ class IOClient:
     Sender: TypeAlias = Callable[[IORender], Awaitable[None]]
     _logger: Logger
     _send: Sender
-    _on_response_handler: Callable[[IOResponse], Awaitable[None]] | None = None
+    _on_response_handler: Optional[Callable[[IOResponse], Awaitable[None]]] = None
 
     _is_canceled = False
 
@@ -42,13 +44,13 @@ class IOClient:
     async def render_components(
         self,
         components: list[Component],
-        group_validator: IOPromiseValidator | None = None,
-        continue_button: ButtonConfig | None = None,
+        group_validator: Optional[IOPromiseValidator] = None,
+        continue_button: Optional[ButtonConfig] = None,
     ) -> list[Any]:
         if self._is_canceled:
             raise IOError("TRANSACTION_CLOSED")
 
-        validation_error_message: str | None = None
+        validation_error_message: Optional[str] = None
 
         input_group_key = uuid4()
         is_returned = False
@@ -113,7 +115,7 @@ class IOClient:
                 if group_validator is not None:
                     resp = group_validator(response.values)
                     validation_error_message = cast(
-                        str | None, await resp if inspect.isawaitable(resp) else resp
+                        Optional[str], await resp if inspect.isawaitable(resp) else resp
                     )
 
                     if validation_error_message is not None:

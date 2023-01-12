@@ -2,12 +2,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 import traceback
 from typing import (
+    Union,
     cast,
     Any,
     Callable,
     Optional,
     Literal,
-    TypeAlias,
     Generic,
     TypeVar,
     Mapping,
@@ -16,7 +16,7 @@ from typing import (
 from datetime import date, time, datetime
 from uuid import UUID
 import io, json, sys
-from typing_extensions import NotRequired, TypedDict
+from typing_extensions import NotRequired, TypedDict, TypeAlias
 from pydantic import (
     BaseModel as PydanticBaseModel,
     Field,
@@ -84,13 +84,13 @@ DisplayMethodName = Literal[
     "DISPLAY_PROGRESS_THROUGH_LIST",
 ]
 
-MethodName = InputMethodName | DisplayMethodName
+MethodName = Union[InputMethodName, DisplayMethodName]
 
 MN = TypeVar("MN", bound=MethodName)
 
 
 class ComponentMultipleProps(BaseModel):
-    default_value: list[Any] | None = None
+    default_value: Optional[list[Any]] = None
 
 
 class ComponentRenderInfo(GenericModel, Generic[MN]):
@@ -100,8 +100,8 @@ class ComponentRenderInfo(GenericModel, Generic[MN]):
     is_stateful: bool
     is_optional: bool
     is_multiple: bool
-    validation_error_message: str | None = None
-    multiple_props: ComponentMultipleProps | None = None
+    validation_error_message: Optional[str] = None
+    multiple_props: Optional[ComponentMultipleProps] = None
 
     class Config:
         json_loads = json_loads_snake_strip_none
@@ -119,8 +119,8 @@ TypeValue = Literal[
 
 
 class ButtonConfig(BaseModel):
-    label: str | None = None
-    theme: Literal["primary", "secondary", "danger"] | None = None
+    label: Optional[str] = None
+    theme: Optional[Literal["primary", "secondary", "danger"]] = None
 
 
 class RichSelectOption(TypedDict):
@@ -131,20 +131,22 @@ class RichSelectOption(TypedDict):
 
 
 PassthroughRichSelectOption = TypeVar(
-    "PassthroughRichSelectOption", bound=RichSelectOption | str
+    "PassthroughRichSelectOption", bound=Union[RichSelectOption, str]
 )
 
 
 class RichSelectOptionModel(BaseModel):
     label: ObjectLiteral
     value: ObjectLiteral
-    description: str | None = None
-    imageUrl: str | None = None
+    description: Optional[str] = None
+    imageUrl: Optional[str] = None
 
 
 class KeyValueObjectModel(BaseModel):
-    __root__: ObjectLiteral | list[KeyValueObjectModel | None] | dict[
-        str, KeyValueObjectModel | None
+    __root__: Union[
+        ObjectLiteral,
+        list[Optional[KeyValueObjectModel]],
+        dict[str, Optional[KeyValueObjectModel]],
     ]
 
 
@@ -173,10 +175,10 @@ class ButtonItem(TypedDict):
 
 class ButtonItemModel(BaseModel):
     label: str
-    theme: ButtonTheme | None = None
-    route: str | None = None
-    params: SerializableRecord | None = None
-    url: str | None = None
+    theme: Optional[ButtonTheme] = None
+    route: Optional[str] = None
+    params: Optional[SerializableRecord] = None
+    url: Optional[str] = None
     disabled: bool = False
 
 
@@ -215,7 +217,7 @@ class FileUploadState(BaseModel):
 
 
 class InnerFileModel(BaseModel):
-    last_modified: datetime | None = None
+    last_modified: Optional[datetime] = None
     name: str
     type: str
     size: int
@@ -230,7 +232,7 @@ class LabelValue(TypedDict):
     value: ObjectLiteral
 
 
-PassthroughLabelValue = TypeVar("PassthroughLabelValue", bound=LabelValue | str)
+PassthroughLabelValue = TypeVar("PassthroughLabelValue", bound=Union[LabelValue, str])
 
 
 class LabelValueModel(BaseModel):
@@ -239,37 +241,37 @@ class LabelValueModel(BaseModel):
 
 
 RawActionReturnData: TypeAlias = Mapping[str, Serializable]
-IOFunctionReturnType: TypeAlias = Serializable | SerializableRecord | None
+IOFunctionReturnType: TypeAlias = Union[Serializable, SerializableRecord, None]
 
 
 class ParsedActionReturnDataLink(BaseModel):
-    data_kind: Literal["link"] | None
+    data_kind: Optional[Literal["link"]]
     value: str
 
 
-ParsedActionReturnDataValue = SerializableRecord | ParsedActionReturnDataLink
+ParsedActionReturnDataValue = Union[SerializableRecord, ParsedActionReturnDataLink]
 
 ParsedActionReturnData: TypeAlias = dict[str, ParsedActionReturnDataValue]
 
 
 class DeserializableModel(BaseModel):
-    __root__: StrictInt | StrictFloat | StrictBool | None | str
+    __root__: Union[StrictInt, StrictFloat, StrictBool, None, str]
 
 
 class DeserializableRecordModel(BaseModel):
-    __root__: dict[str, DeserializableModel | None]
+    __root__: dict[str, Optional[DeserializableModel]]
 
 
 class SerializableModel(BaseModel):
-    __root__: StrictInt | StrictFloat | StrictBool | None | date | time | datetime | str
+    __root__: Union[StrictInt, StrictFloat, StrictBool, None, date, time, datetime, str]
 
 
 class SerializableRecordModel(BaseModel):
-    __root__: dict[str, SerializableModel | None]
+    __root__: dict[str, Optional[SerializableModel]]
 
 
 class IOFunctionReturnModel(BaseModel):
-    __root__: DeserializableModel | DeserializableRecordModel | None
+    __root__: Union[DeserializableModel, DeserializableRecordModel, None]
 
 
 class ActionResult(BaseModel):
@@ -278,13 +280,15 @@ class ActionResult(BaseModel):
     data: IOFunctionReturnModel
 
 
-TableRowValuePrimitive = (
-    StrictInt | StrictFloat | StrictBool | date | datetime | None | str | Any
-)
+TableRowValuePrimitive = Union[
+    StrictInt, StrictFloat, StrictBool, date, datetime, None, str, Any
+]
 
-SearchResultValuePrimitive = StrictInt | StrictFloat | StrictBool | str
+SearchResultValuePrimitive = Union[StrictInt, StrictFloat, StrictBool, str]
 
-SearchResultValue = SearchResultValuePrimitive | dict[str, SearchResultValuePrimitive]
+SearchResultValue = Union[
+    SearchResultValuePrimitive, dict[str, SearchResultValuePrimitive]
+]
 
 PassthroughSearchResultValue = TypeVar(
     "PassthroughSearchResultValue", bound=SearchResultValue
@@ -301,23 +305,23 @@ class TableRowValueObject(TypedDict):
 
 
 class TableRowValueObjectModel(BaseModel):
-    label: TableRowValuePrimitive | None = None
-    value: TableRowValuePrimitive | None = None
-    url: str | None = None
-    route: str | None = None
-    params: SerializableRecordModel | None = None
-    image: ImageDefinitionModel | None = None
+    label: Optional[TableRowValuePrimitive] = None
+    value: Optional[TableRowValuePrimitive] = None
+    url: Optional[str] = None
+    route: Optional[str] = None
+    params: Optional[SerializableRecordModel] = None
+    image: Optional[ImageDefinitionModel] = None
 
 
-TableRowValue: TypeAlias = TableRowValueObject | TableRowValuePrimitive
+TableRowValue: TypeAlias = Union[TableRowValueObject, TableRowValuePrimitive]
 TableRow: TypeAlias = Mapping[str, TableRowValue]
 
 
 class TableRowValueModel(BaseModel):
-    __root__: TableRowValuePrimitive | TableRowValueObjectModel
+    __root__: Union[TableRowValuePrimitive, TableRowValueObjectModel]
 
 
-TableRowModel: TypeAlias = dict[str, TableRowValueModel | None]
+TableRowModel: TypeAlias = dict[str, Optional[TableRowValueModel]]
 
 
 class TableMenuItem(TypedDict):
@@ -331,18 +335,18 @@ class TableMenuItem(TypedDict):
 
 class TableMenuItemModel(BaseModel):
     label: str
-    theme: Literal["danger"] | None
+    theme: Optional[Literal["danger"]]
     disabled: bool = False
-    route: str | None = None
-    params: SerializableRecord | None = None
-    url: str | None = None
+    route: Optional[str] = None
+    params: Optional[SerializableRecord] = None
+    url: Optional[str] = None
 
 
 class InternalTableRow(BaseModel):
     key: str
     data: TableRowModel
     menu: list[TableMenuItemModel] = Field(default_factory=list)
-    filterValue: str | None = None
+    filterValue: Optional[str] = None
 
 
 class SelectTableReturnModel(BaseModel):
@@ -364,23 +368,23 @@ class InternalTableColumn(BaseModel):
 
 
 class GridItemImage(TypedDict):
-    url: NotRequired[str | None]
+    url: NotRequired[Optional[str]]
     alt: NotRequired[str]
     fit: NotRequired[Literal["cover", "contain"]]
     aspectRatio: NotRequired[float]
 
 
 class GridItemImageModel(BaseModel):
-    url: str | None = None
-    alt: str | None = None
-    fit: Literal["cover", "contain"] | None = None
-    aspectRatio: float | None = None
+    url: Optional[str] = None
+    alt: Optional[str] = None
+    fit: Optional[Literal["cover", "contain"]] = None
+    aspectRatio: Optional[float] = None
 
 
 class GridItem(TypedDict):
-    title: NotRequired[str | None]
-    description: NotRequired[str | None]
-    image: NotRequired[GridItemImage | None]
+    title: NotRequired[Optional[str]]
+    description: NotRequired[Optional[str]]
+    image: NotRequired[Optional[GridItemImage]]
     menu: NotRequired[list[TableMenuItem]]
     url: NotRequired[str]
     route: NotRequired[str]
@@ -388,19 +392,19 @@ class GridItem(TypedDict):
 
 
 class GridItemModel(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    image: GridItemImageModel | None = None
-    menu: list[TableMenuItemModel] | None = None
-    url: str | None = None
-    route: str | None = None
-    params: SerializableRecord | None = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    image: Optional[GridItemImageModel] = None
+    menu: Optional[list[TableMenuItemModel]] = None
+    url: Optional[str] = None
+    route: Optional[str] = None
+    params: Optional[SerializableRecord] = None
 
 
 class InternalGridItem(BaseModel):
     key: str
     data: GridItemModel
-    filterValue: str | None = None
+    filterValue: Optional[str] = None
 
 
 PropsType = TypeVar("PropsType", bound=Type)
@@ -435,9 +439,9 @@ class InputEmailProps(BaseModel):
 
 
 class InputNumberProps(BaseModel):
-    min: Optional[float | int]
-    max: Optional[float | int]
-    default_value: Optional[float | int]
+    min: Optional[Union[float, int]]
+    max: Optional[Union[float, int]]
+    default_value: Optional[Union[float, int]]
     decimals: Optional[int]
     prepend: Optional[str]
     help_text: Optional[str]
@@ -522,9 +526,9 @@ class SelectTableProps(BaseModel):
     min_selections: Optional[int]
     max_selections: Optional[int]
     total_records: int
-    selected_keys: list[str] | None = None
+    selected_keys: Optional[list[str]] = None
     disabled: Optional[bool]
-    default_page_size: int | None = None
+    default_page_size: Optional[int] = None
     is_sortable: bool = True
     is_filterable: bool = True
 
@@ -559,10 +563,10 @@ LinkTheme: TypeAlias = Literal["default", "danger"]
 
 
 class DisplayLinkProps(BaseModel):
-    action: str | None
-    url: str | None
-    params: dict[str, Any] | None
-    theme: LinkTheme | None
+    action: Optional[str]
+    url: Optional[str]
+    params: Optional[dict[str, Any]]
+    theme: Optional[LinkTheme]
 
 
 MetadataLayout: TypeAlias = Literal["card", "list", "grid"]
@@ -588,8 +592,8 @@ class ImageDefinition(TypedDict):
 
 class ImageDefinitionModel(BaseModel):
     url: str
-    alt: str | None = None
-    size: ImageSize | None = None
+    alt: Optional[str] = None
+    size: Optional[ImageSize] = None
 
 
 class DisplayImageProps(BaseModel):
@@ -602,11 +606,11 @@ class DisplayImageProps(BaseModel):
 class DisplayGridProps(BaseModel):
     help_text: Optional[str] = None
     data: list[InternalGridItem]
-    ideal_column_width: int | None = None
-    default_page_size: int | None = None
+    ideal_column_width: Optional[int] = None
+    default_page_size: Optional[int] = None
     is_filterable: bool = True
     # private props
-    total_records: int | None = None
+    total_records: Optional[int] = None
     is_async: bool
 
 
@@ -620,11 +624,11 @@ class DisplayTableProps(BaseModel):
     help_text: Optional[str] = None
     data: list[InternalTableRow]
     columns: list[InternalTableColumn]
-    default_page_size: int | None = None
+    default_page_size: Optional[int] = None
     is_sortable: bool = True
     is_filterable: bool = True
     # private props
-    total_records: int | None = None
+    total_records: Optional[int] = None
     is_async: bool
 
 
@@ -903,8 +907,8 @@ class IORender(BaseModel):
     input_group_key: UUID
     to_render: list[ComponentRenderInfo]
     kind: Literal["RENDER"] = "RENDER"
-    validation_error_message: str | None = None
-    continue_button: ButtonConfig | None = None
+    validation_error_message: Optional[str] = None
+    continue_button: Optional[ButtonConfig] = None
 
     class Config:
         json_dumps = json_dumps_io_render
@@ -912,7 +916,7 @@ class IORender(BaseModel):
 
 class IOResponse(PydanticBaseModel):
     id: UUID
-    input_group_key: str | None = None
+    input_group_key: Optional[str] = None
     transaction_id: str
     kind: Literal["RETURN", "SET_STATE", "CANCELED"]
     values: list[Any]
@@ -949,7 +953,7 @@ def dump_method(method_name: MethodName) -> str:
             else:
                 field_type: str = str(field.outer_type_)
             if not field.required:
-                field_type += " | None"
+                field_type = f"Optional[{field_type}]"
                 field_type += f" = {field.default}"
 
             print(f"    {name}: {field_type},", file=contents)

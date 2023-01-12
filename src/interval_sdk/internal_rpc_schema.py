@@ -7,12 +7,12 @@ from typing import (
     Generic,
     Optional,
     Type,
-    TypeAlias,
     Literal,
     TypeVar,
     TypedDict,
+    Union,
 )
-from typing_extensions import Annotated
+from typing_extensions import Annotated, TypeAlias
 
 from pydantic import Field
 from pydantic.dataclasses import dataclass
@@ -63,14 +63,14 @@ class LeavePageInputs(BaseModel):
 
 class SendLoadingCallInputs(LoadingState):
     transaction_id: str
-    label: str | None = None
+    label: Optional[str] = None
 
 
 class SendLogInputs(BaseModel):
     transaction_id: str
     data: str
-    index: int | None = None
-    timestamp: int | None = None
+    index: Optional[int] = None
+    timestamp: Optional[int] = None
 
 
 class DeliveryInstruction(TypedDict):
@@ -80,7 +80,7 @@ class DeliveryInstruction(TypedDict):
 
 class DeliveryInstructionModel(BaseModel):
     to: str
-    method: Literal["EMAIL", "SLACK"] | None = None
+    method: Optional[Literal["EMAIL", "SLACK"]] = None
 
     class Config:
         json_dumps = json_dumps_strip_none
@@ -88,10 +88,10 @@ class DeliveryInstructionModel(BaseModel):
 
 class NotifyInputs(BaseModel):
     message: str
-    transaction_id: str | None = None
-    title: str | None = None
-    idempotency_key: str | None = None
-    delivery_instructions: list[DeliveryInstructionModel] | None = None
+    transaction_id: Optional[str] = None
+    title: Optional[str] = None
+    idempotency_key: Optional[str] = None
+    delivery_instructions: Optional[list[DeliveryInstructionModel]] = None
     created_at: str
 
 
@@ -105,15 +105,15 @@ class NotifyReturnsError(BaseModel):
 
 
 NotifyReturns = Annotated[
-    NotifyReturnsSuccess | NotifyReturnsError, Field(discriminator="type")
+    Union[NotifyReturnsSuccess, NotifyReturnsError], Field(discriminator="type")
 ]
 
 
 class SendRedirectInputs(BaseModel):
     transaction_id: str
-    url: str | None = None
-    route: str | None = None
-    params: SerializableRecord | None = None
+    url: Optional[str] = None
+    route: Optional[str] = None
+    params: Optional[SerializableRecord] = None
 
 
 class MarkTransactionCompleteInputs(BaseModel):
@@ -125,28 +125,28 @@ class AccessControlObjectDefinition(TypedDict):
     teams: list[str]
 
 
-AccessControlDefinition: TypeAlias = (
-    Literal["entire-organization"] | AccessControlObjectDefinition
-)
+AccessControlDefinition: TypeAlias = Union[
+    Literal["entire-organization"], AccessControlObjectDefinition
+]
 
 
 class ActionDefinition(BaseModel):
-    group_slug: str | None = None
+    group_slug: Optional[str] = None
     slug: str
-    name: str | None = None
-    description: str | None = None
+    name: Optional[str] = None
+    description: Optional[str] = None
     backgroundable: bool = False
     unlisted: bool = False
-    access: AccessControlDefinition | None = None
+    access: Optional[AccessControlDefinition] = None
 
 
 class PageDefinition(BaseModel):
     slug: str
     name: str
-    description: str | None = None
+    description: Optional[str] = None
     has_handler: bool = False
     unlisted: bool = False
-    access: AccessControlDefinition | None = None
+    access: Optional[AccessControlDefinition] = None
 
 
 class InitializeHostInputs(BaseModel):
@@ -168,26 +168,26 @@ class InitializeHostReturnsSuccess(BaseModel):
     invalid_slugs: list[str]
     organization: OrganizationDef
     dashboard_url: str
-    sdk_alert: SdkAlert | None = None
+    sdk_alert: Optional[SdkAlert] = None
     warnings: list[str]
 
 
 class InitializeHostReturnsError(BaseModel):
     type: Literal["error"] = "error"
     message: str
-    sdk_alert: SdkAlert | None = None
+    sdk_alert: Optional[SdkAlert] = None
 
 
 InitializeHostReturns = Annotated[
-    InitializeHostReturnsSuccess | InitializeHostReturnsError,
+    Union[InitializeHostReturnsSuccess, InitializeHostReturnsError],
     Field(discriminator="type"),
 ]
 
 
 class EnqueueActionInputs(BaseModel):
     slug: str
-    assignee: str | None
-    params: SerializableRecord | None
+    assignee: Optional[str]
+    params: Optional[SerializableRecord]
 
 
 class EnqueueActionReturnsSuccess(BaseModel):
@@ -201,7 +201,7 @@ class EnqueueActionReturnsError(BaseModel):
 
 
 EnqueueActionReturns = Annotated[
-    EnqueueActionReturnsSuccess | EnqueueActionReturnsError,
+    Union[EnqueueActionReturnsSuccess, EnqueueActionReturnsError],
     Field(discriminator="type"),
 ]
 
@@ -213,8 +213,8 @@ class DequeueActionInputs(BaseModel):
 class DequeueActionReturnsSuccess(BaseModel):
     type: Literal["success"] = "success"
     id: str
-    assignee: str | None
-    params: SerializableRecord | None
+    assignee: Optional[str]
+    params: Optional[SerializableRecord]
 
 
 class DequeueActionReturnsError(BaseModel):
@@ -223,7 +223,7 @@ class DequeueActionReturnsError(BaseModel):
 
 
 DequeueActionReturns = Annotated[
-    DequeueActionReturnsSuccess | DequeueActionReturnsError,
+    Union[DequeueActionReturnsSuccess, DequeueActionReturnsError],
     Field(discriminator="type"),
 ]
 
@@ -347,8 +347,8 @@ class IOResponseInputs(BaseModel):
 @dataclass
 class ContextUser:
     email: str
-    first_name: str | None = None
-    last_name: str | None = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
 
 
 @dataclass
@@ -410,9 +410,9 @@ class ActionContext:
     async def notify(
         self,
         message: str,
-        title: str | None = None,
-        delivery: list[DeliveryInstruction] | None = None,
-        idempotency_key: str | None = None,
+        title: Optional[str] = None,
+        delivery: Optional[list[DeliveryInstruction]] = None,
+        idempotency_key: Optional[str] = None,
     ):
         return await self._notify(
             NotifyInputs(
@@ -431,9 +431,9 @@ class ActionContext:
 
     async def redirect(
         self,
-        url: str | None = None,
-        route: str | None = None,
-        params: SerializableRecord | None = None,
+        url: Optional[str] = None,
+        route: Optional[str] = None,
+        params: Optional[SerializableRecord] = None,
     ):
         if (url is None and route is None) or (url is not None and route is not None):
             self._logger.error("Must specify exactly one of either `url` or `route`.")
@@ -476,7 +476,7 @@ class StartTransactionInputs(BaseModel):
 
 class OpenPageInputs(BaseModel):
     page_key: str
-    client_id: str | None = None
+    client_id: Optional[str] = None
     page: PageInfo
     environment: ActionEnvironment
     user: ContextUser
@@ -490,11 +490,11 @@ class OpenPageReturnsSuccess(BaseModel):
 
 class OpenPageReturnsError(BaseModel):
     type: Literal["ERROR"] = "ERROR"
-    message: str | None = None
+    message: Optional[str] = None
 
 
 OpenPageReturns = Annotated[
-    OpenPageReturnsSuccess | OpenPageReturnsError,
+    Union[OpenPageReturnsSuccess, OpenPageReturnsError],
     Field(discriminator="type"),
 ]
 
@@ -530,9 +530,9 @@ host_schema: HostSchema = {
     ),
 }
 
-AnyRPCSchemaMethodName: TypeAlias = (
-    WSServerSchemaMethodName | ClientSchemaMethodName | HostSchemaMethodName
-)
+AnyRPCSchemaMethodName: TypeAlias = Union[
+    WSServerSchemaMethodName, ClientSchemaMethodName, HostSchemaMethodName
+]
 
 RPCSchemaMethodName = TypeVar(
     "RPCSchemaMethodName",

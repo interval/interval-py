@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from playwright.async_api import BrowserContext, Page, expect
 
@@ -70,7 +71,7 @@ class Transaction:
                 self.page.locator('[data-test-id="transaction-result"]')
             ).to_contain_text("".join([key, val]))
 
-    async def expect_success(self, result: dict[str, str] | None = None):
+    async def expect_success(self, result: Optional[dict[str, str]] = None):
         await expect(
             self.page.locator('[data-test-id="result-type"]:has-text("Success")')
         ).to_be_visible()
@@ -79,7 +80,7 @@ class Transaction:
             await self.expect_result(result)
 
     async def expect_failure(
-        self, message: str | None = None, error: str | None = None
+        self, message: Optional[str] = None, error: Optional[str] = None
     ):
         await expect(
             self.page.locator('[data-test-id="result-type"]:has-text("Error")')

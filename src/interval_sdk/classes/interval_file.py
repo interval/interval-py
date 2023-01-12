@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 import urllib.request, json, os.path
 
 from ..types import IntervalError
@@ -8,7 +8,7 @@ from ..types import IntervalError
 
 @dataclass
 class IntervalFile:
-    last_modified: datetime | None
+    last_modified: Optional[datetime]
     name: str
     type: str
     size: int

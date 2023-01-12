@@ -1,12 +1,13 @@
 import json
 from dataclasses import dataclass
-from typing import Any, Callable, Literal, Awaitable, TypeAlias
+from typing import Any, Callable, Optional, Union
 
-from interval_sdk.classes.io_promise import DisplayIOPromise
-from interval_sdk.util import dump_snake_obj, json_loads_camel, snake_to_camel
+from typing_extensions import Literal, TypeAlias, Awaitable
 
+from ..classes.io_promise import DisplayIOPromise
 from ..types import BaseModel
 from ..io_schema import ButtonItem, ButtonItemModel, IORender, dump_io_render
+from ..util import dump_snake_obj, json_loads_camel, snake_to_camel
 
 PageLayoutKey = Literal["title", "description", "children", "menuItems"]
 
@@ -15,20 +16,20 @@ class PageError(BaseModel):
     layout_key: PageLayoutKey
     error: str
     message: str
-    cause: str | None = None
-    stack: str | None = None
+    cause: Optional[str] = None
+    stack: Optional[str] = None
 
 
-EventualStr: TypeAlias = str | Awaitable[str] | Callable[[], Awaitable[str]]
+EventualStr: TypeAlias = Union[str, Awaitable[str], Callable[[], Awaitable[str]]]
 
 
 @dataclass
 class BasicLayout:
     kind: Literal["BASIC"] = "BASIC"
-    title: EventualStr | None = None
-    description: EventualStr | None = None
-    children: list[DisplayIOPromise] | None = None
-    menu_items: list[ButtonItem] | None = None
+    title: Optional[EventualStr] = None
+    description: Optional[EventualStr] = None
+    children: Optional[list[DisplayIOPromise]] = None
+    menu_items: Optional[list[ButtonItem]] = None
 
 
 Layout: TypeAlias = BasicLayout
@@ -47,10 +48,10 @@ def json_dumps_basic_layout_model(layout: dict[str, Any], *args, **kwargs) -> st
 
 class BasicLayoutModel(BaseModel):
     kind: Literal["BASIC"]
-    title: str | None = None
-    description: str | None = None
-    children: IORender | None = None
-    menu_items: list[ButtonItemModel] | None = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    children: Optional[IORender] = None
+    menu_items: Optional[list[ButtonItemModel]] = None
     errors: list[PageError] = []
 
     class Config:
