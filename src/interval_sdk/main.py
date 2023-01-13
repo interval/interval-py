@@ -1,7 +1,6 @@
-import asyncio, importlib.metadata, time
+import asyncio, importlib.metadata, time, datetime
 from contextvars import ContextVar
 from dataclasses import dataclass
-from datetime import datetime
 from inspect import iscoroutine, signature, isfunction
 from typing import Any, Optional, Callable, cast, Union
 from urllib.parse import urlparse, urlunparse
@@ -522,7 +521,7 @@ class Interval:
                 if delivery is not None
                 else None,
                 idempotency_key=idempotency_key,
-                created_at=isoformat_datetime(datetime.now()),
+                created_at=isoformat_datetime(datetime.datetime.now()),
             )
         )
 
@@ -833,6 +832,20 @@ class Interval:
                             raise IntervalError(
                                 "handler accepts invalid number of arguments"
                             )
+
+                        if resp is not None and not isinstance(
+                            resp,
+                            (
+                                bool,
+                                int,
+                                float,
+                                datetime.date,
+                                datetime.time,
+                                datetime.datetime,
+                                str,
+                            ),
+                        ):
+                            resp = dict(resp.items())
 
                         result = ActionResult(
                             status="SUCCESS",

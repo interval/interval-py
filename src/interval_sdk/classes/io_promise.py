@@ -3,7 +3,9 @@ from typing import (
     Awaitable,
     Generic,
     Iterable,
+    Iterator,
     Literal,
+    Mapping,
     Optional,
     TypeVar,
     Callable,
@@ -28,6 +30,7 @@ from .component import (
     IOPromiseValidator,
 )
 from ..io_schema import (
+    ButtonTheme,
     ComponentMultipleProps,
     input_schema,
     ButtonConfig,
@@ -348,14 +351,30 @@ class MultipleIOPromise(
 IOGroupPromiseSelf = TypeVar("IOGroupPromiseSelf", bound="IOGroupPromise")
 
 
-class KeyedIONamespace:
+class KeyedIONamespace(Mapping):
     __items: dict[str, Any] = {}
 
-    def __init__(self, items: dict[str, Any]):
-        self.__items = items
+    def __init__(self, **kwargs: Any):
+        self.__items = kwargs
+
+    def __repr__(self) -> str:
+        items = ", ".join([f"{k}={v}" for k, v in self.__items.items()])
+        return f"KeyedIONamespace({items})"
 
     def __getattr__(self, name: str) -> Any:
         return self.__items[name]
+
+    def __getitem__(self, name: str) -> Any:
+        return self.__items[name]
+
+    def __len__(self) -> int:
+        return len(self.__items)
+
+    def __iter__(self) -> Iterator[str]:
+        yield from self.__items.keys()
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.__items
 
 
 class IOGroupPromise(Generic[Unpack[GroupOutput]]):
@@ -401,7 +420,7 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
             res_dict = {
                 key: res[i] for i, key in enumerate(self._kw_io_promises.keys())
             }
-            return KeyedIONamespace(res_dict)
+            return KeyedIONamespace(**res_dict)
         else:
             res = yield from self._renderer(
                 [p._component for p in self._io_promises],
@@ -457,7 +476,7 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
     def continue_button_options(
         self: "IOGroupPromise[Unpack[GroupOutput]]",
         label: Optional[str] = None,
-        theme: Optional[Literal["primary", "secondary", "danger"]] = None,
+        theme: Optional[ButtonTheme] = None,
     ) -> "IOGroupPromise[Unpack[GroupOutput]]":
         self._continue_button = ButtonConfig(label=label, theme=theme)
         return self

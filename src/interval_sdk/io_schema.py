@@ -118,9 +118,12 @@ TypeValue = Literal[
 ]
 
 
+ButtonTheme = Literal["primary", "secondary", "danger"]
+
+
 class ButtonConfig(BaseModel):
     label: Optional[str] = None
-    theme: Optional[Literal["primary", "secondary", "danger"]] = None
+    theme: Optional[ButtonTheme] = None
 
 
 class RichSelectOption(TypedDict):
@@ -160,9 +163,6 @@ class ImageModel(BaseModel):
     url: Optional[str] = None
     alt: Optional[str] = None
     size: Optional[ImageSize] = None
-
-
-ButtonTheme = Literal["primary", "secondary", "danger"]
 
 
 class ButtonItem(TypedDict):
