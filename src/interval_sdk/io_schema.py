@@ -279,6 +279,9 @@ class ActionResult(BaseModel):
     status: Literal["SUCCESS", "FAILURE"]
     data: IOFunctionReturnModel
 
+    class Config:
+        json_dumps = json.dumps
+
 
 TableRowValuePrimitive = Union[
     StrictInt, StrictFloat, StrictBool, date, datetime, None, str, Any
