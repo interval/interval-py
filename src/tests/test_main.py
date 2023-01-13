@@ -1,9 +1,7 @@
-import asyncio, json, re, os.path
+import json, re
 from datetime import date
 from typing_extensions import NotRequired
 
-import pytest
-from filelock import FileLock
 from playwright.async_api import Page as BrowserPage, expect
 
 from interval_sdk import Interval, IO, ActionContext
