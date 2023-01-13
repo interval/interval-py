@@ -48,7 +48,9 @@ async def context(
     )
     context = await browser.new_context()
     await config.log_in(context)
+
     yield context
+
     await context.close()
 
 
@@ -57,7 +59,10 @@ async def page(
     context: BrowserContext,
 ) -> AsyncIterator[Page]:
     page = await context.new_page()
+
     yield page
+
+    await page.close()
 
 
 @pytest.fixture
