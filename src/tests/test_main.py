@@ -4,30 +4,31 @@ from typing_extensions import NotRequired
 
 import pytest
 from filelock import FileLock
-from playwright.async_api import Page, expect
+from playwright.async_api import Page as BrowserPage, expect
 
 from interval_sdk import Interval, IO, ActionContext
 from interval_sdk.io_schema import LabelValue
 
-from . import base_config, Transaction
+from . import Transaction
 
 
-@pytest.fixture(scope="session", autouse=True)
-async def host(
-    event_loop: asyncio.AbstractEventLoop,
-    tmp_path_factory: pytest.TempPathFactory,
-    worker_id: str,
+async def test_heading(
+    interval: Interval, page: BrowserPage, transactions: Transaction
 ):
-    interval = Interval(
-        api_key=base_config.api_key,
-        endpoint=base_config.endpoint_url,
-        log_level="debug",
-    )
-
     @interval.action("io.display.heading")
     async def display_heading(io: IO):
         await io.display.heading("io.display.heading result")
 
+    await transactions.console()
+    await transactions.run("io.display.heading")
+    await expect(page.locator("text=io.display.heading result")).to_be_visible()
+    await transactions.press_continue()
+    await transactions.expect_success()
+
+
+async def test_context(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
     @interval.action
     async def context(_: IO, ctx: ActionContext):
         return {
@@ -36,6 +37,19 @@ async def host(
             "environment": ctx.environment,
         }
 
+    await transactions.console()
+    await transactions.run("context")
+    await page.goto(page.url + "?message=Hello")
+    await transactions.expect_success(
+        {
+            "user": "Test Runner",
+            "message": "Hello",
+            "environment": "development",
+        }
+    )
+
+
+async def test_group(interval: Interval, page: BrowserPage, transactions: Transaction):
     @interval.action("io.group")
     async def group(io: IO):
         await io.group(
@@ -43,6 +57,15 @@ async def host(
             io.display.markdown("2. Second item"),
         )
 
+    await transactions.console()
+    await transactions.run("io.group")
+    await expect(page.locator("text=First item")).to_be_visible()
+    await expect(page.locator("text=Second item")).to_be_visible()
+    await transactions.press_continue()
+    await transactions.expect_success()
+
+
+async def test_object(interval: Interval, page: BrowserPage, transactions: Transaction):
     @interval.action("io.display.object")
     async def display_object(io: IO):
         await io.display.object(
@@ -59,6 +82,23 @@ async def host(
             },
         )
 
+    await transactions.console()
+    await transactions.run("io.display.object")
+    await expect(page.locator('dt:has-text("isTrue")')).to_be_visible()
+    await expect(page.locator('dd:has-text("true")')).to_be_visible()
+    await expect(page.locator('dt:has-text("none_value")')).to_be_visible()
+    await expect(page.locator('dd:has-text("null")')).to_be_visible()
+    await expect(page.locator('dt:has-text("name")')).to_be_visible()
+    await expect(page.locator('dd:has-text("Interval")')).to_be_visible()
+    await expect(page.locator('summary:has-text("longList")')).to_be_visible()
+    await expect(page.locator('dd:has-text("Item 99")')).to_be_hidden()
+    await page.locator('summary:has-text("longList")').click()
+    await expect(page.locator('dd:has-text("Item 99")')).to_be_visible()
+    await transactions.press_continue()
+    await transactions.expect_success()
+
+
+async def test_table(interval: Interval, page: BrowserPage, transactions: Transaction):
     @interval.action("io.display.table")
     async def display_table(io: IO):
         await io.display.table(
@@ -73,11 +113,43 @@ async def host(
             ],
         )
 
+    await transactions.console()
+    await transactions.run("io.display.table")
+    await expect(page.locator("text=io.display.table result")).to_be_visible()
+    await expect(
+        page.locator('[role="columnheader"]:has-text("string")')
+    ).to_be_visible()
+    await expect(page.locator('[role="cell"]:has-text("string")')).to_be_visible()
+    await expect(
+        page.locator('[role="columnheader"]:has-text("number")')
+    ).to_be_visible()
+    await expect(page.locator('[role="cell"]:has-text("15")')).to_be_visible()
+    await expect(
+        page.locator('[role="columnheader"]:has-text("boolean")')
+    ).to_be_visible()
+    await expect(page.locator('[role="cell"]:has-text("true")')).to_be_visible()
+    await expect(page.locator('[role="columnheader"]:has-text("none")')).to_be_visible()
+    await expect(page.locator('[role="cell"]:has-text("-")')).to_be_visible()
+    await transactions.press_continue()
+    await transactions.expect_success()
+
+
+async def test_text(interval: Interval, page: BrowserPage, transactions: Transaction):
     @interval.action("io.input.text")
     async def io_input_text(io: IO):
         name = await io.input.text("First name")
         return {"name": name}
 
+    await transactions.console()
+    await transactions.run("io.input.text")
+
+    await page.click("text=First name")
+    await page.fill('input[type="text"]', "Interval")
+    await transactions.press_continue()
+    await transactions.expect_success({"name": "Interval"})
+
+
+async def test_number(interval: Interval, page: BrowserPage, transactions: Transaction):
     @interval.action("io.input.number")
     async def input_number(io: IO):
         num = await io.input.number("Enter a number")
@@ -87,6 +159,28 @@ async def host(
 
         return {"sum": num + num2}
 
+    await transactions.console()
+    await transactions.run("io.input.number")
+
+    await page.click("text=Enter a number")
+    await page.fill('input[inputmode="numeric"]', "12")
+    await transactions.press_continue()
+
+    await page.click("text=Enter a second number")
+    await page.fill('input[inputmode="numeric"]', "7")
+    await transactions.press_continue()
+    await transactions.expect_validation_error(
+        "Please enter a number greater than or equal to 13."
+    )
+    await page.fill('input[inputmode="numeric"]', "13")
+
+    await transactions.press_continue()
+    await transactions.expect_success({"sum": "25"})
+
+
+async def test_rich_text(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
     @interval.action("io.input.richText")
     async def rich_text(io: IO):
         body = await io.input.rich_text("Email body")
@@ -100,6 +194,35 @@ async def host(
             """
         )
 
+    await transactions.console()
+    await transactions.run("io.input.richText")
+    await expect(page.locator("text=Email body")).to_be_visible()
+
+    input = page.locator(".ProseMirror")
+
+    await page.select_option('select[aria-label="Heading level"]', "1")
+    await input.type("Heading 1")
+    await input.press("Enter")
+    await page.click('button[aria-label="Toggle italic"]')
+    await input.type("Emphasis")
+    await input.press("Enter")
+    await page.click('button[aria-label="Toggle italic"]')
+    await page.click('button[aria-label="Toggle underline"]')
+    await input.type("Underline")
+    await page.click('button[aria-label="Toggle underline"]')
+
+    await transactions.press_continue()
+    await expect(page.locator('h2:has-text("You entered:")')).to_be_visible()
+    await expect(page.locator("pre code")).to_contain_text(
+        "<h1>Heading 1</h1><p><em>Emphasis</em></p><p><u>Underline</u></p>\n"
+    )
+    await transactions.press_continue()
+    await transactions.expect_success()
+
+
+async def test_select_single(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
     @interval.action("io.select.single")
     async def select_single(io: IO):
         selected = await io.select.single(
@@ -113,6 +236,28 @@ async def host(
 
         await io.display.markdown(f"You selected: {selected['label']}")
 
+    await transactions.console()
+    await transactions.run("io.select.single")
+
+    label = page.locator('label:has-text("Choose role")')
+    inputId = await label.get_attribute("for")
+    input = page.locator(f"#{inputId}")
+    await input.click()
+    await page.locator('.iv-select__menu div div:has-text("Admin")').click()
+    await expect(page.locator(".iv-select__single-value")).to_contain_text("Admin")
+
+    await input.fill("ed")
+    await input.press("Enter")
+    await transactions.press_continue()
+    await expect(page.locator("text=You selected: Editor")).to_be_visible()
+
+    await transactions.press_continue()
+    await transactions.expect_success()
+
+
+async def test_select_multiple(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
     @interval.action("io.select.multiple")
     async def select_multiple(io: IO):
         class Option(LabelValue):
@@ -161,201 +306,6 @@ async def host(
             else None,
         }
 
-    @interval.action("io.select.table")
-    async def select_table(io: IO):
-        selected = await io.select.table(
-            "Select some rows",
-            data=[
-                {"firstName": "Alex", "lastName": "Arena"},
-                {"firstName": "Dan", "lastName": "Philibin"},
-                {"firstName": "Ryan", "lastName": "Coppolo"},
-                {
-                    "firstName": "Jacob",
-                    "lastName": "Mischka",
-                    "favoriteColor": "Orange",
-                },
-            ],
-            min_selections=1,
-            max_selections=2,
-        )
-
-        await io.display.markdown(
-            f"""
-            ## You selected:
-
-            ```
-            {json.dumps(selected)}
-            ```
-            """
-        )
-
-    @interval.action
-    async def error(io: IO):
-        await io.input.text("First name")
-        raise Exception("Unauthorized")
-
-    if worker_id == "master":
-        event_loop.create_task(interval.listen_async())
-    else:
-        root_tmp_dir = tmp_path_factory.getbasetemp().parent
-        lockfile = root_tmp_dir / "host"
-
-        with FileLock(str(lockfile) + ".lock"):
-            if not os.path.exists(lockfile):
-                with open(lockfile, "w", encoding="utf-8"):
-                    pass
-                event_loop.create_task(interval.listen_async())
-
-    yield interval
-
-
-async def test_heading(page: Page, transactions: Transaction):
-    await transactions.console()
-    await transactions.run("io.display.heading")
-    await expect(page.locator("text=io.display.heading result")).to_be_visible()
-    await transactions.press_continue()
-    await transactions.expect_success()
-
-
-async def test_context(page: Page, transactions: Transaction):
-    await transactions.console()
-    await transactions.run("context")
-    await page.goto(page.url + "?message=Hello")
-    await transactions.expect_success(
-        {
-            "user": "Test Runner",
-            "message": "Hello",
-            "environment": "development",
-        }
-    )
-
-
-async def test_group(page: Page, transactions: Transaction):
-    await transactions.console()
-    await transactions.run("io.group")
-    await expect(page.locator("text=First item")).to_be_visible()
-    await expect(page.locator("text=Second item")).to_be_visible()
-    await transactions.press_continue()
-    await transactions.expect_success()
-
-
-async def test_object(page: Page, transactions: Transaction):
-    await transactions.console()
-    await transactions.run("io.display.object")
-    await expect(page.locator('dt:has-text("isTrue")')).to_be_visible()
-    await expect(page.locator('dd:has-text("true")')).to_be_visible()
-    await expect(page.locator('dt:has-text("none_value")')).to_be_visible()
-    await expect(page.locator('dd:has-text("null")')).to_be_visible()
-    await expect(page.locator('dt:has-text("name")')).to_be_visible()
-    await expect(page.locator('dd:has-text("Interval")')).to_be_visible()
-    await expect(page.locator('summary:has-text("longList")')).to_be_visible()
-    await expect(page.locator('dd:has-text("Item 99")')).to_be_hidden()
-    await page.locator('summary:has-text("longList")').click()
-    await expect(page.locator('dd:has-text("Item 99")')).to_be_visible()
-    await transactions.press_continue()
-    await transactions.expect_success()
-
-
-async def test_table(page: Page, transactions: Transaction):
-    await transactions.console()
-    await transactions.run("io.display.table")
-    await expect(page.locator("text=io.display.table result")).to_be_visible()
-    await expect(
-        page.locator('[role="columnheader"]:has-text("string")')
-    ).to_be_visible()
-    await expect(page.locator('[role="cell"]:has-text("string")')).to_be_visible()
-    await expect(
-        page.locator('[role="columnheader"]:has-text("number")')
-    ).to_be_visible()
-    await expect(page.locator('[role="cell"]:has-text("15")')).to_be_visible()
-    await expect(
-        page.locator('[role="columnheader"]:has-text("boolean")')
-    ).to_be_visible()
-    await expect(page.locator('[role="cell"]:has-text("true")')).to_be_visible()
-    await expect(page.locator('[role="columnheader"]:has-text("none")')).to_be_visible()
-    await expect(page.locator('[role="cell"]:has-text("-")')).to_be_visible()
-    await transactions.press_continue()
-    await transactions.expect_success()
-
-
-async def test_text(page: Page, transactions: Transaction):
-    await transactions.console()
-    await transactions.run("io.input.text")
-
-    await page.click("text=First name")
-    await page.fill('input[type="text"]', "Interval")
-    await transactions.press_continue()
-    await transactions.expect_success({"name": "Interval"})
-
-
-async def test_number(page: Page, transactions: Transaction):
-    await transactions.console()
-    await transactions.run("io.input.number")
-
-    await page.click("text=Enter a number")
-    await page.fill('input[inputmode="numeric"]', "12")
-    await transactions.press_continue()
-
-    await page.click("text=Enter a second number")
-    await page.fill('input[inputmode="numeric"]', "7")
-    await transactions.press_continue()
-    await transactions.expect_validation_error(
-        "Please enter a number greater than or equal to 13."
-    )
-    await page.fill('input[inputmode="numeric"]', "13")
-
-    await transactions.press_continue()
-    await transactions.expect_success({"sum": "25"})
-
-
-async def test_rich_text(page: Page, transactions: Transaction):
-    await transactions.console()
-    await transactions.run("io.input.richText")
-    await expect(page.locator("text=Email body")).to_be_visible()
-
-    input = page.locator(".ProseMirror")
-
-    await page.select_option('select[aria-label="Heading level"]', "1")
-    await input.type("Heading 1")
-    await input.press("Enter")
-    await page.click('button[aria-label="Toggle italic"]')
-    await input.type("Emphasis")
-    await input.press("Enter")
-    await page.click('button[aria-label="Toggle italic"]')
-    await page.click('button[aria-label="Toggle underline"]')
-    await input.type("Underline")
-    await page.click('button[aria-label="Toggle underline"]')
-
-    await transactions.press_continue()
-    await expect(page.locator('h2:has-text("You entered:")')).to_be_visible()
-    await expect(page.locator("pre code")).to_contain_text(
-        "<h1>Heading 1</h1><p><em>Emphasis</em></p><p><u>Underline</u></p>\n"
-    )
-    await transactions.press_continue()
-    await transactions.expect_success()
-
-
-async def test_select_single(page: Page, transactions: Transaction):
-    await transactions.console()
-    await transactions.run("io.select.single")
-
-    label = page.locator('label:has-text("Choose role")')
-    inputId = await label.get_attribute("for")
-    input = page.locator(f"#{inputId}")
-    await input.click()
-    await page.locator('.iv-select__menu div div:has-text("Admin")').click()
-    await expect(page.locator(".iv-select__single-value")).to_contain_text("Admin")
-
-    await input.fill("ed")
-    await input.press("Enter")
-    await transactions.press_continue()
-    await expect(page.locator("text=You selected: Editor")).to_be_visible()
-
-    await transactions.press_continue()
-    await transactions.expect_success()
-
-
-async def test_select_multiple(page: Page, transactions: Transaction):
     await transactions.console()
     await transactions.run("io.select.multiple")
 
@@ -396,7 +346,37 @@ async def test_select_multiple(page: Page, transactions: Transaction):
     )
 
 
-async def test_select_table(page: Page, transactions: Transaction):
+async def test_select_table(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
+    @interval.action("io.select.table")
+    async def select_table(io: IO):
+        selected = await io.select.table(
+            "Select some rows",
+            data=[
+                {"firstName": "Alex", "lastName": "Arena"},
+                {"firstName": "Dan", "lastName": "Philibin"},
+                {"firstName": "Ryan", "lastName": "Coppolo"},
+                {
+                    "firstName": "Jacob",
+                    "lastName": "Mischka",
+                    "favoriteColor": "Orange",
+                },
+            ],
+            min_selections=1,
+            max_selections=2,
+        )
+
+        await io.display.markdown(
+            f"""
+            ## You selected:
+
+            ```
+            {json.dumps(selected)}
+            ```
+            """
+        )
+
     await transactions.console()
     await transactions.run("io.select.table")
 
@@ -419,7 +399,12 @@ async def test_select_table(page: Page, transactions: Transaction):
     await transactions.expect_success()
 
 
-async def test_error(page: Page, transactions: Transaction):
+async def test_error(interval: Interval, page: BrowserPage, transactions: Transaction):
+    @interval.action
+    async def error(io: IO):
+        await io.input.text("First name")
+        raise Exception("Unauthorized")
+
     await transactions.console()
     await transactions.run("error")
     await page.click("text=First name")

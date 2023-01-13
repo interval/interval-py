@@ -61,12 +61,18 @@ async def page(
 
 
 @pytest.fixture
-async def interval(config: Config) -> Interval:
-    return Interval(
+async def interval(event_loop: asyncio.AbstractEventLoop, config: Config):
+    interval = Interval(
         api_key=config.api_key,
         endpoint=config.endpoint_url,
         log_level="debug",
     )
+
+    event_loop.create_task(interval.listen_async())
+
+    yield interval
+
+    await interval.close()
 
 
 @pytest.fixture
@@ -76,6 +82,10 @@ def transactions(page: Page) -> Transaction:
 
 @pytest.fixture(scope="session")
 def event_loop():
-    loop = asyncio.get_event_loop_policy().new_event_loop()
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
     yield loop
-    loop.close()
