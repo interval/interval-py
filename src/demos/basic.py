@@ -830,7 +830,7 @@ async def multi_search(io: IO):
             render_result=render_result,
             initial_results=states,
         )
-        .multiple()
+        .multiple(default_value=["Wisconsin"])
         .optional()
         .validate(check_for_illinois)
     )

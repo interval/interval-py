@@ -23,7 +23,7 @@ from ..io_schema import (
     ComponentRenderInfo,
 )
 from ..types import GenericModel
-from ..util import dict_keys_to_snake, dict_strip_none, dict_keys_to_camel
+from ..util import dict_keys_to_snake, dict_keys_to_camel
 
 Output_co = TypeVar("Output_co", covariant=True)
 GroupOutput = TypeVarTuple("GroupOutput")
@@ -35,13 +35,19 @@ IOGroupPromiseValidator: TypeAlias = Callable[
     [Unpack[GroupOutput]], Union[Awaitable[Optional[str]], str, None]
 ]
 
+StateModel_co = TypeVar(
+    "StateModel_co", bound=Union[PydanticBaseModel, None], covariant=True
+)
+PropsModel_co = TypeVar(
+    "PropsModel_co", bound=Union[PydanticBaseModel, None], covariant=True
+)
 
-class ComponentInstance(GenericModel, Generic[MN]):
+
+class ComponentInstance(GenericModel, Generic[MN, PropsModel_co, StateModel_co]):
     method_name: MN
     label: str
-    # TODO: Try typing these
-    props: dict[str, Any] = {}
-    state: Optional[dict[str, Any]] = None
+    props: PropsModel_co
+    state: Optional[StateModel_co]
     is_stateful: bool = False
     is_optional: bool = False
     is_multiple: bool = False
@@ -49,21 +55,14 @@ class ComponentInstance(GenericModel, Generic[MN]):
     multiple_props: Optional[ComponentMultipleProps] = None
 
 
-StateModel_co = TypeVar("StateModel_co", bound=PydanticBaseModel, covariant=True)
-PropsModel_co = TypeVar("PropsModel_co", bound=PydanticBaseModel, covariant=True)
-
-
-class Component(Generic[MN]):
-    # TODO: Try typing this
-    StateChangeHandler: TypeAlias = Callable[
-        [StateModel_co, PropsModel_co], Awaitable[PydanticBaseModel]
-    ]
-
-    _handle_state_change: Optional[StateChangeHandler] = None
+class Component(Generic[MN, PropsModel_co, StateModel_co]):
+    _handle_state_change: Optional[
+        Callable[[StateModel_co, PropsModel_co], Awaitable[PropsModel_co]]
+    ] = None
     _fut: Future[Any]
 
     schema: MethodDef
-    instance: ComponentInstance
+    instance: ComponentInstance[MN, PropsModel_co, StateModel_co]
     on_state_change: Optional[Callable[[], Awaitable[None]]] = None
     validator: Optional[IOPromiseValidator] = None
 
@@ -71,19 +70,18 @@ class Component(Generic[MN]):
         self,
         method_name: MN,
         label: str,
-        initial_props: Optional[dict[str, Any]],
-        handle_state_change: Optional[StateChangeHandler] = None,
+        initial_props: PropsModel_co,
+        handle_state_change: Optional[
+            Callable[[StateModel_co, PropsModel_co], Awaitable[PropsModel_co]]
+        ] = None,
         is_optional: bool = False,
         validator: Optional[IOPromiseValidator] = None,
     ):
-        if initial_props is None:
-            initial_props = {}
-
         self.schema = io_schema[method_name]
-        self.instance = ComponentInstance(
+        self.instance = ComponentInstance[MN, PropsModel_co, StateModel_co](
             method_name=method_name,
             label=label,
-            props=dict_keys_to_camel(dict_strip_none(initial_props)),
+            props=initial_props,
             state=None,
             is_stateful=handle_state_change is not None,
             is_optional=is_optional,
@@ -126,16 +124,12 @@ class Component(Generic[MN]):
         try:
             parsed = parse_obj_as(self.schema.state, dict_keys_to_snake(value))
             if self._handle_state_change:
-                self.instance.props = dict_keys_to_camel(
-                    (
-                        await self._handle_state_change(
-                            parsed,
-                            parse_obj_as(
-                                self.schema.props,
-                                dict_keys_to_snake(self.instance.props),
-                            ),
-                        )
-                    ).dict()
+                self.instance.props = await self._handle_state_change(
+                    parsed,
+                    parse_obj_as(
+                        self.schema.props,
+                        dict_keys_to_snake(self.instance.props),
+                    ),
                 )
             elif parsed is not None:
                 print(
@@ -165,7 +159,9 @@ class Component(Generic[MN]):
         return ComponentRenderInfo(
             method_name=self.instance.method_name,
             label=self.instance.label,
-            props=dict_keys_to_camel(self.instance.props),
+            props=dict_keys_to_camel(self.instance.props.dict(exclude_defaults=True))
+            if self.instance.props is not None
+            else {},
             is_stateful=self.instance.is_stateful,
             is_optional=self.instance.is_optional,
             is_multiple=self.instance.is_multiple,

@@ -151,7 +151,7 @@ class IO:
                     lines=lines,
                     disabled=disabled,
                     placeholder=placeholder,
-                ).dict(),
+                ),
             )
             return InputIOPromise(c, renderer=self._renderer)
 
@@ -172,7 +172,7 @@ class IO:
                     default_value=default_value,
                     disabled=disabled,
                     placeholder=placeholder,
-                ).dict(),
+                ),
             )
             return InputIOPromise(c, renderer=self._renderer)
 
@@ -233,7 +233,7 @@ class IO:
                     decimals=decimals,
                     disabled=disabled,
                     placeholder=placeholder,
-                ).dict(),
+                ),
             )
 
             def get_value(val: float):
@@ -259,7 +259,7 @@ class IO:
                     help_text=help_text,
                     default_value=default_value,
                     disabled=disabled,
-                ).dict(),
+                ),
             )
             return InputIOPromise(c, renderer=self._renderer)
 
@@ -278,7 +278,7 @@ class IO:
                     help_text=help_text,
                     disabled=disabled,
                     placeholder=placeholder,
-                ).dict(),
+                ),
             )
             return InputIOPromise(c, renderer=self._renderer)
 
@@ -301,7 +301,7 @@ class IO:
                     default_value=default_value,
                     disabled=disabled,
                     placeholder=placeholder,
-                ).dict(),
+                ),
             )
 
             def get_value(val: Any) -> ParseResult:
@@ -331,7 +331,7 @@ class IO:
                     help_text=help_text,
                     default_value=model_default,
                     disabled=disabled,
-                ).dict(),
+                ),
             )
 
             def get_value(val: DateModel) -> date:
@@ -360,7 +360,7 @@ class IO:
                     help_text=help_text,
                     default_value=model_default,
                     disabled=disabled,
-                ).dict(),
+                ),
             )
 
             def get_value(val: TimeModel) -> time:
@@ -392,7 +392,7 @@ class IO:
                     help_text=help_text,
                     default_value=model_default,
                     disabled=disabled,
-                ).dict(),
+                ),
             )
 
             def get_value(val: DateTimeModel) -> datetime:
@@ -441,7 +441,7 @@ class IO:
                     upload_url=None,
                     download_url=None,
                     disabled=disabled,
-                ).dict(),
+                ),
                 handle_state_change=handle_state_change,
             )
 
@@ -528,7 +528,7 @@ class IO:
                     default_page_size=default_page_size,
                     is_sortable=is_sortable,
                     is_filterable=is_filterable,
-                ).dict(),
+                ),
                 handle_state_change=handle_state_change,
             )
 
@@ -629,7 +629,7 @@ class IO:
                     else None,
                     searchable=searchable,
                     disabled=disabled,
-                ).dict(),
+                ),
             )
             option_map = {
                 option if isinstance(option, str) else option["value"]: option
@@ -745,7 +745,7 @@ class IO:
                     min_selections=min_selections,
                     max_selections=max_selections,
                     disabled=disabled,
-                ).dict(),
+                ),
             )
 
             option_map = {
@@ -777,7 +777,7 @@ class IO:
                 initial_props=DisplayCodeProps(
                     code=code,
                     language=language,
-                ).dict(),
+                ),
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
@@ -788,7 +788,7 @@ class IO:
             c = Component(
                 method_name="DISPLAY_HEADING",
                 label=label,
-                initial_props={},
+                initial_props=None,
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
@@ -809,7 +809,7 @@ class IO:
                     params=params,
                     theme=theme,
                     url=url,
-                ).dict(),
+                ),
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
@@ -820,7 +820,7 @@ class IO:
             c = Component(
                 method_name="DISPLAY_MARKDOWN",
                 label=label,
-                initial_props={},
+                initial_props=None,
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
@@ -837,7 +837,7 @@ class IO:
                 initial_props=DisplayMetadataProps(
                     layout=layout,
                     data=KeyValueObjectModel.parse_obj(data),
-                ).dict(),
+                ),
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
@@ -852,7 +852,7 @@ class IO:
                 label=label,
                 initial_props=DisplayObjectProps(
                     data=KeyValueObjectModel.parse_obj(data),
-                ).dict(),
+                ),
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
@@ -890,7 +890,7 @@ class IO:
                     alt=alt,
                     height=size,
                     width=size,
-                ).dict(),
+                ),
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
@@ -1008,7 +1008,7 @@ class IO:
                     is_sortable=is_sortable,
                     is_filterable=is_filterable,
                     is_async=get_data is not None,
-                ).dict(),
+                ),
                 handle_state_change=handle_state_change,
             )
             return DisplayIOPromise(c, renderer=self._renderer)
@@ -1106,7 +1106,7 @@ class IO:
                     is_filterable=is_filterable,
                     total_records=len(data) if data is not None else None,
                     is_async=get_data is not None,
-                ).dict(),
+                ),
                 handle_state_change=handle_state_change,
             )
             return DisplayIOPromise(c, renderer=self._renderer)
@@ -1151,7 +1151,7 @@ class IO:
                     loop=loop,
                     height=height if height is not None else size,
                     width=width if width is not None else size,
-                ).dict(),
+                ),
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
@@ -1172,7 +1172,7 @@ class IO:
                 initial_props=InputSpreadsheetProps(
                     help_text=help_text,
                     columns=columns,
-                ).dict(),
+                ),
             )
             return InputIOPromise(c, renderer=self._renderer)
 
@@ -1202,7 +1202,7 @@ class IO:
             label=label,
             initial_props=ConfirmProps(
                 help_text=help_text,
-            ).dict(),
+            ),
         )
         return ExclusiveIOPromise(c, renderer=self._renderer)
 
@@ -1216,7 +1216,7 @@ class IO:
             label=label,
             initial_props=ConfirmIdentityProps(
                 grace_period_ms=grace_period_ms,
-            ).dict(),
+            ),
         )
         return ExclusiveIOPromise(c, renderer=self._renderer)
 
@@ -1388,6 +1388,8 @@ class IO:
         results = render_results(initial_results)
 
         def get_default_value(default_value: PassthroughSearchResultValue) -> str:
+            nonlocal results
+
             if "default" not in result_map:
                 result_map["default"] = []
 
@@ -1428,9 +1430,13 @@ class IO:
                 default_value=get_default_value(default_value)
                 if default_value is not None
                 else None,
-            ).dict(),
+            ),
             handle_state_change=handle_state_change,
         )
+
+        # Reassign this here so get_default_value modifies the working results list
+        # Pydantic models seem to create new lists instead of referencing originals
+        results = c.instance.props.results
 
         def get_value(val: str):
             batch_index, index = val.split(":")

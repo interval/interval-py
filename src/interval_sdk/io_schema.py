@@ -90,7 +90,7 @@ MN = TypeVar("MN", bound=MethodName)
 
 
 class ComponentMultipleProps(BaseModel):
-    default_value: Optional[list[Any]] = None
+    defaultValue: Optional[list[Any]] = None
 
 
 class ComponentRenderInfo(GenericModel, Generic[MN]):

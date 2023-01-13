@@ -104,7 +104,9 @@ def serialize_table_row(
             else:
                 filter_values.append(str(val))
 
-        rendered_row[accessor_key] = TableRowValueModel.parse_obj(val)
+        rendered_row[accessor_key] = (
+            TableRowValueModel.parse_obj(val) if val is not None else None
+        )
 
     return InternalTableRow(
         key=key,

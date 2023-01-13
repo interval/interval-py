@@ -201,23 +201,25 @@ class MultipleableIOPromise(
             potential_default_value = (
                 [self._default_value_getter(i) for i in default_value]
                 if self._default_value_getter is not None
-                else default_value
+                else list(default_value)
             )
-            try:
-                props_schema: BaseModel = input_schema[
-                    self._component.instance.method_name
-                ].props
-                default_value_field = props_schema.__fields__["defaultValue"]
-                transformed_default_value = parse_obj_as(
-                    list[default_value_field.type_], potential_default_value
-                )
-            except ValidationError as e:
-                print(
-                    f"[Interval] Invalid default value found for multiple IO call with label {self._component.instance.label}: {default_value}. This default value will be ignored.",
-                    file=sys.stderr,
-                )
-                print(e, file=sys.stderr)
-                transformed_default_value = None
+            if len(potential_default_value) > 0:
+                try:
+                    props_schema: BaseModel = input_schema[
+                        self._component.instance.method_name
+                    ].props
+                    default_value_field = props_schema.__fields__["default_value"]
+                    transformed_default_value = parse_obj_as(
+                        list[default_value_field.type_], potential_default_value
+                    )
+                except (ValidationError, KeyError) as e:
+                    print(
+                        f"[Interval] Invalid default value found for multiple IO call with label {self._component.instance.label}: {default_value}. This default value will be ignored.",
+                        file=sys.stderr,
+                    )
+                    if isinstance(e, ValidationError):
+                        print(e, file=sys.stderr)
+                        transformed_default_value = None
 
         return MultipleIOPromise(
             component=self._component,
@@ -257,7 +259,7 @@ class MultipleIOPromise(
         component.validator = None
         if default_value is not None:
             component.instance.multiple_props = ComponentMultipleProps(
-                default_value=default_value
+                defaultValue=default_value
             )
         super().__init__(
             component=component,
