@@ -57,8 +57,8 @@ class Transaction:
         print("Starting test", slug)
         await self.page.locator(f"[data-pw-run-slug='{slug}']").click()
 
-    async def press_continue(self):
-        await self.page.locator('button:has-text("Continue")').click()
+    async def press_continue(self, label: str = "Continue"):
+        await self.page.locator(f'button:has-text("{label}")').click()
 
     async def expect_validation_error(self, message: str = "This field is required"):
         await expect(

@@ -1,7 +1,7 @@
 import asyncio, json
 from datetime import date, datetime
 from typing import Iterable, Optional, cast
-from typing_extensions import NotRequired
+from typing_extensions import Literal, NotRequired
 
 from interval_sdk import Interval, IO, io_var, ctx_var, action_ctx_var
 from interval_sdk.classes.action import Action
@@ -491,9 +491,18 @@ async def io_display_video(io: IO):
 
 @interval.action(slug="io.display.metadata")
 async def io_display_metadata(io: IO):
+    layout = await io.select.single(
+        "Layout",
+        options=cast(
+            list[Literal["list", "grid", "card"]],
+            ["list", "grid", "card"],
+        ),
+        default_value="list",
+    )
+
     await io.display.metadata(
         "User info",
-        layout="card",
+        layout=layout,
         data=[
             {"label": "Name", "value": "Alex"},
             {"label": "Email", "value": "alex@interval.com"},

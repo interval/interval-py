@@ -1,34 +1,24 @@
+import asyncio
 import json, re
 from datetime import date
+from pathlib import Path
+
 from typing_extensions import NotRequired
 
 from playwright.async_api import Page as BrowserPage, expect
 
-from interval_sdk import Interval, IO, ActionContext
+from interval_sdk import Interval, IO, io_var, action_ctx_var, ctx_var
 from interval_sdk.io_schema import LabelValue
 
 from . import Transaction
-
-
-async def test_heading(
-    interval: Interval, page: BrowserPage, transactions: Transaction
-):
-    @interval.action("io.display.heading")
-    async def display_heading(io: IO):
-        await io.display.heading("io.display.heading result")
-
-    await transactions.console()
-    await transactions.run("io.display.heading")
-    await expect(page.locator("text=io.display.heading result")).to_be_visible()
-    await transactions.press_continue()
-    await transactions.expect_success()
 
 
 async def test_context(
     interval: Interval, page: BrowserPage, transactions: Transaction
 ):
     @interval.action
-    async def context(_: IO, ctx: ActionContext):
+    async def context():
+        ctx = ctx_var.get()
         return {
             "user": f"{ctx.user.first_name} {ctx.user.last_name}",
             "message": ctx.params.get("message", None),
@@ -47,6 +37,54 @@ async def test_context(
     )
 
 
+async def test_heading(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
+    @interval.action("io.display.heading")
+    async def display_heading():
+        io = io_var.get()
+
+        await io.display.heading("io.display.heading result")
+
+        await io.display.heading(
+            "Section heading",
+            level=3,
+            description="Sub-heading",
+            menu_items=[
+                {
+                    "label": "External link item",
+                    "url": "https://interval.com",
+                },
+                {
+                    "label": "Action link item",
+                    "route": "context",
+                    "params": {"param": "true"},
+                },
+            ],
+        )
+
+    await transactions.console()
+    await transactions.run("io.display.heading")
+    await expect(page.locator("text=io.display.heading result")).to_be_visible()
+    await transactions.press_continue()
+
+    await expect(page.locator("text=Section heading")).to_be_visible()
+    await expect(page.locator("text=Sub-heading")).to_be_visible()
+    await expect(page.locator("text=Sub-heading")).to_be_visible()
+    await expect(page.locator('a:has-text("External link item")')).to_have_attribute(
+        "href",
+        "https://interval.com",
+    )
+    await expect(page.locator('a:has-text("Action link item")')).to_have_attribute(
+        "href",
+        "/dashboard/test-runner/develop/actions/context?param=true",
+    )
+
+    await transactions.press_continue()
+
+    await transactions.expect_success()
+
+
 async def test_group(interval: Interval, page: BrowserPage, transactions: Transaction):
     @interval.action("io.group")
     async def group(io: IO):
@@ -55,11 +93,81 @@ async def test_group(interval: Interval, page: BrowserPage, transactions: Transa
             io.display.markdown("2. Second item"),
         )
 
+        await io.group(io.display.markdown("1. First item")).continue_button_options(
+            label="Custom label",
+            theme="danger",
+        )
+
+        resp = await io.group(
+            text=io.input.text("Text"), num=io.input.number("Number").optional()
+        )
+
+        return {**resp}
+
     await transactions.console()
     await transactions.run("io.group")
     await expect(page.locator("text=First item")).to_be_visible()
     await expect(page.locator("text=Second item")).to_be_visible()
     await transactions.press_continue()
+
+    button = page.locator('button:has-text("Custom label")')
+    await expect(button).to_be_visible()
+    await expect(button).to_have_class(re.compile("bg-red-500"))
+    await transactions.press_continue("Custom label")
+
+    await page.click("text=Text")
+    await page.keyboard.type("Hello")
+    await page.click("text=Number")
+    await page.keyboard.type("1337")
+    await transactions.press_continue()
+
+    await transactions.expect_success(
+        {
+            "text": "Hello",
+            "num": "1,337",
+        }
+    )
+
+
+async def test_image(interval: Interval, page: BrowserPage, transactions: Transaction):
+    @interval.action("io.display.image")
+    async def display_image(io: IO):
+        await io.display.image(
+            "Image via URL",
+            url="https://media.giphy.com/media/26ybw6AltpBRmyS76/giphy.gif",
+            alt="Man makes like he's going to jump on a skateboard but doesn't",
+            size="medium",
+        )
+
+        path = Path(__file__).parent / "data/fail.gif"
+        with open(path, "rb") as image:
+            await io.display.image(
+                "Image via bytes",
+                bytes=image.read(),
+                alt="Wile E. Coyote pulls a rope to launch a boulder from a catapult but it topples backwards and crushes him",
+            )
+
+    await transactions.console()
+    await transactions.run("io.display.image")
+
+    await expect(page.locator("text=Image via URL")).to_be_visible()
+    img = page.locator("img[data-pw-display-image]")
+    await expect(img).to_be_visible()
+    await expect(img).to_have_attribute(
+        "src", "https://media.giphy.com/media/26ybw6AltpBRmyS76/giphy.gif"
+    )
+    await expect(img).to_have_class(re.compile("w-img-medium"))
+    assert await img.get_attribute("alt") is not None
+    await transactions.press_continue()
+
+    await expect(page.locator("text=Image via bytes")).to_be_visible()
+    img = page.locator("img[data-pw-display-image]")
+    await expect(img).to_be_visible()
+    src = await img.get_attribute("src")
+    assert src is not None and src.startswith("data:")
+    assert await img.get_attribute("alt") is not None
+    await transactions.press_continue()
+
     await transactions.expect_success()
 
 
@@ -93,6 +201,89 @@ async def test_object(interval: Interval, page: BrowserPage, transactions: Trans
     await page.locator('summary:has-text("longList")').click()
     await expect(page.locator('dd:has-text("Item 99")')).to_be_visible()
     await transactions.press_continue()
+    await transactions.expect_success()
+
+
+async def test_metadata(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
+    @interval.action("io.display.metadata")
+    async def display_metadata(io: IO):
+        data = [
+            {
+                "label": "Is true",
+                "value": True,
+            },
+            {
+                "label": "Is false",
+                "value": False,
+            },
+            {
+                "label": "Is null",
+                "value": None,
+            },
+            {
+                "label": "Is empty string",
+                "value": "",
+            },
+            {
+                "label": "Is long string",
+                "value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sit amet quam in lorem",
+            },
+            {
+                "label": "Is number 15",
+                "value": 15,
+            },
+            {
+                "label": "Is string",
+                "value": "Hello",
+            },
+            {
+                "label": "Action link",
+                "value": "Click me",
+                "action": "helloCurrentUser",
+                "params": {"message": "Hello from metadata!"},
+            },
+            {
+                "label": "Image",
+                "value": "Optional caption",
+                "image": {
+                    "url": "https://picsum.photos/200/300",
+                    "width": "small",
+                    "height": "small",
+                },
+            },
+        ]
+
+        await io.display.metadata("Metadata list", data=data)
+        await io.display.metadata("Metadata grid", layout="grid", data=data)
+        await io.display.metadata("Metadata card", layout="card", data=data)
+
+    await transactions.console()
+    await transactions.run("io.display.metadata")
+    for layout in ["list", "grid", "card"]:
+        await expect(page.locator(f'h4:has-text("Metadata {layout}")')).to_be_visible()
+
+        await expect(page.locator('dt:has-text("Is true")')).to_be_visible()
+        await expect(page.locator('dd:has-text("true")')).to_be_visible()
+        await expect(page.locator('dt:has-text("Is false")')).to_be_visible()
+        await expect(page.locator('dd:has-text("false")')).to_be_visible()
+        await expect(page.locator('dt:has-text("Is null")')).to_be_visible()
+        await expect(page.locator('dt:has-text("Is empty")')).to_be_visible()
+        await expect(page.locator('dt:has-text("Is long string")')).to_be_visible()
+        await expect(
+            page.locator(
+                'dd:has-text("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sit amet quam in lorem")'
+            )
+        ).to_be_visible()
+        await expect(page.locator('dt:has-text("Is number 15")')).to_be_visible()
+        await expect(page.locator('dd:has-text("15")')).to_be_visible()
+        await expect(page.locator('dt:has-text("Is string")')).to_be_visible()
+        await expect(page.locator('dd:has-text("Hello")')).to_be_visible()
+        await expect(page.locator('dt:has-text("Action link")')).to_be_visible()
+        await expect(page.locator('dd a:has-text("Click me")')).to_be_visible()
+        await transactions.press_continue()
+
     await transactions.expect_success()
 
 
@@ -397,6 +588,24 @@ async def test_select_table(
     await transactions.expect_success()
 
 
+async def test_logs(interval: Interval, page: BrowserPage, transactions: Transaction):
+    @interval.action
+    async def logs():
+        ctx = action_ctx_var.get()
+        for i in range(10):
+            await ctx.log("Log number", i)
+
+        await asyncio.sleep(0.5)
+
+    await transactions.console()
+    await transactions.run("logs")
+
+    await transactions.expect_success()
+    log_divs = page.locator("[data-pw-transaction-logs] div")
+    for i in range(10):
+        await expect(log_divs.nth(i)).to_contain_text(f"Log number {i}")
+
+
 async def test_error(interval: Interval, page: BrowserPage, transactions: Transaction):
     @interval.action
     async def error(io: IO):
@@ -409,3 +618,56 @@ async def test_error(interval: Interval, page: BrowserPage, transactions: Transa
     await page.fill('input[type="text"]', "Interval")
     await transactions.press_continue()
     await transactions.expect_failure(message="Unauthorized")
+
+
+async def test_loading(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
+    items_in_queue = 5
+
+    @interval.action
+    async def loading():
+        ctx = action_ctx_var.get()
+
+        await asyncio.sleep(0.5)
+        await ctx.loading.start("Bare title")
+        await asyncio.sleep(0.5)
+        await ctx.loading.update(description="Description text")
+        await asyncio.sleep(0.5)
+        await ctx.loading.start()
+        await asyncio.sleep(0.5)
+        await ctx.loading.update(description="Description only")
+        await asyncio.sleep(0.5)
+        await ctx.loading.update(
+            title="With progress",
+            items_in_queue=items_in_queue,
+        )
+        await asyncio.sleep(0.5)
+        for i in range(items_in_queue):
+            await ctx.loading.complete_one()
+            await asyncio.sleep(0.5)
+
+    await transactions.console()
+    await transactions.run("loading")
+
+    await expect(page.locator('[data-pw-title]:has-text("Bare title")')).to_be_visible()
+    await expect(page.locator("[data-pw-description]")).to_be_hidden()
+
+    await expect(
+        page.locator('[data-pw-description]:has-text("Description text")')
+    ).to_be_visible()
+
+    await expect(page.locator("[data-pw-description]")).to_be_hidden()
+    await expect(page.locator("[data-pw-title]")).to_be_hidden()
+
+    await expect(
+        page.locator('[data-pw-description]:has-text("Description only")')
+    ).to_be_visible()
+    await expect(page.locator("[data-pw-title]")).to_be_hidden()
+
+    await expect(
+        page.locator('[data-pw-title]:has-text("With progress")')
+    ).to_be_visible()
+
+    for i in range(items_in_queue):
+        await expect(page.locator(f"text=Completed {i} of 5")).to_be_visible()
