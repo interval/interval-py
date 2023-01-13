@@ -66,7 +66,7 @@ InputMethodName = Literal[
     "UPLOAD_FILE",
 ]
 
-MultipleableMethodName = Literal["SEARCH"]
+MultipleableMethodName = Literal["SEARCH", "UPLOAD_FILE"]
 
 DisplayMethodName = Literal[
     "DISPLAY_CODE",

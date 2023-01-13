@@ -14,6 +14,7 @@ from typing import (
     Callable,
     Awaitable,
 )
+from typing_extensions import Never
 from urllib.parse import ParseResult, urlparse
 
 from ..io_schema import (
@@ -412,7 +413,7 @@ class IO:
                 ]
             ] = None,
             disabled: Optional[bool] = None,
-        ) -> InputIOPromise[Literal["UPLOAD_FILE"], IntervalFile]:
+        ) -> MultipleableIOPromise[Literal["UPLOAD_FILE"], IntervalFile, Never]:
             async def handle_state_change(
                 state: FileUploadState, props: FileUploadProps
             ) -> FileUploadProps:
@@ -453,7 +454,9 @@ class IO:
                     url=val.url,
                 )
 
-            return InputIOPromise(c, renderer=self._renderer, get_value=get_value)
+            return MultipleableIOPromise(
+                c, renderer=self._renderer, get_value=get_value
+            )
 
     @dataclass
     class Select:

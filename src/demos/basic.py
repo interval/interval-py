@@ -888,7 +888,10 @@ async def validity_tester(io: IO):
     ).validate(validate)
 
 
-@interval.action("io.input.file")
+files = Page("Files")
+
+
+@files.action("io.input.file")
 async def input_file(io: IO):
     file = await io.input.file(
         "Upload file!", help_text="From python!", allowed_extensions=[".txt", ".json"]
@@ -901,6 +904,29 @@ async def input_file(io: IO):
         "extension": file.extension,
         "contents": text,
     }
+
+
+@files.action
+async def multiple(io: IO):
+    files = (
+        await io.input.file(
+            "Upload images",
+            help_text="From python!",
+            allowed_extensions=[".png", ".jpg", ".jpeg"],
+        )
+        .multiple()
+        .optional()
+    )
+
+    if files is None:
+        return
+
+    await io.group(*(io.display.image(file.name, url=file.url) for file in files))
+
+    return {file.name: file.size for file in files}
+
+
+interval.routes.add("files", files)
 
 
 @interval.action("io.confirm_identity")
