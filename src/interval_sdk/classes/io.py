@@ -18,8 +18,11 @@ from typing_extensions import Never
 from urllib.parse import ParseResult, urlparse
 
 from ..io_schema import (
+    ButtonItem,
+    ButtonItemModel,
     DisplayGridProps,
     DisplayGridState,
+    DisplayHeadingProps,
     DisplayTableState,
     GridItem,
     InputTextProps,
@@ -784,11 +787,21 @@ class IO:
         def heading(
             self,
             label: str,
+            *,
+            level: Optional[Literal[2, 3, 4]] = None,
+            description: Optional[str] = None,
+            menu_items: Optional[list[ButtonItem]] = None,
         ) -> DisplayIOPromise[Literal["DISPLAY_HEADING"], None]:
             c = Component(
                 method_name="DISPLAY_HEADING",
                 label=label,
-                initial_props=None,
+                initial_props=DisplayHeadingProps(
+                    level=level,
+                    description=description,
+                    menu_items=[ButtonItemModel.parse_obj(i) for i in menu_items]
+                    if menu_items is not None
+                    else None,
+                ),
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 

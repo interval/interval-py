@@ -162,15 +162,16 @@ class ImageModel(BaseModel):
     size: Optional[ImageSize] = None
 
 
-ButtonTheme = Literal["danger"]
+ButtonTheme = Literal["primary", "secondary", "danger"]
 
 
 class ButtonItem(TypedDict):
     label: str
-    theme: Optional[ButtonTheme]
-    params: Optional[SerializableRecord]
-    url: Optional[str]
-    disabled: Optional[bool]
+    theme: NotRequired[ButtonTheme]
+    route: NotRequired[str]
+    params: NotRequired[SerializableRecord]
+    url: NotRequired[str]
+    disabled: NotRequired[bool]
 
 
 class ButtonItemModel(BaseModel):
@@ -557,6 +558,12 @@ class SelectMultipleProps(BaseModel):
     disabled: Optional[bool]
 
 
+class DisplayHeadingProps(BaseModel):
+    level: Optional[Literal[2, 3, 4]]
+    description: Optional[str]
+    menu_items: Optional[list[ButtonItemModel]]
+
+
 class DisplayCodeProps(BaseModel):
     code: str
     language: Optional[str]
@@ -794,7 +801,7 @@ display_schema: dict[DisplayMethodName, MethodDef] = {
         returns=None,
     ),
     "DISPLAY_HEADING": MethodDef(
-        props={},
+        props=DisplayHeadingProps,
         state=None,
         returns=None,
     ),

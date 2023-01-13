@@ -304,8 +304,24 @@ async def context():
 
 
 @interval.action
-async def io_display_heading(io: IO):
-    await io.display.heading("io.display.heading result")
+async def heading(io: IO):
+    await io.display.heading(
+        "Section heading",
+        level=2,
+        description="A section heading here",
+        menu_items=[
+            {
+                "label": "Link",
+                "url": "https://interval.com",
+                "theme": "primary",
+            },
+            {
+                "label": "Danger",
+                "route": "disabled_inputs",
+                "theme": "danger",
+            },
+        ],
+    )
 
 
 @interval.action
