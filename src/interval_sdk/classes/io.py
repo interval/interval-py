@@ -20,6 +20,7 @@ from urllib.parse import ParseResult, urlparse
 from ..io_schema import (
     ButtonItem,
     ButtonItemModel,
+    CurrencyCode,
     DisplayGridProps,
     DisplayGridState,
     DisplayHeadingProps,
@@ -196,6 +197,7 @@ class IO:
             decimals: None = None,
             disabled: Optional[bool] = None,
             placeholder: Optional[str] = None,
+            currency: Optional[CurrencyCode] = None,
         ) -> InputIOPromise[Literal["INPUT_NUMBER"], int]:
             ...
 
@@ -212,6 +214,7 @@ class IO:
             decimals: int = 0,
             disabled: Optional[bool] = None,
             placeholder: Optional[str] = None,
+            currency: Optional[CurrencyCode] = None,
         ) -> InputIOPromise[Literal["INPUT_NUMBER"], float]:
             ...
 
@@ -227,6 +230,7 @@ class IO:
             decimals: Optional[int] = None,
             disabled: Optional[bool] = None,
             placeholder: Optional[str] = None,
+            currency: Optional[CurrencyCode] = None,
         ):
             c = Component(
                 method_name="INPUT_NUMBER",
@@ -240,6 +244,7 @@ class IO:
                     decimals=decimals,
                     disabled=disabled,
                     placeholder=placeholder,
+                    currency=currency,
                 ),
             )
 

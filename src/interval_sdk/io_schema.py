@@ -444,15 +444,19 @@ class InputEmailProps(BaseModel):
     placeholder: Optional[str]
 
 
+CurrencyCode = Literal["USD", "CAD", "EUR", "GBP", "AUD", "CNY", "JPY"]
+
+
 class InputNumberProps(BaseModel):
     min: Optional[Union[float, int]]
     max: Optional[Union[float, int]]
-    default_value: Optional[Union[float, int]]
-    decimals: Optional[int]
     prepend: Optional[str]
     help_text: Optional[str]
-    disabled: Optional[bool]
     placeholder: Optional[str]
+    default_value: Optional[Union[float, int]]
+    decimals: Optional[int]
+    currency: Optional[CurrencyCode]
+    disabled: Optional[bool]
 
 
 class InputBooleanProps(BaseModel):

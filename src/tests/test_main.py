@@ -362,35 +362,95 @@ async def test_input_text(
     await transactions.expect_success(name="Interval")
 
 
-async def test_input_number(
+async def test_input_email(
     interval: Interval, page: BrowserPage, transactions: Transaction
 ):
-    @interval.action("io.input.number")
-    async def input_number(io: IO):
-        num = await io.input.number("Enter a number")
-        num2 = await io.input.number(
-            f"Enter a second number that's greater than {num}", min=num + 1
-        )
-
-        return {"sum": num + num2}
+    @interval.action("io.input.email")
+    async def io_input_email(io: IO):
+        email = await io.input.email("Email address")
+        return {"email": email}
 
     await transactions.console()
-    await transactions.run("io.input.number")
+    await transactions.run("io.input.email")
 
-    await page.click("text=Enter a number")
-    await page.fill('input[inputmode="numeric"]', "12")
+    await page.click("text=Email address")
+    await page.keyboard.type("notanemail")
     await transactions.press_continue()
+    # will be prevented by browser email validator
 
-    await page.click("text=Enter a second number")
-    await page.fill('input[inputmode="numeric"]', "7")
+    await page.click("text=Email address")
+    await page.keyboard.type("hello@interval.com")
     await transactions.press_continue()
-    await transactions.expect_validation_error(
-        "Please enter a number greater than or equal to 13."
-    )
-    await page.fill('input[inputmode="numeric"]', "13")
+    await transactions.expect_success(email="hello@interval.com")
 
-    await transactions.press_continue()
-    await transactions.expect_success(sum="25")
+
+class TestInputNumber:
+    async def test_input_number(
+        self, interval: Interval, page: BrowserPage, transactions: Transaction
+    ):
+        @interval.action("io.input.number")
+        async def input_number(io: IO):
+            num = await io.input.number("Enter a number")
+            num2 = await io.input.number(
+                f"Enter a second number that's greater than {num}", min=num + 1
+            )
+
+            return {"sum": num + num2}
+
+        await transactions.console()
+        await transactions.run("io.input.number")
+
+        await page.click("text=Enter a number")
+        await page.fill('input[inputmode="numeric"]', "12")
+        await transactions.press_continue()
+
+        await page.click("text=Enter a second number")
+        await page.fill('input[inputmode="numeric"]', "7")
+        await transactions.press_continue()
+        await transactions.expect_validation_error(
+            "Please enter a number greater than or equal to 13."
+        )
+        await page.fill('input[inputmode="numeric"]', "13")
+
+        await transactions.press_continue()
+        await transactions.expect_success(sum="25")
+
+    async def test_currency(
+        self, interval: Interval, page: BrowserPage, transactions: Transaction
+    ):
+        @interval.action
+        async def currency(io: IO):
+            return await io.group(
+                usd=io.input.number("United States Dollar", min=10, currency="USD"),
+                eur=io.input.number("Euro", currency="EUR"),
+                jpy=io.input.number("Japanese yen", currency="JPY", decimals=3),
+            )
+
+        await transactions.console()
+        await transactions.run("currency")
+
+        await page.locator("text=United States Dollar").click()
+        await page.keyboard.type("9.99")
+        await page.locator("text=Euro").click()
+        await page.keyboard.type("10.001")
+        await page.locator("text=Japanese yen").click()
+        await page.keyboard.type("12.345")
+        await transactions.press_continue()
+        await transactions.expect_validation_error(
+            "Please enter a number greater than or equal to 10."
+        )
+        await transactions.expect_validation_error(
+            "Please enter a number with up to 2 decimal places."
+        )
+        await page.locator("input").nth(0).fill("10")
+        await page.locator("input").nth(1).fill("10.01")
+
+        await transactions.press_continue()
+        await transactions.expect_success(
+            usd="10",
+            eur="10.01",
+            jpy="12.345",
+        )
 
 
 async def test_input_rich_text(
