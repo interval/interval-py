@@ -6,11 +6,22 @@ from pathlib import Path
 from typing_extensions import NotRequired
 
 from playwright.async_api import Page as BrowserPage, expect
+import pytest
 
-from interval_sdk import Interval, IO, io_var, action_ctx_var, ctx_var
+from interval_sdk import (
+    Interval,
+    IO,
+    ActionContext,
+    io_var,
+    action_ctx_var,
+    ctx_var,
+    Page,
+    Layout,
+)
 from interval_sdk.io_schema import LabelValue
 
 from . import Transaction
+from .data.mock_db import MockDb
 
 
 async def test_context(
@@ -671,3 +682,184 @@ async def test_loading(
 
     for i in range(items_in_queue):
         await expect(page.locator(f"text=Completed {i} of 5")).to_be_visible()
+
+
+# The `before_listen` and `after_listen` tests from JS are basically
+# performed in all tests with the current isolated testing model
+
+
+async def test_self_destructing(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
+    @interval.action
+    async def self_destructing():
+        interval.routes.remove("self_destructing")
+        return "Goodbye!"
+
+    await transactions.console()
+    await transactions.run("self_destructing")
+    await transactions.expect_success()
+    await page.wait_for_timeout(0.2)
+    await transactions.console()
+    await expect(page.locator("[data-pw-run-slug='self_destructing']")).to_be_hidden()
+
+
+class TestRedirects:
+    async def test_url(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def redirect_url(io: IO, ctx: ActionContext):
+            url = (await io.input.url("Enter a URL")).geturl()
+            await ctx.redirect(url=url)
+            return {"url": url}
+
+        await transactions.console()
+        await transactions.run("redirect_url")
+        url = "https://interval.com/"
+
+        await page.fill("text=Enter a URL", url)
+        await transactions.press_continue()
+        await page.wait_for_url(url)
+
+    async def test_route(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def redirect_route(io: IO, ctx: ActionContext):
+            [route, params_str] = await io.group(
+                io.input.text("Action slug"),
+                io.input.text("Params", multiline=True).optional(),
+            )
+
+            params = json.loads(params_str) if params_str is not None else None
+
+            await ctx.redirect(route=route, params=params)
+
+        @interval.action
+        async def redirect_dest():
+            ctx = ctx_var.get()
+            return ctx.params
+
+        await transactions.console()
+        await transactions.run("redirect_route")
+        message = "Hello, from a redirect!"
+
+        await page.fill("text=Action slug", "redirect_dest")
+        await page.fill("text=Params", json.dumps({"message": message}))
+        await transactions.press_continue()
+        await page.wait_for_url(re.compile("redirect_dest"))
+        await transactions.expect_success({"message": message})
+
+
+class TestUnlisted:
+    async def test_action(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action(unlisted=True)
+        async def unlisted_action():
+            return "Hello, world!"
+
+        await asyncio.sleep(0.5)  # wait for interval to initialize new action
+        await transactions.console()
+        await expect(
+            page.locator('[data-pw-run-slug="unlisted_action"]')
+        ).to_be_hidden()
+        await page.goto(f"{transactions.config.console_url()}/unlisted_action")
+        await transactions.expect_success()
+
+    async def test_page(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        unlisted_page = Page("Unlisted page", unlisted=True)
+
+        @unlisted_page.action
+        async def unlisted_listed():
+            return "Hello, world!"
+
+        interval.routes.add("unlisted_page", unlisted_page)
+
+        await asyncio.sleep(0.5)  # wait for interval to initialize new action
+        await transactions.console()
+        await expect(page.locator('[data-pw-run-slug="unlisted_page"]')).to_be_hidden()
+        await page.goto(f"{transactions.config.console_url()}/unlisted_page")
+        await expect(page.locator('h2:has-text("Unlisted page")')).to_be_visible()
+        await transactions.run("unlisted_page/unlisted_listed")
+        await transactions.expect_success()
+
+
+class TestPages:
+    def init_users(self, interval: Interval, mock_db: MockDb):
+        users = Page("Users")
+
+        @users.handle
+        async def handler(display: IO.Display):
+            return Layout(
+                title="Users",
+                menu_items=[
+                    {
+                        "label": "View funnel",
+                        "route": "users/view_funnel",
+                    },
+                    {"label": "Create user", "route": "users/create"},
+                ],
+                children=[display.table("Users", data=mock_db.get_users())],
+            )
+
+        @users.action
+        async def view_funnel():
+            io = io_var.get()
+            await io.display.markdown("# 🌪️")
+
+        interval.routes.add("users", users)
+
+    @pytest.mark.xdist_group("users")
+    async def test_handler(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+        mock_db: MockDb,
+    ):
+        self.init_users(interval, mock_db)
+        await transactions.console()
+        await transactions.navigate("users")
+
+        await expect(page.locator('h2:text("Users")')).to_be_visible()
+        await expect(page.locator(".iv-table")).to_be_visible()
+        await expect(page.locator("text=of 313").nth(0)).to_be_visible()
+
+    @pytest.mark.xdist_group("users")
+    async def test_sub_action(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+        mock_db: MockDb,
+    ):
+        self.init_users(interval, mock_db)
+        await transactions.console()
+        await transactions.navigate("users")
+        await expect(
+            page.locator(
+                "a[href='/dashboard/test-runner/develop/actions/users/view_funnel']:has-text('View funnel')"
+            )
+        ).to_be_visible()
+        await transactions.run("users/view_funnel")
+
+        await expect(page.locator("h2:text('View funnel')")).to_be_visible()
+        await expect(page.locator("text=🌪️")).to_be_visible()
+        await transactions.press_continue()
+        await transactions.expect_success()

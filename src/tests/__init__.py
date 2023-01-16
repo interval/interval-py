@@ -31,6 +31,9 @@ class Config:
 
         return self.app_url(f"/dashboard/{org_slug}/{path}")
 
+    def console_url(self) -> str:
+        return self.dashboard_url("develop/actions")
+
     async def log_in(self, context: BrowserContext):
         page = await context.new_page()
 
@@ -46,19 +49,26 @@ class Config:
         return page
 
 
-@dataclass
 class Transaction:
     page: Page
+    config: Config
+
+    def __init__(self, page: Page, config: Config):
+        self.page = page
+        self.config = config
 
     async def console(self):
-        await self.page.goto(base_config.dashboard_url("develop/console"))
+        await self.page.goto(self.config.console_url())
+
+    async def navigate(self, page_slug: str):
+        await self.page.click(f"[data-pw-action-group='{page_slug}']")
 
     async def run(self, slug: str):
         print("Starting test", slug)
-        await self.page.locator(f"[data-pw-run-slug='{slug}']").click()
+        await self.page.click(f"[data-pw-run-slug='{slug}']")
 
     async def press_continue(self, label: str = "Continue"):
-        await self.page.locator(f'button:has-text("{label}")').click()
+        await self.page.click(f'button:has-text("{label}")')
 
     async def expect_validation_error(self, message: str = "This field is required"):
         await expect(

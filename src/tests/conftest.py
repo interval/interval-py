@@ -2,6 +2,7 @@
 
 import asyncio
 from typing import AsyncIterator
+from faker import Faker
 
 import pytest
 from playwright.async_api import (
@@ -13,6 +14,7 @@ from playwright.async_api import (
 )
 
 from interval_sdk import Interval
+from tests.data.mock_db import MockDb
 
 from . import Config, base_config as base_config, Transaction
 
@@ -81,8 +83,13 @@ async def interval(event_loop: asyncio.AbstractEventLoop, config: Config):
 
 
 @pytest.fixture
-def transactions(page: Page) -> Transaction:
-    return Transaction(page)
+def transactions(page: Page, config: Config) -> Transaction:
+    return Transaction(page=page, config=config)
+
+
+@pytest.fixture
+def mock_db(faker: Faker) -> MockDb:
+    return MockDb(faker)
 
 
 @pytest.fixture(scope="session")

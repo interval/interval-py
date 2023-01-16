@@ -152,6 +152,9 @@ async def handler(display: IO.Display):
 
     return Layout(
         title=title,
+        menu_items=[
+            {"label": "Sub action", "route": "new_page/sub_action"},
+        ],
         description=description(),
         children=[
             display.markdown("Hey!"),
@@ -1019,6 +1022,28 @@ async def disabled_inputs(io: IO):
     )
     return "All done!"
 
+
+@interval.action
+async def redirect_url(io: IO, ctx: ActionContext):
+    url = (await io.input.url("Enter a URL")).geturl()
+    await ctx.redirect(url=url)
+    return {"url": url}
+
+
+@interval.action(unlisted=True)
+async def unlisted_action():
+    return "Hello, world!"
+
+
+unlisted_page = Page("Unlisted page", unlisted=True)
+
+
+@unlisted_page.action
+async def unlisted_listed():
+    return "Hello, world!"
+
+
+interval.routes.add("unlisted_page", unlisted_page)
 
 dynamic_group = Page(name="Dynamic")
 
