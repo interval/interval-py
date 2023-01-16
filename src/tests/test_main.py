@@ -337,14 +337,25 @@ async def test_table(interval: Interval, page: BrowserPage, transactions: Transa
 async def test_text(interval: Interval, page: BrowserPage, transactions: Transaction):
     @interval.action("io.input.text")
     async def io_input_text(io: IO):
-        name = await io.input.text("First name")
+        name = await io.input.text("First name", min_length=5, max_length=20)
         return {"name": name}
 
     await transactions.console()
     await transactions.run("io.input.text")
 
     await page.click("text=First name")
-    await page.fill('input[type="text"]', "Interval")
+    input = page.locator('input[type="text"]')
+    message = "Please enter a value with between 5 and 20 characters."
+
+    await input.fill("Int")
+    await transactions.press_continue()
+    await transactions.expect_validation_error(message)
+
+    await input.fill("Interval Interval Interval Interval")
+    await transactions.press_continue()
+    await transactions.expect_validation_error(message)
+
+    await input.fill("Interval")
     await transactions.press_continue()
     await transactions.expect_success({"name": "Interval"})
 

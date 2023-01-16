@@ -143,6 +143,8 @@ class IO:
             lines: Optional[int] = None,
             disabled: Optional[bool] = None,
             placeholder: Optional[str] = None,
+            min_length: Optional[int] = None,
+            max_length: Optional[int] = None,
         ) -> InputIOPromise[Literal["INPUT_TEXT"], str]:
             c = Component(
                 method_name="INPUT_TEXT",
@@ -154,6 +156,8 @@ class IO:
                     lines=lines,
                     disabled=disabled,
                     placeholder=placeholder,
+                    min_length=min_length,
+                    max_length=max_length,
                 ),
             )
             return InputIOPromise(c, renderer=self._renderer)

@@ -428,11 +428,13 @@ class MethodDef(Generic[PropsType, StateType, ReturnType]):
 
 class InputTextProps(BaseModel):
     help_text: Optional[str]
+    placeholder: Optional[str]
     default_value: Optional[str]
     multiline: Optional[bool]
     lines: Optional[int]
     disabled: Optional[bool]
-    placeholder: Optional[str]
+    min_length: Optional[int]
+    max_length: Optional[int]
 
 
 class InputEmailProps(BaseModel):
