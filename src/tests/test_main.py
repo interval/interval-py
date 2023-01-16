@@ -40,11 +40,7 @@ async def test_context(
     await transactions.run("context")
     await page.goto(page.url + "?message=Hello")
     await transactions.expect_success(
-        {
-            "user": "Test Runner",
-            "message": "Hello",
-            "environment": "development",
-        }
+        user="Test Runner", message="Hello", environment="development"
     )
 
 
@@ -132,12 +128,7 @@ async def test_group(interval: Interval, page: BrowserPage, transactions: Transa
     await page.keyboard.type("1337")
     await transactions.press_continue()
 
-    await transactions.expect_success(
-        {
-            "text": "Hello",
-            "num": "1,337",
-        }
-    )
+    await transactions.expect_success(text="Hello", num="1,337")
 
 
 async def test_display_image(
@@ -351,6 +342,9 @@ async def test_input_text(
     await transactions.console()
     await transactions.run("io.input.text")
 
+    await transactions.press_continue()
+    await transactions.expect_validation_error()
+
     await page.click("text=First name")
     input = page.locator('input[type="text"]')
     message = "Please enter a value with between 5 and 20 characters."
@@ -365,7 +359,7 @@ async def test_input_text(
 
     await input.fill("Interval")
     await transactions.press_continue()
-    await transactions.expect_success({"name": "Interval"})
+    await transactions.expect_success(name="Interval")
 
 
 async def test_input_number(
@@ -396,7 +390,7 @@ async def test_input_number(
     await page.fill('input[inputmode="numeric"]', "13")
 
     await transactions.press_continue()
-    await transactions.expect_success({"sum": "25"})
+    await transactions.expect_success(sum="25")
 
 
 async def test_input_rich_text(
@@ -558,7 +552,7 @@ async def test_select_multiple(
     await transactions.press_continue()
 
     await transactions.expect_success(
-        {
+        **{
             date_val: "true",
             "True": "false",
             "3": "true",
@@ -776,7 +770,7 @@ class TestRedirects:
         await page.fill("text=Params", json.dumps({"message": message}))
         await transactions.press_continue()
         await page.wait_for_url(re.compile("redirect_dest"))
-        await transactions.expect_success({"message": message})
+        await transactions.expect_success(message=message)
 
 
 class TestUnlisted:
