@@ -48,7 +48,7 @@ async def test_context(
     )
 
 
-async def test_heading(
+async def test_display_heading(
     interval: Interval, page: BrowserPage, transactions: Transaction
 ):
     @interval.action("io.display.heading")
@@ -140,7 +140,9 @@ async def test_group(interval: Interval, page: BrowserPage, transactions: Transa
     )
 
 
-async def test_image(interval: Interval, page: BrowserPage, transactions: Transaction):
+async def test_display_image(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
     @interval.action("io.display.image")
     async def display_image(io: IO):
         await io.display.image(
@@ -182,7 +184,9 @@ async def test_image(interval: Interval, page: BrowserPage, transactions: Transa
     await transactions.expect_success()
 
 
-async def test_object(interval: Interval, page: BrowserPage, transactions: Transaction):
+async def test_display_object(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
     @interval.action("io.display.object")
     async def display_object(io: IO):
         await io.display.object(
@@ -215,7 +219,7 @@ async def test_object(interval: Interval, page: BrowserPage, transactions: Trans
     await transactions.expect_success()
 
 
-async def test_metadata(
+async def test_display_metadata(
     interval: Interval, page: BrowserPage, transactions: Transaction
 ):
     @interval.action("io.display.metadata")
@@ -298,7 +302,9 @@ async def test_metadata(
     await transactions.expect_success()
 
 
-async def test_table(interval: Interval, page: BrowserPage, transactions: Transaction):
+async def test_display_table(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
     @interval.action("io.display.table")
     async def display_table(io: IO):
         await io.display.table(
@@ -334,7 +340,9 @@ async def test_table(interval: Interval, page: BrowserPage, transactions: Transa
     await transactions.expect_success()
 
 
-async def test_text(interval: Interval, page: BrowserPage, transactions: Transaction):
+async def test_input_text(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
     @interval.action("io.input.text")
     async def io_input_text(io: IO):
         name = await io.input.text("First name", min_length=5, max_length=20)
@@ -360,7 +368,9 @@ async def test_text(interval: Interval, page: BrowserPage, transactions: Transac
     await transactions.expect_success({"name": "Interval"})
 
 
-async def test_number(interval: Interval, page: BrowserPage, transactions: Transaction):
+async def test_input_number(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
     @interval.action("io.input.number")
     async def input_number(io: IO):
         num = await io.input.number("Enter a number")
@@ -389,7 +399,7 @@ async def test_number(interval: Interval, page: BrowserPage, transactions: Trans
     await transactions.expect_success({"sum": "25"})
 
 
-async def test_rich_text(
+async def test_input_rich_text(
     interval: Interval, page: BrowserPage, transactions: Transaction
 ):
     @interval.action("io.input.richText")
