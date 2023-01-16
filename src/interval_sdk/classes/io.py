@@ -328,21 +328,36 @@ class IO:
             help_text: Optional[str] = None,
             default_value: Optional[date] = None,
             disabled: Optional[bool] = None,
+            min: Optional[date] = None,
+            max: Optional[date] = None,
         ) -> InputIOPromise[Literal["INPUT_DATE"], date]:
-            model_default = None
-            if default_value is not None:
-                model_default = DateModel(
-                    year=default_value.year,
-                    month=default_value.month,
-                    day=default_value.day,
-                )
             c = Component(
                 method_name="INPUT_DATE",
                 label=label,
                 initial_props=InputDateProps(
                     help_text=help_text,
-                    default_value=model_default,
+                    default_value=DateModel(
+                        year=default_value.year,
+                        month=default_value.month,
+                        day=default_value.day,
+                    )
+                    if default_value is not None
+                    else None,
                     disabled=disabled,
+                    min=DateModel(
+                        year=min.year,
+                        month=min.month,
+                        day=min.day,
+                    )
+                    if min is not None
+                    else None,
+                    max=DateModel(
+                        year=max.year,
+                        month=max.month,
+                        day=max.day,
+                    )
+                    if max is not None
+                    else None,
                 ),
             )
 
@@ -358,20 +373,26 @@ class IO:
             help_text: Optional[str] = None,
             default_value: Optional[time] = None,
             disabled: Optional[bool] = None,
+            min: Optional[time] = None,
+            max: Optional[time] = None,
         ) -> InputIOPromise[Literal["INPUT_TIME"], time]:
-            model_default = None
-            if default_value is not None:
-                model_default = TimeModel(
-                    hour=default_value.hour,
-                    minute=default_value.minute,
-                )
             c = Component(
                 method_name="INPUT_TIME",
                 label=label,
                 initial_props=InputTimeProps(
                     help_text=help_text,
-                    default_value=model_default,
+                    default_value=TimeModel(
+                        hour=default_value.hour, minute=default_value.minute
+                    )
+                    if default_value is not None
+                    else None,
                     disabled=disabled,
+                    min=TimeModel(hour=min.hour, minute=min.minute)
+                    if min is not None
+                    else None,
+                    max=TimeModel(hour=max.hour, minute=max.minute)
+                    if max is not None
+                    else None,
                 ),
             )
 
@@ -387,23 +408,42 @@ class IO:
             help_text: Optional[str] = None,
             default_value: Optional[datetime] = None,
             disabled: Optional[bool] = None,
+            min: Optional[datetime] = None,
+            max: Optional[datetime] = None,
         ) -> InputIOPromise[Literal["INPUT_DATETIME"], datetime]:
-            model_default = None
-            if default_value is not None:
-                model_default = DateTimeModel(
-                    year=default_value.year,
-                    month=default_value.month,
-                    day=default_value.day,
-                    hour=default_value.hour,
-                    minute=default_value.minute,
-                )
             c = Component(
                 method_name="INPUT_DATETIME",
                 label=label,
                 initial_props=InputDateTimeProps(
                     help_text=help_text,
-                    default_value=model_default,
+                    default_value=DateTimeModel(
+                        year=default_value.year,
+                        month=default_value.month,
+                        day=default_value.day,
+                        hour=default_value.hour,
+                        minute=default_value.minute,
+                    )
+                    if default_value is not None
+                    else None,
                     disabled=disabled,
+                    min=DateTimeModel(
+                        year=min.year,
+                        month=min.month,
+                        day=min.day,
+                        hour=min.hour,
+                        minute=min.minute,
+                    )
+                    if min is not None
+                    else None,
+                    max=DateTimeModel(
+                        year=max.year,
+                        month=max.month,
+                        day=max.day,
+                        hour=max.hour,
+                        minute=max.minute,
+                    )
+                    if max is not None
+                    else None,
                 ),
             )
 

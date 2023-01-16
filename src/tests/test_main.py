@@ -1,6 +1,6 @@
 import asyncio
 import json, re
-from datetime import date
+from datetime import date, time, datetime
 from pathlib import Path
 
 from typing_extensions import NotRequired
@@ -22,6 +22,7 @@ from interval_sdk.io_schema import LabelValue
 
 from . import Transaction
 from .data.mock_db import MockDb
+from .utils.date import input_date, input_time
 
 
 async def test_context(
@@ -776,6 +777,227 @@ async def test_select_table(
     )
     await transactions.press_continue()
     await transactions.expect_success()
+
+
+async def test_input_date(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
+    @interval.action
+    async def input_date(io: IO):
+        d = await io.input.date(
+            "Enter date", min=date(2000, 1, 1), max=date(2022, 12, 30)
+        )
+        return {
+            "year": d.year,
+            "month": d.month,
+            "day": d.day,
+            "py_date": d,
+        }
+
+    await transactions.console()
+    await transactions.run("input_date")
+
+    await transactions.press_continue()
+    await transactions.expect_validation_error()
+
+    input = page.locator('.iv-datepicker input[type="text"]')
+    await input.fill("12/34/5678")
+    await page.wait_for_timeout(
+        200
+    )  # wait for 100ms delay we apply before showing the popover
+    await input.press("Tab")
+    await transactions.press_continue()
+    await transactions.expect_validation_error("Please enter a valid date.")
+
+    await input.fill("6/23/1997")
+    await page.wait_for_timeout(200)
+    await input.press("Tab")
+    await transactions.press_continue()
+    validationErrorMessage = (
+        "Please enter a date between January 1, 2000 and December 30, 2022."
+    )
+    await transactions.expect_validation_error(validationErrorMessage)
+
+    await input.fill("1/2/2023")
+    await page.wait_for_timeout(200)
+    await input.press("Tab")
+    await transactions.press_continue()
+    await transactions.expect_validation_error(validationErrorMessage)
+
+    await input.click()
+    await page.wait_for_timeout(200)
+    await input.fill("02/22/2022")
+    await page.locator('.flatpickr-day:has-text("25")').click()
+    await expect(input).to_have_value("02/25/2022")
+
+    await transactions.press_continue()
+    await transactions.expect_success(
+        year="2,022", month="2", day="25", py_date=date(2022, 2, 25).isoformat()
+    )
+
+
+async def test_input_time(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
+    @interval.action
+    async def input_time(io: IO):
+        t = await io.input.time("Enter time", min=time(8, 30), max=time(20))
+        return {
+            "hour": t.hour,
+            "minute": t.minute,
+            "py_time": t,
+        }
+
+    await transactions.console()
+    await transactions.run("input_time")
+
+    await transactions.press_continue()
+    await transactions.expect_validation_error()
+
+    await expect(page.locator(".iv-datepicker")).to_be_visible()
+    selects = page.locator(".iv-datepicker select")
+
+    [h, m, ampm] = [selects.nth(0), selects.nth(1), selects.nth(2)]
+
+    await h.select_option(value="8")
+    await h.press("Tab")
+
+    await expect(m).to_be_focused()
+    await m.type("36")
+    await m.press("Tab")
+
+    await expect(ampm).to_be_focused()
+    await ampm.select_option("pm")
+
+    await transactions.press_continue()
+    validation_error_message = "Please enter a time between 8:30 AM and 8:00 PM."
+
+    await transactions.expect_validation_error(validation_error_message)
+
+    await h.select_option(value="2")
+    await ampm.select_option("am")
+    await transactions.press_continue()
+    await transactions.expect_validation_error(validation_error_message)
+
+    await ampm.select_option("pm")
+    await transactions.press_continue()
+    await transactions.expect_success(
+        hour="14",
+        minute="36",
+        py_time=time(14, 36).isoformat(),
+    )
+
+
+class TestInputDatetime:
+    async def test_input_datetime_basic(
+        self, interval: Interval, page: BrowserPage, transactions: Transaction
+    ):
+        @interval.action
+        async def input_datetime(io: IO):
+            dt = await io.input.datetime("Enter datetime")
+            return {
+                "year": dt.year,
+                "month": dt.month,
+                "day": dt.day,
+                "hour": dt.hour,
+                "minute": dt.minute,
+                "py_datetime": dt,
+            }
+
+        await transactions.console()
+        await transactions.run("input_datetime")
+
+        await input_date(page)
+        await input_time(page)
+        await transactions.press_continue()
+        await transactions.expect_success(
+            year="2,022",
+            month="2",
+            day="25",
+            hour="14",
+            minute="36",
+            py_datetime=datetime(2022, 2, 25, 14, 36).isoformat(),
+        )
+
+    async def test_input_datetime_default(
+        self, interval: Interval, page: BrowserPage, transactions: Transaction
+    ):
+        @interval.action
+        async def input_datetime_default(io: IO):
+            dt = await io.input.datetime(
+                "Enter datetime", default_value=datetime(2020, 6, 23, 13, 25)
+            )
+            return {
+                "year": dt.year,
+                "month": dt.month,
+                "day": dt.day,
+                "hour": dt.hour,
+                "minute": dt.minute,
+                "py_datetime": dt,
+            }
+
+        await transactions.console()
+        await transactions.run("input_datetime_default")
+
+        await transactions.press_continue()
+        await transactions.expect_success(
+            year="2,020",
+            month="6",
+            day="23",
+            hour="13",
+            minute="25",
+            py_datetime=datetime(2020, 6, 23, 13, 25).isoformat(),
+        )
+
+    async def test_input_datetime_min_max(
+        self, interval: Interval, page: BrowserPage, transactions: Transaction
+    ):
+        @interval.action
+        async def input_datetime_min_max(io: IO):
+            dt = await io.input.datetime(
+                "Enter datetime",
+                min=datetime(2000, 1, 1, 7, 30),
+                max=datetime(2022, 12, 30, 13, 0),
+            )
+            return {
+                "year": dt.year,
+                "month": dt.month,
+                "day": dt.day,
+                "hour": dt.hour,
+                "minute": dt.minute,
+                "py_datetime": dt,
+            }
+
+        await transactions.console()
+        await transactions.run("input_datetime_min_max")
+
+        await expect(page.locator(".iv-datepicker")).to_be_visible()
+        dateInput = page.locator('.iv-datepicker input[type="text"]')
+        await dateInput.fill("1/1/2000")
+
+        selects = page.locator(".iv-datepicker select")
+        [h, m, ampm] = [selects.nth(0), selects.nth(1), selects.nth(2)]
+        await h.select_option(value="6")
+        await m.type("0")
+        await ampm.select_option("am")
+
+        validation_error_message = "Please enter a date between Jan 1, 2000, 7:30 AM and Dec 30, 2022, 1:00 PM."
+
+        await transactions.press_continue()
+        await transactions.expect_validation_error(validation_error_message)
+
+        await dateInput.fill("12/30/2022")
+        await h.select_option(value="8")
+        await m.type("45")
+        await ampm.select_option("pm")
+
+        await transactions.press_continue()
+        await transactions.expect_validation_error(validation_error_message)
+
+        await ampm.select_option("am")
+
+        await transactions.press_continue()
+        await transactions.expect_success()
 
 
 async def test_logs(interval: Interval, page: BrowserPage, transactions: Transaction):

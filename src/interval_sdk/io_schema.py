@@ -502,18 +502,24 @@ class InputDateProps(BaseModel):
     help_text: Optional[str]
     default_value: Optional[DateModel]
     disabled: Optional[bool]
+    min: Optional[DateModel]
+    max: Optional[DateModel]
 
 
 class InputTimeProps(BaseModel):
     help_text: Optional[str]
     default_value: Optional[TimeModel]
     disabled: Optional[bool]
+    min: Optional[TimeModel]
+    max: Optional[TimeModel]
 
 
 class InputDateTimeProps(BaseModel):
     help_text: Optional[str]
     default_value: Optional[DateTimeModel]
     disabled: Optional[bool]
+    min: Optional[DateTimeModel]
+    max: Optional[DateTimeModel]
 
 
 class InputSpreadsheetProps(BaseModel):
