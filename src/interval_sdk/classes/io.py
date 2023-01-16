@@ -1231,13 +1231,15 @@ class IO:
     def confirm_identity(
         self,
         label: str,
-        grace_period_ms: Optional[int] = None,
+        grace_period: Optional[float] = None,
     ) -> ExclusiveIOPromise[Literal["CONFIRM_IDENTITY"], bool]:
         c = Component(
             method_name="CONFIRM_IDENTITY",
             label=label,
             initial_props=ConfirmIdentityProps(
-                grace_period_ms=grace_period_ms,
+                grace_period_ms=int(grace_period * 1000)
+                if grace_period is not None
+                else None,
             ),
         )
         return ExclusiveIOPromise(c, renderer=self._renderer)

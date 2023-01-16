@@ -495,6 +495,110 @@ async def test_input_rich_text(
     await transactions.expect_success()
 
 
+async def test_confirm(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
+    @interval.action
+    async def confirm(io: IO):
+        first = await io.confirm("Are you sure?", help_text="Really sure?")
+        second = await io.confirm("Still?")
+
+        return {
+            "first": first,
+            "second": second,
+        }
+
+    await transactions.console()
+    await transactions.run("confirm")
+
+    await expect(page.locator("text=Are you sure?")).to_be_visible()
+    await expect(page.locator("text=Really sure?")).to_be_visible()
+    await page.locator('button:has-text("Confirm")').click()
+
+    await expect(page.locator("text=Still?")).to_be_visible()
+    await page.locator('button:has-text("Cancel")').click()
+
+    await transactions.expect_success(first="true", second="false")
+
+
+async def test_confirm_identity(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
+    @interval.action
+    async def confirm_identity(io: IO):
+        first = await io.confirm_identity("First", grace_period=0)
+        second = await io.confirm_identity("Second")
+        third = await io.confirm_identity("Third", grace_period=0)
+
+        return {
+            "first": first,
+            "second": second,
+            "third": third,
+        }
+
+    await transactions.console()
+    await transactions.run("confirm_identity")
+
+    await expect(
+        page.locator("text=Please confirm your identity to continue")
+    ).to_be_visible()
+    await expect(page.locator("text=First")).to_be_visible()
+    await page.fill('input[type="password"]', transactions.config.login.password)
+    await page.locator('button:has-text("Verify")').click()
+    await expect(page.locator("text=Second")).to_be_hidden()
+    await expect(page.locator("text=Third")).to_be_visible()
+    await page.locator('button:has-text("Cancel")').click()
+
+    await transactions.expect_success(
+        first="true",
+        second="true",
+        third="false",
+    )
+
+
+async def test_input_url(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
+    @interval.action("io.input.url")
+    async def io_input_url(io: IO):
+        url = await io.input.url("Enter a URL")
+        secure_url = await io.input.url(
+            "Enter a secure URL", allowed_protocols=["https"]
+        )
+        return {
+            "url": url.geturl(),
+            "secure_url": secure_url.geturl(),
+        }
+
+    await transactions.console()
+    await transactions.run("io.input.url")
+
+    await transactions.press_continue()
+    await transactions.expect_validation_error()
+
+    await page.click("text=Enter a URL")
+    input = page.locator('input[type="text"]')
+    await input.fill("not a url")
+    await transactions.press_continue()
+    validation_error_message = "Please enter a valid URL."
+    await transactions.expect_validation_error(validation_error_message)
+
+    await input.fill("https://interval.com/?isTest=true&foo=bar")
+    await transactions.press_continue()
+
+    secureInput = page.locator('input[type="text"]')
+    await secureInput.fill("http://interval.com")
+    await transactions.press_continue()
+    await transactions.expect_validation_error("The URL must begin with https.")
+
+    await secureInput.fill("https://interval.com")
+    await transactions.press_continue()
+    await transactions.expect_success(
+        url="https://interval.com/?isTest=true&foo=bar",
+        secure_url="https://interval.com",
+    )
+
+
 async def test_select_single(
     interval: Interval, page: BrowserPage, transactions: Transaction
 ):
