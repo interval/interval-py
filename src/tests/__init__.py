@@ -70,6 +70,10 @@ class Transaction:
     async def press_continue(self, label: str = "Continue"):
         await self.page.click(f'button:has-text("{label}")')
 
+    async def restart(self):
+        await self.page.locator("button:has-text('New transaction')").click()
+        await self.page.wait_for_load_state("networkidle")
+
     async def expect_validation_error(self, message: str = "This field is required"):
         await expect(
             self.page.locator(f"[data-pw='field-error']:has-text('{message}')")

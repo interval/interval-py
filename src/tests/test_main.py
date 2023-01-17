@@ -2,9 +2,9 @@ import asyncio
 import json, re
 from datetime import date, time, datetime
 from pathlib import Path
-from typing import TypedDict, cast
+from typing import Union, cast
 
-from typing_extensions import NotRequired
+from typing_extensions import NotRequired, TypedDict
 
 from playwright.async_api import Page as BrowserPage, expect
 import pytest
@@ -19,7 +19,7 @@ from interval_sdk import (
     Page,
     Layout,
 )
-from interval_sdk.io_schema import LabelValue, RichSelectOption
+from interval_sdk.io_schema import LabelValue, RenderableSearchResult, RichSelectOption
 
 from . import Transaction
 from .data.mock_db import MockDb
@@ -30,8 +30,10 @@ async def test_context(
     interval: Interval, page: BrowserPage, transactions: Transaction
 ):
     @interval.action
-    async def context():
+    async def context(_, ctx_arg: ActionContext):
         ctx = ctx_var.get()
+        assert ctx_arg == ctx
+
         return {
             "user": f"{ctx.user.first_name} {ctx.user.last_name}",
             "message": ctx.params.get("message", None),
@@ -746,6 +748,33 @@ async def test_select_multiple(
     )
 
 
+async def test_select_invalid_defaults(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
+    @interval.action
+    async def select_invalid_defaults(io: IO):
+        await io.group(
+            io.select.single(
+                "Choose one",
+                options=[],
+                default_value={"label": "Invalid", "value": "invalid"},
+            ),
+            io.select.multiple(
+                "Choose some",
+                options=[],
+                default_value=[
+                    {"label": "Invalid", "value": "invalid"},
+                    {"label": "Also invalid", "value": "also_invalid"},
+                ],
+            ),
+        )
+
+    await transactions.console()
+    await transactions.run("select_invalid_defaults")
+    await transactions.press_continue()
+    await transactions.expect_validation_error()
+
+
 async def test_select_table(
     interval: Interval, page: BrowserPage, transactions: Transaction
 ):
@@ -1049,6 +1078,299 @@ class TestInputDatetime:
         await transactions.expect_success()
 
 
+class TestSearch:
+    async def test_one_search(
+        self, interval: Interval, page: BrowserPage, transactions: Transaction
+    ):
+        @interval.action
+        async def search(io: IO):
+            class Option(RenderableSearchResult):
+                value: Union[str, bool, date]
+                extraData: NotRequired[int]
+
+            options: list[Option] = [
+                {"label": True, "value": True, "extraData": 1},
+                {
+                    "label": date(2022, 6, 20),
+                    "value": date(2022, 6, 20),
+                    "extraData": 2,
+                },
+                {"label": "Viewer", "value": "c", "extraData": 3},
+            ]
+
+            async def handle_search(query: str):
+                return [o for o in options if query in str(o["label"]).lower()]
+
+            selected = await io.search(
+                "Find something",
+                initial_results=options,
+                render_result=lambda o: o,
+                on_search=handle_search,
+            )
+
+            return {**selected}
+
+        await transactions.console()
+        await transactions.run("search")
+
+        label = page.locator('label:has-text("Find something")')
+        await expect(label).to_be_visible()
+
+        await transactions.press_continue()
+        await transactions.expect_validation_error()
+
+        inputId = await label.get_attribute("for")
+        input = page.locator(f"#{inputId}")
+        await input.click()
+        await input.fill("view")
+        await expect(
+            page.locator('[data-pw-search-result]:has-text("true")')
+        ).to_be_hidden()
+        await expect(
+            page.locator('[data-pw-search-result]:has-text("Viewer")')
+        ).to_be_visible()
+        await page.keyboard.press("ArrowDown")
+        await input.press("Enter")
+        await expect(
+            page.locator('[data-pw-selected-search-result]:has-text("Viewer")')
+        ).to_be_visible()
+        await transactions.press_continue()
+        await transactions.expect_success(
+            label="Viewer",
+            value="c",
+            extraData="3",
+        )
+
+    async def test_multi_search(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+        mock_db: MockDb,
+    ):
+        def render_user(user: MockDb.User):
+            return f"{user['firstName']} {user['lastName']} {({user['email']})}"
+
+        @interval.action
+        async def multi_search(io: IO):
+            async def handle_search(query: str) -> list[MockDb.User]:
+                return mock_db.find_users(query)
+
+            selected = await io.search(
+                "Find some users",
+                render_result=render_user,
+                on_search=handle_search,
+            ).multiple()
+
+            return {str(i): render_user(user) for (i, user) in enumerate(selected)}
+
+        await transactions.console()
+        await transactions.run("multi_search")
+
+        label = page.locator('label:has-text("Find some users")')
+        await expect(label).to_be_visible()
+
+        await transactions.press_continue()
+        await transactions.expect_validation_error()
+
+        inputId = await label.get_attribute("for")
+        input = page.locator(f"#{inputId}")
+
+        async def search_and_select(query: str):
+            await input.click()
+            await input.fill(query)
+            await expect(page.locator('text="Loading..."')).to_be_visible()
+            await expect(page.locator('text="Loading..."')).to_be_hidden()
+            await page.click(
+                f"[data-pw-search-result]:has-text('{query}'):nth-child(1)"
+            )
+            await expect(
+                page.locator(f".iv-select__multi-value__label:has-text('{query}')")
+            ).to_be_visible()
+            await expect(
+                page.locator(
+                    f"[data-pw-search-result]:has-text('{query}'):nth-child(1)"
+                )
+            ).to_be_hidden()
+
+        await search_and_select("Jacob")
+        await search_and_select("Ryan")
+
+        await transactions.press_continue()
+        await transactions.expect_success(
+            **{
+                "0": render_user(mock_db.find_users("Jacob")[0]),
+                "1": render_user(mock_db.find_users("Ryan")[0]),
+            }
+        )
+
+    async def test_optional_multi_search(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+        mock_db: MockDb,
+    ):
+        def render_user(user: MockDb.User):
+            return f"{user['firstName']} {user['lastName']} {({user['email']})}"
+
+        @interval.action
+        async def optional_multi_search(io: IO):
+            async def handle_search(query: str) -> list[MockDb.User]:
+                return mock_db.find_users(query)
+
+            selected = (
+                await io.search(
+                    "Find some users",
+                    render_result=render_user,
+                    on_search=handle_search,
+                )
+                .multiple()
+                .optional()
+            )
+
+            if selected is None:
+                return "Nothing selected!"
+
+            return {str(i): render_user(user) for (i, user) in enumerate(selected)}
+
+        await transactions.console()
+        await transactions.run("optional_multi_search")
+
+        label = page.locator('label:has-text("Find some users")')
+        await expect(label).to_be_visible()
+
+        await transactions.press_continue()
+        await transactions.expect_success()
+
+        await transactions.restart()
+        inputId = await label.get_attribute("for")
+        input = page.locator(f"#{inputId}")
+
+        async def search_and_select(query: str):
+            await input.click()
+            await input.fill(query)
+            await expect(page.locator('text="Loading..."')).to_be_visible()
+            await expect(page.locator('text="Loading..."')).to_be_hidden()
+            await page.click(
+                f"[data-pw-search-result]:has-text('{query}'):nth-child(1)"
+            )
+            await expect(
+                page.locator(f".iv-select__multi-value__label:has-text('{query}')")
+            ).to_be_visible()
+            await expect(
+                page.locator(
+                    f"[data-pw-search-result]:has-text('{query}'):nth-child(1)"
+                )
+            ).to_be_hidden()
+
+        await search_and_select("Jacob")
+        await search_and_select("Ryan")
+
+        await transactions.press_continue()
+        await transactions.expect_success(
+            **{
+                "0": render_user(mock_db.find_users("Jacob")[0]),
+                "1": render_user(mock_db.find_users("Ryan")[0]),
+            }
+        )
+
+    async def test_two_searches(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def two_searches(io: IO):
+            class Option(RenderableSearchResult):
+                value: Union[date, bool, str]
+                extraData: int
+
+            options: list[Option] = [
+                {
+                    "label": True,
+                    "value": True,
+                    "extraData": 1,
+                },
+                {
+                    "label": date(2022, 6, 20),
+                    "value": date(2022, 6, 20),
+                    "extraData": 2,
+                },
+                {
+                    "label": "Viewer",
+                    "value": "c",
+                    "extraData": 3,
+                },
+            ]
+
+            async def handle_search(query: str):
+                return [o for o in options if query in str(o["label"]).lower()]
+
+            [r1, r2] = await io.group(
+                io.search("First", on_search=handle_search, render_result=lambda o: o),
+                io.search("Second", on_search=handle_search, render_result=lambda o: o),
+            )
+
+            return {
+                "r1": r1["label"],
+                "r2": r2["label"],
+                "equal": r1 == r2,
+                "r1Index": options.index(r1),
+                "r2Index": options.index(r2),
+                "equalIndex": options.index(r1) == options.index(r2),
+            }
+
+        await transactions.console()
+        await transactions.run("two_searches")
+
+        label1 = page.locator('label:has-text("First")')
+        label2 = page.locator('label:has-text("Second")')
+
+        inputId1 = await label1.get_attribute("for")
+        inputId2 = await label2.get_attribute("for")
+        input1 = page.locator(f"#{inputId1}")
+        input2 = page.locator(f"#{inputId2}")
+        await input1.click()
+        await input1.fill("view")
+        await expect(
+            page.locator('[data-pw-search-result]:has-text("Viewer"):nth-child(1)')
+        ).to_be_visible()
+        await page.keyboard.press("ArrowDown")
+        await input1.press("Enter")
+        await expect(
+            page.locator('[data-pw-selected-search-result]:has-text("Viewer")')
+        ).to_be_visible()
+
+        await input2.click()
+        for i in range(3):
+            await input2.fill("abc")
+            await expect(page.locator('text="Loading..."')).to_be_visible()
+            await expect(page.locator('text="No results found."')).to_be_visible()
+            await input2.fill("fdsa")
+            await expect(page.locator('text="Loading..."')).to_be_visible()
+            await expect(page.locator('text="No results found."')).to_be_visible()
+
+        await input2.fill("viewer")
+        await expect(
+            page.locator('[data-pw-search-result]:has-text("Viewer"):nth-child(1)')
+        ).to_be_visible()
+        await page.keyboard.press("ArrowDown")
+        await expect(
+            page.locator('[data-pw-search-result]:has-text("Viewer"):nth-child(1)')
+        ).to_have_attribute("data-pw-search-result-focused", "true")
+        await input2.press("Enter")
+
+        await transactions.press_continue()
+        await transactions.expect_success(
+            r1="Viewer",
+            r2="Viewer",
+            equal="true",
+            equalIndex="true",
+        )
+
+
 async def test_logs(interval: Interval, page: BrowserPage, transactions: Transaction):
     @interval.action
     async def logs():
@@ -1313,3 +1635,163 @@ class TestPages:
         await expect(page.locator("text=🌪️")).to_be_visible()
         await transactions.press_continue()
         await transactions.expect_success()
+
+
+async def test_optional(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
+    @interval.action
+    async def optional(io: IO):
+        await io.input.text("Text").optional()
+        await io.input.email("Email").optional()
+        await io.input.number("Number").optional()
+        await io.input.rich_text("Rich text").optional()
+        await io.input.date("Date").optional()
+        await io.input.time("Time").optional()
+        await io.input.datetime("Datetime").optional()
+
+        await io.select.single("Select single", options=[]).optional()
+        await io.select.multiple("Select multiple", options=[]).optional()
+
+        async def handle_search(_: str):
+            return []
+
+        await io.search(
+            "Search", on_search=handle_search, render_result=lambda x: ""
+        ).optional()
+
+        d = await io.input.date("Date").optional()
+        dt = await io.input.datetime("Datetime").optional()
+        table = await io.select.table(
+            "Table",
+            data=[
+                {"a": 1, "b": 2, "c": 3},
+                {"a": 4, "b": 5, "c": 6},
+                {"a": 7, "b": 8, "c": 9},
+            ],
+            min_selections=1,
+            max_selections=1,
+        ).optional()
+
+        await io.display.object(
+            "Date",
+            data={
+                "py_date": d,
+            }
+            if d is not None
+            else None,
+        )
+        await io.display.object(
+            "Datetime",
+            data={
+                "py_date": dt,
+            }
+            if dt is not None
+            else None,
+        )
+
+        return table[0] if table is not None else None
+
+    await transactions.console()
+    await transactions.run("optional")
+
+    fields = [
+        "Text",
+        "Email",
+        "Number",
+        "Rich text",
+        "Date",
+        "Time",
+        "Datetime",
+        "Select single",
+        "Select multiple",
+        "Search",
+    ]
+
+    for field in fields:
+        if field == "Rich text":
+            await page.locator("div.ProseMirror").click()
+        elif field == "Select single" or field == "Search":
+            await page.locator(f"label:has-text('{field}')").click()
+        else:
+            await page.locator(f"text={field}").click()
+
+        for item in await page.locator(":focus").all():
+            await item.blur()
+
+        await expect(page.locator('[data-pw="input-error"]')).not_to_be_visible()
+        await transactions.press_continue()
+
+    await expect(page.locator('text="Date"')).to_be_visible()
+    await input_date(page)
+    await transactions.press_continue()
+    await expect(page.locator('text="Datetime"')).to_be_visible()
+    await input_date(page)
+    await input_time(page)
+    await transactions.press_continue()
+    await page.locator('[role="cell"]:has-text("5")').click()
+    await transactions.press_continue()
+
+    await expect(page.locator('text="Date"')).to_be_visible()
+    await expect(page.locator("text=py_date")).to_be_visible()
+    await transactions.press_continue()
+    await expect(page.locator('text="Datetime"')).to_be_visible()
+    await expect(page.locator("text=py_date")).to_be_visible()
+    await transactions.press_continue()
+    await transactions.expect_success(
+        a="4",
+        b="5",
+        c="6",
+    )
+
+
+async def test_notifications(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
+    @interval.action
+    async def notifications(io: IO, ctx: ActionContext):
+        await ctx.notify(
+            title="Explicit",
+            message="Message",
+            delivery=[{"to": "alex@interval.com", "method": "EMAIL"}],
+        )
+
+        await io.display.markdown("Press continue to send another")
+
+        await ctx.notify(
+            message="Implicit", delivery=[{"to": "test-runner@interval.com"}]
+        )
+
+    await transactions.console()
+    await transactions.run("notifications")
+
+    controlPanel = page.locator("[data-pw-control-panel]")
+    expanded = (await controlPanel.get_attribute("data-pw-expanded")) == "true"
+    selected = await controlPanel.get_attribute("data-pw-selected")
+
+    if not expanded or selected != "Notifications":
+        await controlPanel.locator('[data-pw-tab-id="Notifications"]').click()
+
+    await expect(controlPanel.locator("text=Explicit: Message")).to_be_visible()
+    await expect(
+        controlPanel.locator("text=Would have sent to alex@interval.com via EMAIL")
+    ).to_be_visible()
+
+    await transactions.press_continue()
+
+    await expect(controlPanel.locator("text=Implicit")).to_be_visible()
+    await expect(
+        controlPanel.locator("text=Would have sent to test-runner@interval.com")
+    ).to_be_visible()
+
+
+async def test_malformed(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
+    @interval.action
+    async def malformed(io: IO):
+        await io.input.text(Exception())  # type: ignore
+
+    await transactions.console()
+    await transactions.run("malformed")
+    await expect(page.locator("text=ValidationError")).to_be_visible()

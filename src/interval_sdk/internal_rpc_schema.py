@@ -2,17 +2,15 @@ from dataclasses import dataclass as base_dataclass
 from datetime import datetime
 from typing import (
     Any,
-    Awaitable,
     Callable,
     Generic,
     Optional,
     Type,
     Literal,
     TypeVar,
-    TypedDict,
     Union,
 )
-from typing_extensions import Annotated, TypeAlias
+from typing_extensions import Annotated, NotRequired, TypeAlias, TypedDict, Awaitable
 
 from pydantic import Field
 from pydantic.dataclasses import dataclass
@@ -75,7 +73,7 @@ class SendLogInputs(BaseModel):
 
 class DeliveryInstruction(TypedDict):
     to: str
-    method: Optional[Literal["EMAIL", "SLACK"]]
+    method: NotRequired[Literal["EMAIL", "SLACK"]]
 
 
 class DeliveryInstructionModel(BaseModel):

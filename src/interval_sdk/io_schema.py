@@ -196,7 +196,8 @@ class RenderableSearchResultModel(BaseModel):
 
 
 PassthroughRenderableSearchResult = TypeVar(
-    "PassthroughRenderableSearchResult", bound=RenderableSearchResult
+    "PassthroughRenderableSearchResult",
+    bound=Union[RenderableSearchResult, ObjectLiteral],
 )
 
 
@@ -295,14 +296,16 @@ class ActionResult(BaseModel):
         json_dumps = json.dumps
 
 
-TableRowValuePrimitive = Union[
+TableRowValuePrimitive: TypeAlias = Union[
     StrictInt, StrictFloat, StrictBool, date, datetime, None, str, Any
 ]
 
-SearchResultValuePrimitive = Union[StrictInt, StrictFloat, StrictBool, str]
+SearchResultValuePrimitive: TypeAlias = Union[
+    StrictInt, StrictFloat, StrictBool, date, datetime, None, str
+]
 
-SearchResultValue = Union[
-    SearchResultValuePrimitive, dict[str, SearchResultValuePrimitive]
+SearchResultValue: TypeAlias = Union[
+    SearchResultValuePrimitive, Mapping[str, SearchResultValuePrimitive], TypedDict
 ]
 
 PassthroughSearchResultValue = TypeVar(

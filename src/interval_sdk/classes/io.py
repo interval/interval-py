@@ -1429,11 +1429,11 @@ class IO:
         *,
         on_search: Callable[
             [str],
-            Awaitable[list[PassthroughSearchResultValue]],
+            Awaitable[Iterable[PassthroughSearchResultValue]],
         ],
         render_result: Callable[
             [PassthroughSearchResultValue],
-            RenderableSearchResult,
+            Union[RenderableSearchResult, ObjectLiteral],
         ],
         help_text: Optional[str] = None,
         initial_results: Optional[Iterable[PassthroughSearchResultValue]] = None,
@@ -1455,7 +1455,7 @@ class IO:
             result: PassthroughSearchResultValue,
             index: int,
         ) -> InnerRenderableSearchResultModel:
-            r: RenderableSearchResult = render_result(result)
+            r = render_result(result)
             value = f"{len(result_map) - 1}:{index}"
 
             if isinstance(r, Mapping):
@@ -1499,6 +1499,9 @@ class IO:
         ) -> SearchProps:
             nonlocal result_batch_index
             results = await on_search(state.query_term)
+            if not isinstance(results, list):
+                results = list(results)
+
             result_batch_index += 1
             result_map[str(result_batch_index)] = results
 
