@@ -960,9 +960,7 @@ interval.routes.add("files", files)
 @interval.action("io.confirm_identity")
 async def confirm_identity(io: IO):
     _name = await io.input.text("Please enter your name")
-    can_do = await io.confirm_identity(
-        "This is a sensitive action", grace_period_ms=600000
-    )
+    can_do = await io.confirm_identity("This is a sensitive action", grace_period=600)
 
     if can_do:
         return {"confirmed": True}

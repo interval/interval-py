@@ -134,7 +134,7 @@ class RichSelectOption(TypedDict):
 
 
 PassthroughRichSelectOption = TypeVar(
-    "PassthroughRichSelectOption", bound=Union[RichSelectOption, str]
+    "PassthroughRichSelectOption", bound=Union[RichSelectOption, ObjectLiteral]
 )
 
 
@@ -242,7 +242,9 @@ class LabelValue(TypedDict):
     value: ObjectLiteral
 
 
-PassthroughLabelValue = TypeVar("PassthroughLabelValue", bound=Union[LabelValue, str])
+PassthroughLabelValue = TypeVar(
+    "PassthroughLabelValue", bound=Union[LabelValue, ObjectLiteral]
+)
 
 
 class LabelValueModel(BaseModel):

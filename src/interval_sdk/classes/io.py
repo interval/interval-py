@@ -117,7 +117,12 @@ from ..components.grid import (
 )
 
 
-from ..util import DeserializableRecord, KeyValueObject, SerializableRecord
+from ..util import (
+    DeserializableRecord,
+    KeyValueObject,
+    ObjectLiteral,
+    SerializableRecord,
+)
 
 
 _T1 = TypeVar("_T1")
@@ -597,7 +602,7 @@ class IO:
             *,
             options: Iterable[PassthroughRichSelectOption],
             help_text: Optional[str] = None,
-            default_value: Optional[Union[RichSelectOption, str]] = None,
+            default_value: Optional[Union[RichSelectOption, ObjectLiteral]] = None,
             searchable: Optional[bool] = None,
             disabled: Optional[bool] = None,
         ) -> InputIOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption]:
@@ -621,12 +626,12 @@ class IO:
             self,
             label: str,
             *,
-            options: Iterable[str],
+            options: Iterable[ObjectLiteral],
             help_text: Optional[str] = None,
-            default_value: Optional[str] = None,
+            default_value: Optional[ObjectLiteral] = None,
             searchable: Optional[bool] = None,
             disabled: Optional[bool] = None,
-        ) -> InputIOPromise[Literal["SELECT_SINGLE"], str]:
+        ) -> InputIOPromise[Literal["SELECT_SINGLE"], ObjectLiteral]:
             ...
 
         @overload
@@ -634,12 +639,14 @@ class IO:
             self,
             label: str,
             *,
-            options: Iterable[Union[RichSelectOption, str]],
+            options: Iterable[Union[RichSelectOption, ObjectLiteral]],
             help_text: Optional[str] = None,
-            default_value: Optional[Union[RichSelectOption, str]] = None,
+            default_value: Optional[Union[RichSelectOption, ObjectLiteral]] = None,
             searchable: Optional[bool] = None,
             disabled: Optional[bool] = None,
-        ) -> InputIOPromise[Literal["SELECT_SINGLE"], Union[RichSelectOption, str]]:
+        ) -> InputIOPromise[
+            Literal["SELECT_SINGLE"], Union[RichSelectOption, ObjectLiteral]
+        ]:
             ...
 
         def single(
@@ -648,19 +655,22 @@ class IO:
             *,
             options: Iterable[PassthroughRichSelectOption],
             help_text: Optional[str] = None,
-            default_value: Optional[Union[RichSelectOption, str]] = None,
+            default_value: Optional[Union[RichSelectOption, ObjectLiteral]] = None,
             searchable: Optional[bool] = None,
             disabled: Optional[bool] = None,
         ) -> InputIOPromise[Literal["SELECT_SINGLE"], PassthroughRichSelectOption]:
             normalized_options: list[RichSelectOption] = [
                 {"label": option, "value": option}
-                if isinstance(option, str)
+                if isinstance(option, (str, int, bool, float, date, time, datetime))
+                or option is None
                 else option
                 for option in options
             ]
             normalized_default_value: Optional[RichSelectOption] = (
                 {"label": default_value, "value": default_value}
-                if isinstance(default_value, str)
+                if isinstance(
+                    default_value, (str, int, bool, float, date, time, datetime)
+                )
                 else default_value
             )
 
@@ -683,7 +693,10 @@ class IO:
                 ),
             )
             option_map = {
-                option if isinstance(option, str) else option["value"]: option
+                option
+                if isinstance(option, (str, int, bool, float, date, time, datetime))
+                or option is None
+                else option["value"]: option
                 for option in options
             }
 
@@ -701,7 +714,7 @@ class IO:
             *,
             options: Iterable[PassthroughLabelValue],
             help_text: Optional[str] = None,
-            default_value: Optional[Iterable[Union[LabelValue, str]]] = None,
+            default_value: Optional[Iterable[Union[LabelValue, ObjectLiteral]]] = None,
             min_selections: Optional[int] = None,
             max_selections: Optional[int] = None,
             disabled: Optional[bool] = None,
@@ -727,13 +740,13 @@ class IO:
             self,
             label: str,
             *,
-            options: Iterable[str],
+            options: Iterable[ObjectLiteral],
             help_text: Optional[str] = None,
-            default_value: Optional[Iterable[str]] = None,
+            default_value: Optional[Iterable[ObjectLiteral]] = None,
             min_selections: Optional[int] = None,
             max_selections: Optional[int] = None,
             disabled: Optional[bool] = None,
-        ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[str]]:
+        ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[ObjectLiteral]]:
             ...
 
         @overload
@@ -741,13 +754,15 @@ class IO:
             self,
             label: str,
             *,
-            options: Iterable[Union[LabelValue, str]],
+            options: Iterable[Union[LabelValue, ObjectLiteral]],
             help_text: Optional[str] = None,
-            default_value: Optional[Iterable[Union[LabelValue, str]]] = None,
+            default_value: Optional[Iterable[Union[LabelValue, ObjectLiteral]]] = None,
             min_selections: Optional[int] = None,
             max_selections: Optional[int] = None,
             disabled: Optional[bool] = None,
-        ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[Union[LabelValue, str]]]:
+        ) -> InputIOPromise[
+            Literal["SELECT_MULTIPLE"], list[Union[LabelValue, ObjectLiteral]]
+        ]:
             ...
 
         def multiple(
@@ -756,21 +771,23 @@ class IO:
             *,
             options: Iterable[PassthroughLabelValue],
             help_text: Optional[str] = None,
-            default_value: Optional[Iterable[Union[LabelValue, str]]] = None,
+            default_value: Optional[Iterable[Union[LabelValue, ObjectLiteral]]] = None,
             min_selections: Optional[int] = None,
             max_selections: Optional[int] = None,
             disabled: Optional[bool] = None,
         ) -> InputIOPromise[Literal["SELECT_MULTIPLE"], list[PassthroughLabelValue]]:
             normalized_options: list[LabelValue] = [
                 {"label": option, "value": option}
-                if isinstance(option, str)
+                if isinstance(option, (str, int, bool, float, date, time, datetime))
+                or option is None
                 else option
                 for option in options
             ]
             normalized_default_value: Optional[list[LabelValue]] = (
                 [
                     {"label": value, "value": value}
-                    if isinstance(value, str)
+                    if isinstance(value, (str, int, bool, float, date, time, datetime))
+                    or value is None
                     else value
                     for value in default_value
                 ]
@@ -800,7 +817,10 @@ class IO:
             )
 
             option_map = {
-                option if isinstance(option, str) else option["value"]: option
+                option
+                if isinstance(option, (str, int, bool, float, date, time, datetime))
+                or option is None
+                else option["value"]: option
                 for option in options
             }
 

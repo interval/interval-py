@@ -2,6 +2,7 @@ import asyncio
 import json, re
 from datetime import date, time, datetime
 from pathlib import Path
+from typing import TypedDict, cast
 
 from typing_extensions import NotRequired
 
@@ -18,7 +19,7 @@ from interval_sdk import (
     Page,
     Layout,
 )
-from interval_sdk.io_schema import LabelValue
+from interval_sdk.io_schema import LabelValue, RichSelectOption
 
 from . import Transaction
 from .data.mock_db import MockDb
@@ -605,21 +606,40 @@ async def test_select_single(
 ):
     @interval.action("io.select.single")
     async def select_single(io: IO):
+        basic = await io.select.single(
+            "Choose basic", options=[1, True, date(2022, 7, 20)]
+        )
+
         selected = await io.select.single(
-            "Choose role",
+            "Choose custom",
             options=[
                 {"label": "Admin", "value": "a"},
-                {"label": "Editor", "value": "b"},
+                # TODO: See if there's a better way to do this
+                cast(
+                    RichSelectOption,
+                    {"label": "Editor", "value": 2, "extraData": True},
+                ),
                 {"label": "Viewer", "value": "c"},
             ],
         )
 
-        await io.display.markdown(f"You selected: {selected['label']}")
+        return {
+            "basic": basic,
+            "basic_type": type(basic).__name__,
+            **selected,
+        }
 
     await transactions.console()
     await transactions.run("io.select.single")
 
-    label = page.locator('label:has-text("Choose role")')
+    await transactions.press_continue()
+    await transactions.expect_validation_error()
+
+    await page.click(".iv-select-container")
+    await page.locator('.iv-select__menu div div:has-text("2022")').click()
+    await transactions.press_continue()
+
+    label = page.locator('label:has-text("Choose custom")')
     inputId = await label.get_attribute("for")
     input = page.locator(f"#{inputId}")
     await input.click()
@@ -629,10 +649,14 @@ async def test_select_single(
     await input.fill("ed")
     await input.press("Enter")
     await transactions.press_continue()
-    await expect(page.locator("text=You selected: Editor")).to_be_visible()
 
-    await transactions.press_continue()
-    await transactions.expect_success()
+    await transactions.expect_success(
+        basic=date(2022, 7, 20).isoformat(),
+        basic_type="date",
+        label="Editor",
+        value="2",
+        extraData="true",
+    )
 
 
 async def test_select_multiple(
@@ -659,21 +683,19 @@ async def test_select_multiple(
             },
         ]
 
-        selected = await io.select.multiple("Select zero or more", options=options)
+        basic_selected = await io.select.multiple(
+            "Select zero or more", options=[o["value"] for o in options]
+        )
 
         selected = await io.select.multiple(
             "Optionally modify the selection, selecting between 1 and 2",
             options=options,
-            default_value=selected,
+            default_value=[o for o in options if o["value"] in basic_selected],
             min_selections=1,
             max_selections=2,
         )
 
         selected_values = [o["value"] for o in selected]
-        print("***")
-        print(selected, selected_values)
-        print("***")
-
         ret: dict[str, bool] = {}
 
         for option in options:
@@ -681,9 +703,7 @@ async def test_select_multiple(
 
         return {
             **ret,
-            "extraData": selected[0]["extraData"]
-            if "extraData" in selected[0]
-            else None,
+            "extraData": selected[0].get("extraData", None),
         }
 
     await transactions.console()
@@ -731,18 +751,24 @@ async def test_select_table(
 ):
     @interval.action("io.select.table")
     async def select_table(io: IO):
+        class Row(TypedDict):
+            firstName: str
+            lastName: str
+            favoriteColor: NotRequired[str]
+
+        data: list[Row] = [
+            {"firstName": "Alex", "lastName": "Arena"},
+            {"firstName": "Dan", "lastName": "Philibin"},
+            {"firstName": "Ryan", "lastName": "Coppolo"},
+            {
+                "firstName": "Jacob",
+                "lastName": "Mischka",
+                "favoriteColor": "Orange",
+            },
+        ]
         selected = await io.select.table(
             "Select some rows",
-            data=[
-                {"firstName": "Alex", "lastName": "Arena"},
-                {"firstName": "Dan", "lastName": "Philibin"},
-                {"firstName": "Ryan", "lastName": "Coppolo"},
-                {
-                    "firstName": "Jacob",
-                    "lastName": "Mischka",
-                    "favoriteColor": "Orange",
-                },
-            ],
+            data=data,
             min_selections=1,
             max_selections=2,
         )
@@ -756,6 +782,25 @@ async def test_select_table(
             ```
             """
         )
+
+        selected = await io.select.table(
+            "Select some more",
+            data=data,
+            columns=[
+                {
+                    "label": "First name",
+                    "renderCell": lambda row: row["firstName"],
+                },
+                {
+                    "label": "Last name",
+                    "renderCell": lambda row: row["lastName"],
+                },
+            ],
+            min_selections=1,
+            max_selections=1,
+        )
+
+        return {**selected[0]}
 
     await transactions.console()
     await transactions.run("io.select.table")
@@ -776,7 +821,11 @@ async def test_select_table(
         )
     )
     await transactions.press_continue()
-    await transactions.expect_success()
+
+    await page.locator('[role="cell"]:has-text("Alex")').click()
+    await page.locator('[role="cell"]:has-text("Dan")').click()
+    await transactions.press_continue()
+    await transactions.expect_success(firstName="Dan", lastName="Philibin")
 
 
 async def test_input_date(
