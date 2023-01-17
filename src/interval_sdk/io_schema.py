@@ -204,17 +204,26 @@ class InnerRenderableSearchResultModel(RenderableSearchResultModel):
     value: str
 
 
-class FileUploadProps(BaseModel):
+class FileUrlSet(TypedDict):
+    uploadUrl: str
+    downloadUrl: str
+
+
+class UploadFileProps(BaseModel):
     allowed_extensions: Optional[list[str]]
     help_text: Optional[str]
-    upload_url: Optional[str]
-    download_url: Optional[str]
     disabled: Optional[bool]
+    file_urls: Optional[list[FileUrlSet]]
 
 
-class FileUploadState(BaseModel):
+@dataclass
+class FileState:
     name: str
     type: str
+
+
+class UploadFileState(BaseModel):
+    files: list[FileState]
 
 
 class InnerFileModel(BaseModel):
@@ -799,8 +808,8 @@ input_schema: dict[InputMethodName, MethodDef] = {
         supports_multiple=True,
     ),
     "UPLOAD_FILE": MethodDef(
-        props=FileUploadProps,
-        state=FileUploadState,
+        props=UploadFileProps,
+        state=UploadFileState,
         returns=InnerFileModel,
     ),
 }

@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import sys
 from dataclasses import dataclass
@@ -25,6 +26,8 @@ from ..io_schema import (
     DisplayGridState,
     DisplayHeadingProps,
     DisplayTableState,
+    FileState,
+    FileUrlSet,
     GridItem,
     InputTextProps,
     InternalTableRow,
@@ -74,8 +77,8 @@ from ..io_schema import (
     PassthroughSearchResultValue,
     RenderableSearchResult,
     InnerRenderableSearchResultModel,
-    FileUploadProps,
-    FileUploadState,
+    UploadFileProps,
+    UploadFileState,
     InnerFileModel,
 )
 from .io_promise import (
@@ -460,39 +463,32 @@ class IO:
             help_text: Optional[str] = None,
             generate_presigned_urls: Optional[
                 Callable[
-                    [FileUploadState],
-                    Awaitable[FileUploadProps],
+                    [FileState],
+                    Awaitable[FileUrlSet],
                 ]
             ] = None,
             disabled: Optional[bool] = None,
         ) -> MultipleableIOPromise[Literal["UPLOAD_FILE"], IntervalFile, Never]:
             async def handle_state_change(
-                state: FileUploadState, props: FileUploadProps
-            ) -> FileUploadProps:
+                state: UploadFileState, props: UploadFileProps
+            ) -> UploadFileProps:
                 if generate_presigned_urls is None:
-                    props.upload_url = None
-                    props.download_url = None
+                    props.file_urls = None
                     return props
 
-                try:
-                    urls = await generate_presigned_urls(state)
-                    props.upoad_url = urls.upload_url
-                    props.download_url = urls.download_url
-                except Exception:
-                    # FIXME: Bubble this up if possible
-                    props.upload_url = "error"
-                    props.download_url = "error"
+                props.file_urls = await asyncio.gather(
+                    *(generate_presigned_urls(file) for file in state.files)
+                )
                 return props
 
             c = Component(
                 method_name="UPLOAD_FILE",
                 label=label,
-                initial_props=FileUploadProps(
+                initial_props=UploadFileProps(
                     help_text=help_text,
                     allowed_extensions=allowed_extensions,
-                    upload_url=None,
-                    download_url=None,
                     disabled=disabled,
+                    file_urls=None,
                 ),
                 handle_state_change=handle_state_change,
             )
