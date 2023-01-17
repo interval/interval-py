@@ -478,6 +478,7 @@ class InputRichTextProps(BaseModel):
     help_text: Optional[str]
     disabled: Optional[bool]
     placeholder: Optional[str]
+    default_value: Optional[str]
 
 
 class InputUrlProps(BaseModel):
@@ -534,6 +535,7 @@ class InputDateTimeProps(BaseModel):
 class InputSpreadsheetProps(BaseModel):
     columns: dict[str, TypeValue]
     help_text: Optional[str]
+    default_value: Optional[list[DeserializableRecordModel]]
 
 
 class ConfirmProps(BaseModel):
@@ -550,12 +552,23 @@ class SelectTableProps(BaseModel):
     columns: list[InternalTableColumn]
     min_selections: Optional[int]
     max_selections: Optional[int]
-    total_records: int
-    selected_keys: Optional[list[str]] = None
     disabled: Optional[bool]
     default_page_size: Optional[int] = None
     is_sortable: bool = True
     is_filterable: bool = True
+
+    # private props
+    total_records: int
+    selected_keys: Optional[list[str]] = None
+
+
+class SelectTableState(BaseModel):
+    query_term: Optional[str] = None
+    sort_column: Optional[str] = None
+    sort_direction: Optional[Literal["asc", "desc"]] = None
+    offset: int = 0
+    page_size: int
+    is_select_all: bool = False
 
 
 class SelectSingleProps(BaseModel):
@@ -594,7 +607,7 @@ LinkTheme: TypeAlias = Literal["default", "danger"]
 
 
 class DisplayLinkProps(BaseModel):
-    action: Optional[str]
+    route: Optional[str]
     url: Optional[str]
     params: Optional[dict[str, Any]]
     theme: Optional[LinkTheme]
@@ -671,18 +684,8 @@ class DisplayTableState(BaseModel):
     page_size: int
 
 
-class SelectTableState(BaseModel):
-    query_term: Optional[str] = None
-    sort_column: Optional[str] = None
-    sort_direction: Optional[Literal["asc", "desc"]] = None
-    offset: int = 0
-    page_size: int
-    is_select_all: bool = False
-
-
 class DisplayVideoProps(BaseModel):
     url: Optional[str]
-    alt: Optional[str]
     height: Optional[ImageSize]
     width: Optional[ImageSize]
     loop: bool
@@ -772,7 +775,7 @@ input_schema: dict[InputMethodName, MethodDef] = {
     "INPUT_SPREADSHEET": MethodDef(
         props=InputSpreadsheetProps,
         state=None,
-        returns=list[SerializableRecord],
+        returns=list[SerializableRecordModel],
     ),
     "CONFIRM": MethodDef(
         props=ConfirmProps,

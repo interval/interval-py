@@ -474,7 +474,7 @@ setInterval(logTime, 1000)""",
 async def io_display_link(io: IO):
     await io.display.link(
         "Code",
-        action="io.display.code",
+        route="io.display.code",
         params={"hello": "world"},
     )
 

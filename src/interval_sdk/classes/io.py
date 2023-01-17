@@ -22,6 +22,7 @@ from ..io_schema import (
     ButtonItem,
     ButtonItemModel,
     CurrencyCode,
+    DeserializableRecordModel,
     DisplayGridProps,
     DisplayGridState,
     DisplayHeadingProps,
@@ -116,7 +117,7 @@ from ..components.grid import (
 )
 
 
-from ..util import KeyValueObject
+from ..util import DeserializableRecord, KeyValueObject, SerializableRecord
 
 
 _T1 = TypeVar("_T1")
@@ -285,6 +286,7 @@ class IO:
             help_text: Optional[str] = None,
             disabled: Optional[bool] = None,
             placeholder: Optional[str] = None,
+            default_value: Optional[str] = None,
         ) -> InputIOPromise[Literal["INPUT_RICH_TEXT"], str]:
             c = Component(
                 method_name="INPUT_RICH_TEXT",
@@ -293,6 +295,7 @@ class IO:
                     help_text=help_text,
                     disabled=disabled,
                     placeholder=placeholder,
+                    default_value=default_value,
                 ),
             )
             return InputIOPromise(c, renderer=self._renderer)
@@ -854,7 +857,7 @@ class IO:
             self,
             label: str,
             *,
-            action: Optional[str] = None,
+            route: Optional[str] = None,
             params: Optional[dict[str, Any]] = None,
             theme: LinkTheme = "default",
             url: Optional[str] = None,
@@ -863,7 +866,7 @@ class IO:
                 method_name="DISPLAY_LINK",
                 label=label,
                 initial_props=DisplayLinkProps(
-                    action=action,
+                    route=route,
                     params=params,
                     theme=theme,
                     url=url,
@@ -1174,7 +1177,6 @@ class IO:
             label: str,
             *,
             url: Optional[str] = None,
-            alt: Optional[str] = None,
             bytes: Optional[bytes] = None,
             loop: bool = False,
             muted: bool = False,
@@ -1204,7 +1206,6 @@ class IO:
                 label=label,
                 initial_props=DisplayVideoProps(
                     url=url,
-                    alt=alt,
                     muted=muted,
                     loop=loop,
                     height=height if height is not None else size,
@@ -1222,14 +1223,19 @@ class IO:
             label: str,
             columns: dict[str, TypeValue],
             help_text: Optional[str] = None,
-            # XXX: Don't think better type is possible here?
-        ) -> InputIOPromise[Literal["INPUT_SPREADSHEET"], list]:
+            default_value: Optional[list[DeserializableRecord]] = None,
+        ) -> InputIOPromise[Literal["INPUT_SPREADSHEET"], list[SerializableRecord]]:
             c = Component(
                 method_name="INPUT_SPREADSHEET",
                 label=label,
                 initial_props=InputSpreadsheetProps(
                     help_text=help_text,
                     columns=columns,
+                    default_value=[
+                        DeserializableRecordModel.parse_obj(v) for v in default_value
+                    ]
+                    if default_value is not None
+                    else None,
                 ),
             )
             return InputIOPromise(c, renderer=self._renderer)
