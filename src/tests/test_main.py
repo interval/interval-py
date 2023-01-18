@@ -132,7 +132,7 @@ async def test_group(interval: Interval, page: BrowserPage, transactions: Transa
     await page.keyboard.type("1337")
     await transactions.press_continue()
 
-    await transactions.expect_success(text="Hello", num="1,337")
+    await transactions.expect_success(text="Hello", num=1337)
 
 
 async def test_display_image(
@@ -417,7 +417,7 @@ class TestInputNumber:
         await page.fill('input[inputmode="numeric"]', "13")
 
         await transactions.press_continue()
-        await transactions.expect_success(sum="25")
+        await transactions.expect_success(sum=25)
 
     async def test_currency(
         self, interval: Interval, page: BrowserPage, transactions: Transaction
@@ -451,9 +451,9 @@ class TestInputNumber:
 
         await transactions.press_continue()
         await transactions.expect_success(
-            usd="10",
-            eur="10.01",
-            jpy="12.345",
+            usd=10,
+            eur=10.01,
+            jpy=12.345,
         )
 
 
@@ -522,7 +522,7 @@ async def test_confirm(
     await expect(page.locator("text=Still?")).to_be_visible()
     await page.locator('button:has-text("Cancel")').click()
 
-    await transactions.expect_success(first="true", second="false")
+    await transactions.expect_success(first=True, second=False)
 
 
 async def test_confirm_identity(
@@ -554,9 +554,9 @@ async def test_confirm_identity(
     await page.locator('button:has-text("Cancel")').click()
 
     await transactions.expect_success(
-        first="true",
-        second="true",
-        third="false",
+        first=True,
+        second=True,
+        third=False,
     )
 
 
@@ -656,8 +656,8 @@ async def test_select_single(
         basic=date(2022, 7, 20).isoformat(),
         basic_type="date",
         label="Editor",
-        value="2",
-        extraData="true",
+        value=2,
+        extraData=True,
     )
 
 
@@ -740,10 +740,10 @@ async def test_select_multiple(
 
     await transactions.expect_success(
         **{
-            date_val: "true",
-            "True": "false",
-            "3": "true",
-            "extraData": "true",
+            date_val: True,
+            "True": False,
+            "3": True,
+            "extraData": True,
         }
     )
 
@@ -910,7 +910,7 @@ async def test_input_date(
 
     await transactions.press_continue()
     await transactions.expect_success(
-        year="2,022", month="2", day="25", py_date=date(2022, 2, 25).isoformat()
+        year=2022, month=2, day=25, py_date=date(2022, 2, 25).isoformat()
     )
 
 
@@ -960,8 +960,8 @@ async def test_input_time(
     await ampm.select_option("pm")
     await transactions.press_continue()
     await transactions.expect_success(
-        hour="14",
-        minute="36",
+        hour=14,
+        minute=36,
         py_time=time(14, 36).isoformat(),
     )
 
@@ -989,11 +989,11 @@ class TestInputDatetime:
         await input_time(page)
         await transactions.press_continue()
         await transactions.expect_success(
-            year="2,022",
-            month="2",
-            day="25",
-            hour="14",
-            minute="36",
+            year=2022,
+            month=2,
+            day=25,
+            hour=14,
+            minute=36,
             py_datetime=datetime(2022, 2, 25, 14, 36).isoformat(),
         )
 
@@ -1019,11 +1019,11 @@ class TestInputDatetime:
 
         await transactions.press_continue()
         await transactions.expect_success(
-            year="2,020",
-            month="6",
-            day="23",
-            hour="13",
-            minute="25",
+            year=2020,
+            month=6,
+            day=23,
+            hour=13,
+            minute=25,
             py_datetime=datetime(2020, 6, 23, 13, 25).isoformat(),
         )
 
@@ -1138,7 +1138,7 @@ class TestSearch:
         await transactions.expect_success(
             label="Viewer",
             value="c",
-            extraData="3",
+            extraData=3,
         )
 
     async def test_multi_search(
@@ -1366,8 +1366,8 @@ class TestSearch:
         await transactions.expect_success(
             r1="Viewer",
             r2="Viewer",
-            equal="true",
-            equalIndex="true",
+            equal=True,
+            equalIndex=True,
         )
 
 
@@ -1739,9 +1739,9 @@ async def test_optional(
     await expect(page.locator("text=py_date")).to_be_visible()
     await transactions.press_continue()
     await transactions.expect_success(
-        a="4",
-        b="5",
-        c="6",
+        a=4,
+        b=5,
+        c=6,
     )
 
 

@@ -79,19 +79,28 @@ class Transaction:
             self.page.locator(f"[data-pw='field-error']:has-text('{message}')")
         ).to_be_visible()
 
-    async def expect_result(self, **kwargs: str):
+    async def expect_result(self, *args: str, **kwargs: str | int | float | bool):
+        for val in args:
+            await expect(
+                self.page.locator('[data-test-id="transaction-result"]')
+            ).to_contain_text(val)
+
         for key, val in kwargs.items():
+            if isinstance(val, bool):
+                val = "true" if val else "false"
+            elif isinstance(val, (int, float)):
+                val = "{:,}".format(val)
             await expect(
                 self.page.locator('[data-test-id="transaction-result"]')
             ).to_contain_text("".join([key, val]))
 
-    async def expect_success(self, **kwargs: str):
+    async def expect_success(self, *args: str, **kwargs: str | int | float | bool):
         await expect(
             self.page.locator('[data-test-id="result-type"]:has-text("Success")')
         ).to_be_visible()
 
-        if len(kwargs) is not None:
-            await self.expect_result(**kwargs)
+        if len(kwargs) is not None or len(args) is not None:
+            await self.expect_result(*args, **kwargs)
 
     async def expect_failure(
         self, message: Optional[str] = None, error: Optional[str] = None
