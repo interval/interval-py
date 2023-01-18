@@ -2,7 +2,7 @@ import asyncio
 import json, re, os.path
 from datetime import date, time, datetime
 from pathlib import Path
-from typing import Union, cast
+from typing import Optional, Union, cast
 
 from typing_extensions import NotRequired, TypedDict
 from urllib.parse import urlparse
@@ -23,6 +23,7 @@ from interval_sdk import (
     FileState,
     FileUrlSet,
 )
+from interval_sdk.classes.io_promise import KeyedIONamespace
 from interval_sdk.io_schema import LabelValue, RenderableSearchResult, RichSelectOption
 
 from . import Transaction
@@ -1987,3 +1988,293 @@ class TestUploads:
                 await transactions.expect_success(
                     **{os.path.basename(file.name): len(file.read())}
                 )
+
+
+class TestValidation:
+    async def test_validation(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def validation(io: IO):
+            async def validate(
+                name: str, email: str, age: Optional[int], include_drink_tickets: bool
+            ):
+                await asyncio.sleep(0.1)
+                if (age is None or age < 21) and include_drink_tickets:
+                    return (
+                        "Attendees must be 21 years or older to receive drink tickets."
+                    )
+
+            [name, email, age, include_drink_tickets] = await io.group(
+                io.input.text("Name"),
+                io.input.email("Email").validate(
+                    lambda s: "Only Interval employees are invited to the holiday party."
+                    if not s.endswith("@interval.com")
+                    else None
+                ),
+                io.input.number("Age").optional(),
+                io.input.boolean("Include drink tickets?"),
+            ).validate(validate)
+
+            return {
+                "name": name,
+                "email": email,
+                "age": age,
+                "include_drink_tickets": include_drink_tickets,
+            }
+
+        await transactions.console()
+        await transactions.run("validation")
+
+        await page.fill("text=Name", "John")
+        await page.fill("text=Email", "john@example.com")
+        await page.fill("text=Age", "20")
+        await transactions.press_continue()
+        await transactions.expect_validation_error(
+            "Only Interval employees are invited to the holiday party."
+        )
+        await page.fill("text=Email", "john@interval.com")
+        await page.click("text=Include drink tickets?")
+        await transactions.press_continue()
+        await transactions.expect_group_validation_error(
+            "Attendees must be 21 years or older to receive drink tickets."
+        )
+        await page.click("text=Include drink tickets?")
+        await transactions.press_continue()
+        await transactions.expect_success(
+            name="John",
+            email="john@interval.com",
+            age=20,
+            include_drink_tickets=False,
+        )
+
+    async def test_keyed_validation(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        class TypedResponse(KeyedIONamespace):
+            name: str
+            email: str
+            age: Optional[int]
+            include_drink_tickets: bool
+
+        @interval.action
+        async def keyed_validation(io: IO):
+            async def validate(
+                name: str, email: str, age: Optional[int], include_drink_tickets: bool
+            ):
+                await asyncio.sleep(0.1)
+                if (age is None or age < 21) and include_drink_tickets:
+                    return (
+                        "Attendees must be 21 years or older to receive drink tickets."
+                    )
+
+            resp = cast(
+                TypedResponse,
+                await io.group(
+                    name=io.input.text("Name"),
+                    email=io.input.email("Email").validate(
+                        lambda s: "Only Interval employees are invited to the holiday party."
+                        if not s.endswith("@interval.com")
+                        else None
+                    ),
+                    age=io.input.number("Age").optional(),
+                    include_drink_tickets=io.input.boolean("Include drink tickets?"),
+                ).validate(validate),
+            )
+
+            return {**resp}
+
+        await transactions.console()
+        await transactions.run("keyed_validation")
+
+        await page.fill("text=Name", "John")
+        await page.fill("text=Email", "john@example.com")
+        await page.fill("text=Age", "20")
+        await transactions.press_continue()
+        await transactions.expect_validation_error(
+            "Only Interval employees are invited to the holiday party."
+        )
+        await page.fill("text=Email", "john@interval.com")
+        await page.click("text=Include drink tickets?")
+        await transactions.press_continue()
+        await transactions.expect_group_validation_error(
+            "Attendees must be 21 years or older to receive drink tickets."
+        )
+        await page.click("text=Include drink tickets?")
+        await transactions.press_continue()
+        await transactions.expect_success(
+            name="John",
+            email="john@interval.com",
+            age=20,
+            include_drink_tickets=False,
+        )
+
+    async def test_optional_validation(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def optional_validation(io: IO):
+            name = await io.input.text("Name").optional()
+            age = (
+                await io.input.number("Age")
+                .optional()
+                .validate(
+                    lambda age: "Must specify an age if name is specified."
+                    if name is not None and age is None
+                    else None
+                )
+            )
+
+            return {
+                "name": name,
+                "age": age,
+            }
+
+        await transactions.console()
+        await transactions.run("optional_validation")
+
+        await transactions.press_continue()
+        await transactions.press_continue()
+        await transactions.expect_success()
+
+        await transactions.restart()
+
+        await page.fill("text=Name", "John")
+        await transactions.press_continue()
+
+        # Don't enter anything
+        await transactions.press_continue()
+        await transactions.expect_validation_error(
+            "Must specify an age if name is specified."
+        )
+
+        await page.fill("text=Age", "20")
+        await transactions.press_continue()
+        await transactions.expect_success(
+            name="John",
+            age=20,
+        )
+
+    async def test_multiple_validation(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+        mock_db: MockDb,
+    ):
+        first_user = mock_db.get_users()[0]
+
+        @interval.action
+        async def multiple_validation(io: IO):
+            def render_user(user: MockDb.User) -> str:
+                return f"{user['firstName']} {user['lastName']} ({user['email']})"
+
+            async def handle_search(query: str) -> list[MockDb.User]:
+                return mock_db.find_users(query)
+
+            selected = (
+                await io.search(
+                    "Select a user",
+                    help_text=f"Anyone but {first_user['firstName']} {first_user['lastName']}",
+                    render_result=render_user,
+                    on_search=handle_search,
+                )
+                .multiple()
+                .validate(
+                    lambda users: f"{first_user['firstName']} is not allowed."
+                    if first_user in users
+                    else None
+                )
+            )
+
+            return {str(i): render_user(user) for i, user in enumerate(selected)}
+
+        await transactions.console()
+        await transactions.run("multiple_validation")
+
+        label = page.locator('label:has-text("Select a user")')
+        input_id = await label.get_attribute("for")
+        input = page.locator(f"#{input_id}")
+
+        async def searchAndSelect(query: str):
+            await input.click()
+            await input.fill(query)
+            await expect(page.locator('text="Loading..."')).to_be_visible()
+            await expect(page.locator('text="Loading..."')).to_be_hidden()
+            await page.click(
+                f"[data-pw-search-result]:has-text('{query}'):nth-child(1)"
+            )
+            await expect(
+                page.locator(f".iv-select__multi-value__label:has-text('{query}')")
+            ).to_be_visible()
+            await expect(
+                page.locator(
+                    f"[data-pw-search-result]:has-text('{query}'):nth-child(1)"
+                )
+            ).to_be_hidden()
+
+        await searchAndSelect(first_user["email"])
+        await searchAndSelect("Alex")
+        await searchAndSelect("Dan")
+
+        await transactions.press_continue()
+        await transactions.expect_validation_error(
+            f"{first_user['firstName']} is not allowed."
+        )
+
+        await page.click(
+            f"[aria-label='Remove {first_user['firstName']} {first_user['lastName']} ({first_user['email']})']"
+        )
+
+        await transactions.press_continue()
+        await transactions.expect_success()
+
+    async def test_checkbox_validation(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def checkbox_validation(io: IO):
+            options = ["A", "B", "C", "D"]
+            selected = await io.select.multiple(
+                "Select anything but B", options=options
+            ).validate(lambda selected: "Anything but B." if "B" in selected else None)
+
+            return {val: val in selected for val in options}
+
+        await transactions.console()
+        await transactions.run("checkbox_validation")
+
+        await transactions.press_continue()
+        await transactions.expect_success()
+
+        await transactions.restart()
+
+        await expect(page.locator("text=Select anything but B")).to_be_visible()
+
+        await page.click('input[type="checkbox"][value="A"]')
+        await page.click('input[type="checkbox"][value="B"]')
+        await page.click('input[type="checkbox"][value="C"]')
+
+        await transactions.press_continue()
+        await transactions.expect_validation_error("Anything but B.")
+        await page.click('input[type="checkbox"][value="B"]')
+
+        await transactions.press_continue()
+        await transactions.expect_success(
+            A=True,
+            B=False,
+            C=True,
+            D=False,
+        )

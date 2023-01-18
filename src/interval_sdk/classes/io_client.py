@@ -5,6 +5,8 @@ from uuid import uuid4
 
 from typing_extensions import TypeAlias, TypeVar, Any, Awaitable
 
+from pydantic import parse_obj_as
+
 from ..io_schema import ButtonConfig, MethodName, IORender, IOResponse
 from .component import Component, IOPromiseValidator
 from .io_error import IOError
@@ -93,10 +95,8 @@ class IOClient:
                 async def check_invalidity(index: int, value: Any) -> bool:
                     """Returns True if invalid, False if valid"""
                     component = components[index]
-                    if component.validator is not None:
-                        resp = await component.handle_validation(value)
-                        return resp is not None
-                    return False
+                    resp = await component.handle_validation(value)
+                    return resp is not None
 
                 invalidities: list[bool] = await asyncio.gather(
                     *(
@@ -113,7 +113,12 @@ class IOClient:
                     return
 
                 if group_validator is not None:
-                    resp = group_validator(response.values)
+                    # we check that these are valid above, if any are invalid we wouldn't make it this far
+                    parsed_values = [
+                        components[i].parse_return_value(val)
+                        for i, val in enumerate(response.values)
+                    ]
+                    resp = group_validator(parsed_values)
                     validation_error_message = cast(
                         Optional[str], await resp if inspect.isawaitable(resp) else resp
                     )

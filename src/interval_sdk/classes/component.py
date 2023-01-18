@@ -93,31 +93,27 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
         self._fut = loop.create_future()
 
     async def handle_validation(self, return_value: Any) -> Optional[str]:
-        if self.validator is not None:
-            resp = self.validator(return_value)
-            message = cast(
-                Optional[str], await resp if inspect.isawaitable(resp) else resp
-            )
-            self.instance.validation_error_message = message
-            return message
+        try:
+            parsed = self.parse_return_value(return_value)
+            if self.validator is not None:
+                resp = self.validator(parsed)
+                message = cast(
+                    Optional[str], await resp if inspect.isawaitable(resp) else resp
+                )
+                self.instance.validation_error_message = message
+                return message
+            else:
+                return None
+        except BaseException as err:
+            print("[Interval] Received invalid return value:", err, file=sys.stderr)
+            return "Received invalid response."
 
     def set_return_value(self, value: Any):
-        return_schema = self.schema.returns
-        if self.instance.is_multiple:
-            return_schema = list[return_schema]
-        if self.instance.is_optional:
-            return_schema = Optional[return_schema]
-
         try:
-            if value is None:
-                if not self.instance.is_optional and self.schema.returns is not None:
-                    raise ValueError("Received invalid None return value")
-                parsed = None
-            else:
-                parsed = parse_obj_as(return_schema, dict_keys_to_snake(value))
+            parsed = self.parse_return_value(value)
             self._fut.set_result(parsed)
-        except ValueError as err:
-            print("Received invalid return value:", err, file=sys.stderr)
+        except BaseException as err:
+            print("[Interval] Received invalid return value:", err, file=sys.stderr)
             self._fut.set_exception(err)
 
     async def set_state(self, value: Any):
@@ -133,7 +129,7 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
                 )
             elif parsed is not None:
                 print(
-                    "Received state, but no method was defined to handle.",
+                    "[Interval] Received state, but no method was defined to handle.",
                     file=sys.stderr,
                 )
 
@@ -142,7 +138,21 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
                 # pylint: disable-next=not-callable
                 await self.on_state_change()
         except ValidationError as err:
-            print("Received invalid state:", value, err, file=sys.stderr)
+            print("[Interval] Received invalid state:", value, err, file=sys.stderr)
+
+    def parse_return_value(self, value: Any):
+        return_schema = self.schema.returns
+        if self.instance.is_multiple:
+            return_schema = list[return_schema]
+        if self.instance.is_optional:
+            return_schema = Optional[return_schema]
+
+        if value is None:
+            if not self.instance.is_optional and self.schema.returns is not None:
+                raise ValueError("Received invalid None return value")
+            return None
+
+        return parse_obj_as(return_schema, dict_keys_to_snake(value))
 
     def set_optional(self, optional: bool):
         self.instance.is_optional = optional

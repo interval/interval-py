@@ -79,6 +79,11 @@ class Transaction:
             self.page.locator(f"[data-pw='field-error']:has-text('{message}')")
         ).to_be_visible()
 
+    async def expect_group_validation_error(self, message: str):
+        await expect(
+            self.page.locator(f"[data-pw='form-error']:has-text('{message}')")
+        ).to_be_visible()
+
     async def expect_result(self, *args: str, **kwargs: str | int | float | bool):
         for val in args:
             await expect(
