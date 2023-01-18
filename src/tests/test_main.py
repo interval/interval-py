@@ -1,13 +1,15 @@
 import asyncio
-import json, re
+import json, re, os.path
 from datetime import date, time, datetime
 from pathlib import Path
 from typing import Union, cast
 
 from typing_extensions import NotRequired, TypedDict
+from urllib.parse import urlparse
 
 from playwright.async_api import Page as BrowserPage, expect
 import pytest
+import boto3
 
 from interval_sdk import (
     Interval,
@@ -18,6 +20,8 @@ from interval_sdk import (
     ctx_var,
     Page,
     Layout,
+    FileState,
+    FileUrlSet,
 )
 from interval_sdk.io_schema import LabelValue, RenderableSearchResult, RichSelectOption
 
@@ -1795,3 +1799,191 @@ async def test_malformed(
     await transactions.console()
     await transactions.run("malformed")
     await expect(page.locator("text=ValidationError")).to_be_visible()
+
+
+class TestUploads:
+    async def test_input_file(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def upload(io: IO):
+            file = await io.input.file("Upload a file")
+
+            return {
+                "size": file.size,
+                "type": file.type,
+                "name": file.name,
+                "extension": file.extension,
+                "url": file.url,
+                "text": file.text(),
+            }
+
+        await transactions.console()
+        await transactions.run("upload")
+
+        async with page.expect_file_chooser() as fc_info:
+            await page.click("text=Upload a file")
+        file_chooser = await fc_info.value
+        path = Path(__file__).parent / "data/spreadsheet.csv"
+
+        await file_chooser.set_files(path)
+
+        await expect(page.locator("text='Upload complete'")).to_be_visible()
+        await transactions.press_continue()
+
+        with open(path, "rb") as file:
+            buf = file.read()
+            await transactions.expect_success(
+                size=len(buf),
+                name="spreadsheet.csv",
+                type="text/csv",
+                extension=".csv",
+                text=str(buf, encoding="utf8"),
+            )
+
+    async def test_optional_input_file(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def upload_optional(io: IO):
+            file = await io.input.file("Upload a file").optional()
+
+            return {"name": file.name if file is not None else "None selected."}
+
+        await transactions.console()
+        await transactions.run("upload_optional")
+        await transactions.press_continue()
+        await transactions.expect_success()
+
+        await transactions.restart()
+        async with page.expect_file_chooser() as fc_info:
+            await page.click("text=Upload a file")
+        file_chooser = await fc_info.value
+        path = Path(__file__).parent / "data/spreadsheet.csv"
+
+        await file_chooser.set_files(path)
+
+        await expect(page.locator("text='Upload complete'")).to_be_visible()
+        await transactions.press_continue()
+
+        await transactions.expect_success(
+            name="spreadsheet.csv",
+        )
+
+    async def test_custom_upload_endpoint(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def upload_custom_endpoint(io: IO):
+            async def generate_presigned_urls(file: FileState) -> FileUrlSet:
+                url_safe_name = file.name.replace(" ", "-")
+                path = f"test-runner/{int(datetime.now().timestamp())}-{url_safe_name}"
+                s3_client = boto3.client("s3")
+                upload_url = s3_client.generate_presigned_url(
+                    ClientMethod="put_object",
+                    Params={
+                        "Bucket": "interval-io-uploads-dev",
+                        "Key": path,
+                    },
+                    ExpiresIn=3600,  # 1 hour
+                    HttpMethod="PUT",
+                )
+                url = urlparse(upload_url)
+                url = url._replace(params="", query="", fragment="")
+                download_url = url.geturl()
+
+                print(
+                    upload_url,
+                    download_url,
+                )
+
+                return {
+                    "uploadUrl": upload_url,
+                    "downloadUrl": download_url,
+                }
+
+            file = await io.input.file(
+                "Upload a file",
+                generate_presigned_urls=generate_presigned_urls,
+            )
+
+            return {
+                "size": file.size,
+                "type": file.type,
+                "name": file.name,
+                "extension": file.extension,
+                "url": file.url,
+                "text": file.text(),
+            }
+
+        await transactions.console()
+        await transactions.run("upload_custom_endpoint")
+
+        async with page.expect_file_chooser() as fc_info:
+            await page.click("text=Upload a file")
+        file_chooser = await fc_info.value
+        path = Path(__file__).parent / "data/spreadsheet.csv"
+
+        await file_chooser.set_files(path)
+
+        await expect(page.locator("text='Upload complete'")).to_be_visible()
+        await transactions.press_continue()
+        await transactions.expect_success("/test-runner/")
+
+        with open(path, "rb") as file:
+            buf = file.read()
+            await transactions.expect_success(
+                size=len(buf),
+                name="spreadsheet.csv",
+                type="text/csv",
+                extension=".csv",
+                text=str(buf, encoding="utf8"),
+            )
+
+    async def test_multi_upload(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def multi_upload(io: IO):
+            _ = await io.input.file("Upload some files").multiple().optional()
+
+            files = await io.input.file("Upload some files").multiple()
+
+            return {file.name: file.size for file in files}
+
+        await transactions.console()
+        await transactions.run("multi_upload")
+        await expect(page.locator("text=Optional")).to_be_visible()
+        await transactions.press_continue()
+        await expect(page.locator("text=Optional")).not_to_be_visible()
+
+        async with page.expect_file_chooser() as fc_info:
+            await page.click("text=Upload some files")
+        file_chooser = await fc_info.value
+        paths: list[str | Path] = [
+            Path(__file__).parent / "data/spreadsheet.csv",
+            Path(__file__).parent / "data/fail.gif",
+        ]
+
+        await file_chooser.set_files(paths)
+
+        await expect(page.locator("text='Upload complete'")).to_be_visible()
+        await transactions.press_continue()
+
+        for path in paths:
+            with open(path, "rb") as file:
+                await transactions.expect_success(
+                    **{os.path.basename(file.name): len(file.read())}
+                )

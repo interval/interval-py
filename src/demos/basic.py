@@ -2,6 +2,9 @@ import asyncio, json
 from datetime import date, datetime
 from typing import Iterable, Optional, cast
 from typing_extensions import Literal, NotRequired
+from urllib.parse import urlparse
+
+import boto3
 
 from interval_sdk import Interval, IO, io_var, ctx_var, action_ctx_var
 from interval_sdk.classes.action import Action
@@ -12,6 +15,8 @@ from interval_sdk.components.grid import GridDataFetcherState
 from interval_sdk.components.table import TableDataFetcherState
 from interval_sdk.internal_rpc_schema import ActionContext
 from interval_sdk.io_schema import (
+    FileState,
+    FileUrlSet,
     GridItem,
     RichSelectOption,
     RenderableSearchResult,
@@ -931,6 +936,49 @@ async def input_file(io: IO):
         "file_name": file.name,
         "extension": file.extension,
         "contents": text,
+    }
+
+
+@files.action
+async def upload_custom_endpoint(io: IO):
+    async def generate_presigned_urls(file: FileState) -> FileUrlSet:
+        url_safe_name = file.name.replace(" ", "-")
+        path = f"test-runner/{int(datetime.now().timestamp())}-{url_safe_name}"
+        s3_client = boto3.client("s3")
+        upload_url = s3_client.generate_presigned_url(
+            ClientMethod="put_object",
+            Params={
+                "Bucket": "interval-io-uploads-dev",
+                "Key": path,
+            },
+            ExpiresIn=3600,  # 1 hour
+            HttpMethod="PUT",
+        )
+        url = urlparse(upload_url)
+        url = url._replace(params="", query="", fragment="")
+        download_url = url.geturl()
+
+        print(
+            upload_url,
+            download_url,
+        )
+
+        return {
+            "uploadUrl": upload_url,
+            "downloadUrl": download_url,
+        }
+
+    file = await io.input.file(
+        "Upload a file",
+        generate_presigned_urls=generate_presigned_urls,
+    )
+
+    return {
+        "size": file.size,
+        "type": file.type,
+        "name": file.name,
+        "extension": file.extension,
+        "url": file.url,
     }
 
 

@@ -496,7 +496,7 @@ class IO:
                     help_text=help_text,
                     allowed_extensions=allowed_extensions,
                     disabled=disabled,
-                    file_urls=None,
+                    file_urls=[],
                 ),
                 handle_state_change=handle_state_change,
             )
