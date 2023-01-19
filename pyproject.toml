@@ -2,8 +2,19 @@
 name = "interval-sdk"
 version = "0.37.0-dev0"
 description = "Python SDK for Interval."
-authors = ["Interval"]
+authors = [
+	"Jacob Mischka <jacob@interval.com>",
+	"Ryan Coppolo <ryan@interval.com>",
+]
+maintainers = [
+	"Jacob Mischka <jacob@interval.com>",
+	"Ryan Coppolo <ryan@interval.com>",
+]
 readme = "README.md"
+homepage = "https://interval.com"
+documentation = "https://interval.com/docs"
+repository = "https://github.com/interval/interval-py"
+keywords = ["internal tool", "app", "ui", "ui builder"]
 
 [tool.poe.tasks]
 demo = { script = 'demos:main' }
