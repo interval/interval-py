@@ -2,12 +2,10 @@
 
 ## Installation
 
-`interval-sdk` is not yet published on pypi (soon!).
-
-In the meantime, you can install from git:
+Install using pip, (or your python package manager of choice):
 
 ```
-pip install git+https://github.com/interval/interval-py.git
+pip install interval-sdk
 ```
 
 ## API
