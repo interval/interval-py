@@ -1,5 +1,5 @@
 import asyncio
-from asyncio import Future
+import concurrent.futures
 from typing import Any, Callable, Generic, Optional
 
 from typing_extensions import TypeVar, TypeAlias, Awaitable
@@ -32,7 +32,7 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
     _can_call: dict[CallerSchemaMethodName, RPCMethod]
     _can_respond_to: dict[ResponderSchemaMethodName, RPCMethod]
     _handlers: dict[ResponderSchemaMethodName, RPCHandler]
-    _pending_calls: dict[str, Future[Any]]
+    _pending_calls: dict[str, asyncio.Future[Any]]
     _logger: Logger
 
     def __init__(
@@ -66,7 +66,7 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
             if input.kind == "CALL":
                 try:
                     return await self._handle_received_call(input)
-                except TimeoutError as err:
+                except (TimeoutError, asyncio.CancelledError) as err:
                     self._logger.debug(
                         "Call timed out:",
                         input,
@@ -133,7 +133,12 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
         )
         prepared_response_text = message.json()
 
-        await self._communicator.send(prepared_response_text)
+        try:
+            await self._communicator.send(prepared_response_text)
+        except Exception as err:
+            self._logger.error("Failed sending response", message, err)
+            self._logger.print_exception(err)
+            raise err
 
     async def send(self, method_name: CallerSchemaMethodName, inputs: dict[str, Any]):
         id = generate_id()

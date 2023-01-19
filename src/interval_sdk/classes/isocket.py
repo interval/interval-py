@@ -1,5 +1,5 @@
 import asyncio
-from asyncio.futures import Future
+from asyncio import Future
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 from uuid import UUID, uuid4
@@ -126,11 +126,17 @@ class ISocket:
                     def on_complete(task: asyncio.Task):
                         try:
                             task.result()
-                        except (TimeoutError, IntervalError, IOError):
-                            # we'll resend again separately
+                        except (
+                            TimeoutError,
+                            asyncio.CancelledError,
+                            IntervalError,
+                            IOError,
+                        ) as err:
+                            self._logger.print_exception(err)
                             pass
                         except BaseException as err:
                             self._logger.error("Error sending message", err)
+                            self._logger.print_exception(err)
                         finally:
                             self._message_tasks.remove(task)
 
