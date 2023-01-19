@@ -3,6 +3,7 @@ name = "interval-sdk"
 version = "0.1.0.dev0"
 description = "Python SDK for Interval."
 authors = ["Interval"]
+readme = "README.md"
 
 [tool.poe.tasks]
 demo = { script = 'demos:main' }
