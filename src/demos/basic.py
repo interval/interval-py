@@ -32,6 +32,7 @@ interval = Interval(
     "alex_dev_kcLjzxNFxmGLf0aKtLVhuckt6sziQJtxFOdtM19tBrMUp5mj",
     endpoint="ws://localhost:3000/websocket",
     log_level="debug",
+    num_message_producers=5,
 )
 
 
@@ -671,7 +672,7 @@ async def big_table(io: IO):
 async def big_select_table(io: IO):
     data = [
         {"a": i, "b": 2 * i, "c": 3 * i, "d": [i, i, i], "e": {"i": i}}
-        for i in range(100_000)
+        for i in range(10_000)
     ]
 
     selected = await io.select.table(

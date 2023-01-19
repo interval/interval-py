@@ -229,6 +229,7 @@ class Interval:
     _ping_interval_seconds: float = 30
     _close_unresponsive_connection_timeout_seconds: float = 180
     _reinitialize_batch_timeout_seconds: float = 0.2
+    _num_isocket_producers: int
 
     _page_io_clients: dict[str, IOClient]
     _page_futures: dict[str, asyncio.Task]
@@ -258,8 +259,15 @@ class Interval:
     def __init__(
         self,
         api_key: str,
+        *,
         endpoint: Optional[str] = None,
         log_level: LogLevel = "info",
+        retry_interval: float = 3,
+        ping_timeout: float = 5,
+        ping_interval: float = 30,
+        close_unresponsive_connection_timeout: float = 180,
+        reinitialize_batch_timeout: float = 0.2,
+        num_message_producers: int = 1,
     ):
         self._api_key = api_key
         if endpoint is not None:
@@ -269,6 +277,15 @@ class Interval:
         self._http_endpoint = urlunparse(
             url._replace(scheme=url.scheme.replace("ws", "http"), path="/api")
         )
+
+        self._retry_interval_seconds = retry_interval
+        self._ping_timeout_seconds = ping_timeout
+        self._ping_interval_seconds = ping_interval
+        self._close_unresponsive_connection_timeout_seconds = (
+            close_unresponsive_connection_timeout
+        )
+        self._reinitialize_batch_timeout_seconds = reinitialize_batch_timeout
+        self._num_isocket_producers = num_message_producers
 
         self._page_io_clients = {}
         self._page_futures = {}
@@ -735,6 +752,7 @@ class Interval:
             ws=ws,
             on_close=on_close,
             log_level=self._logger.log_level,
+            num_producers=self._num_isocket_producers,
         )
 
         await self._isocket.connect()
@@ -820,7 +838,6 @@ class Interval:
                     )
 
                     try:
-
                         sig = signature(handler)
                         params = sig.parameters
                         if len(params) == 0:

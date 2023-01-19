@@ -1,5 +1,4 @@
 import asyncio
-import concurrent.futures
 from typing import Any, Callable, Generic, Optional
 
 from typing_extensions import TypeVar, TypeAlias, Awaitable

@@ -48,6 +48,7 @@ class ISocket:
     _pending_messages: dict[UUID, PendingMessage]
     _message_tasks: set[asyncio.Task]
     _connection_future: Optional[Future]
+    _num_producers: int
 
     def __init__(
         self,
@@ -60,6 +61,7 @@ class ISocket:
         on_error: Optional[Callable[[Exception], Awaitable[None]]] = None,
         on_close: Optional[Callable[[int, str], Awaitable[None]]] = None,
         log_level: Optional[LogLevel] = None,
+        num_producers: int = 1,
     ):
         self._logger = Logger(log_level=log_level, prefix=self.__class__.__name__)
         self._ws = ws
@@ -76,6 +78,7 @@ class ISocket:
         self._out_queue = asyncio.Queue()
         self._pending_messages = {}
         self._message_tasks = set()
+        self._num_producers = num_producers
 
     async def connect(self) -> None:
         if self.on_open:
@@ -86,11 +89,12 @@ class ISocket:
         self.on_authenticated = fut
 
         self._connection_future = asyncio.gather(
+            # websockets can only have one consumer I think
             self._consumer_handler(self._ws),
-            self._producer_handler(self._ws),
+            *(self._producer_handler(self._ws) for _ in range(self._num_producers)),
         )
 
-        def on_complete(fut: Future[tuple[None, None]]):
+        def on_complete(fut: Future):
             try:
                 fut.result()
             except BaseException as err:
