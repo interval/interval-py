@@ -20,15 +20,22 @@ class SdkAlert(BaseModel):
 
 
 class Logger:
+    prefix: str = "Interval"
     log_level: LogLevel = "info"
 
-    def __init__(self, log_level: Optional[LogLevel] = None):
+    def __init__(
+        self,
+        log_level: Optional[LogLevel] = None,
+        prefix: Optional[str] = None,
+    ):
         if log_level is not None:
             self.log_level = log_level
+        if prefix is not None:
+            self.prefix = prefix
 
     def prod(self, *args, **kwargs):
         """Important messages, always emitted"""
-        print("[Interval] ", *args, **kwargs)
+        print(f"[{self.prefix}] ", *args, **kwargs)
 
     def prod_no_prefix(self, *args, **kwargs):
         """Same as prod, but without the [Interval] prefix"""
@@ -36,12 +43,12 @@ class Logger:
 
     def error(self, *args, **kwargs):
         """Fatal errors or errors in user code, always emitted"""
-        print("[Interval] ", *args, **kwargs, file=sys.stderr)
+        print(f"[{self.prefix}] ", *args, **kwargs, file=sys.stderr)
 
     def info(self, *args, **kwargs):
         """Informational messages, not emitted in "quiet" log level"""
         if self.log_level != "quiet":
-            print("[Interval] ", *args, **kwargs)
+            print(f"[{self.prefix}] ", *args, **kwargs)
 
     def info_no_prefix(self, *args, **kwargs):
         """Same as info, but without the [Interval] prefix"""
@@ -51,14 +58,14 @@ class Logger:
     def warn(self, *args, **kwargs):
         """Non-fatal warnings, not emitted in "quiet" log level"""
         if self.log_level != "quiet":
-            print("[Interval] ", *args, **kwargs, file=sys.stderr)
+            print(f"[{self.prefix}] ", *args, **kwargs, file=sys.stderr)
 
     def debug(self, *args, **kwargs):
         """Debugging/tracing information, only emitted in "debug" log level"""
         if self.log_level == "debug":
-            print("[Interval] ", *args, **kwargs)
+            print(f"[{self.prefix}] ", *args, **kwargs)
 
-    def print_exception(self, err: Exception):
+    def print_exception(self, err: Optional[BaseException] = None):
         if self.log_level == "debug":
             traceback.print_exc(file=sys.stderr)
 

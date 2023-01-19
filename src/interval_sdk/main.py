@@ -280,7 +280,7 @@ class Interval:
         self._page_definitions = []
         self._action_handlers = {}
         self._page_handlers = {}
-        self._logger = Logger(log_level)
+        self._logger = Logger(log_level=log_level, prefix=self.__class__.__name__)
         self.routes = Interval.Routes(self)
 
     def _get_api_address(self, path: str) -> str:
@@ -734,6 +734,7 @@ class Interval:
             id=instance_id,
             ws=ws,
             on_close=on_close,
+            log_level=self._logger.log_level,
         )
 
         await self._isocket.connect()
@@ -1210,6 +1211,7 @@ class Interval:
                 "OPEN_PAGE": open_page,
                 "CLOSE_PAGE": close_page,
             },
+            log_level=self._logger.log_level,
         )
 
     async def _initialize_host(self):

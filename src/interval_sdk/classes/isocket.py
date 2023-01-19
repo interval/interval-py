@@ -1,4 +1,4 @@
-import asyncio, sys
+import asyncio
 from asyncio.futures import Future
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
@@ -9,6 +9,7 @@ from typing_extensions import Literal, Awaitable
 import websockets, websockets.client, websockets.exceptions
 from pydantic import BaseModel
 
+from .logger import LogLevel, Logger
 from ..types import IntervalError
 
 
@@ -29,6 +30,7 @@ class NotConnectedError(Exception):
 
 
 class ISocket:
+    _logger: Logger
     _ws: websockets.client.WebSocketClientProtocol
     _send_timeout: float
     _connect_timeout: float
@@ -51,13 +53,15 @@ class ISocket:
         self,
         ws: websockets.client.WebSocketClientProtocol,
         id: Optional[UUID] = None,
-        send_timeout: float = 3,
+        send_timeout: float = 5,
         connect_timeout: float = 10,
         on_message: Optional[Callable[[str], Awaitable[None]]] = None,
         on_open: Optional[Callable[[], Awaitable[None]]] = None,
         on_error: Optional[Callable[[Exception], Awaitable[None]]] = None,
         on_close: Optional[Callable[[int, str], Awaitable[None]]] = None,
+        log_level: Optional[LogLevel] = None,
     ):
+        self._logger = Logger(log_level=log_level, prefix=self.__class__.__name__)
         self._ws = ws
         self.id = id if id is not None else uuid4()
         self._send_timeout = send_timeout
@@ -90,9 +94,7 @@ class ISocket:
             try:
                 fut.result()
             except BaseException as err:
-                print(
-                    "[ISocket] Encountered connection loop error", err, file=sys.stderr
-                )
+                self._logger.error("Encountered connection loop error", err)
             self._connection_future = None
 
         self._connection_future.add_done_callback(on_complete)
@@ -107,10 +109,9 @@ class ISocket:
                 meta = Message.parse_raw(message)
 
                 if meta.type == "ACK":
-                    pm = self._pending_messages.get(meta.id, None)
-                    if pm:
+                    pm = self._pending_messages.pop(meta.id)
+                    if not pm.on_ack_received.done():
                         pm.on_ack_received.set_result(None)
-                        self._pending_messages.pop(meta.id)
                 elif meta.type == "MESSAGE":
                     await self._out_queue.put(
                         Message(id=meta.id, data=None, type="ACK")
@@ -129,9 +130,7 @@ class ISocket:
                             # we'll resend again separately
                             pass
                         except BaseException as err:
-                            print(
-                                "[ISocket] Error sending message", err, file=sys.stderr
-                            )
+                            self._logger.error("Error sending message", err)
                         finally:
                             self._message_tasks.remove(task)
 
@@ -140,7 +139,8 @@ class ISocket:
         except websockets.exceptions.ConnectionClosed as e:
             await self._handle_close(e.code, e.reason)
         except Exception as e:
-            print("[ISocket] Error in consumer handler", e, file=sys.stderr)
+            self._logger.error("Error in consumer handler", e)
+            self._logger.print_exception(e)
 
     async def _handle_message(self, message: str):
         if self.on_message is not None:
@@ -161,11 +161,13 @@ class ISocket:
                     # No need to put back in queue, we'll try resending again
                     pass
                 except Exception as e:
-                    print("[ISocket] Error in producer handler", e, file=sys.stderr)
+                    self._logger.error("Error in producer handler", e)
+                    self._logger.print_exception(e)
                 finally:
                     self._out_queue.task_done()
             except Exception as e:
-                print("[ISocket] Error getting message from queue?", e)
+                self._logger.error("Error getting message from queue?", e)
+                self._logger.print_exception(e)
 
     async def send(self, data: str) -> None:
         if self._ws is None:

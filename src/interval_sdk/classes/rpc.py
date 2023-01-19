@@ -1,10 +1,11 @@
-import asyncio, sys
+import asyncio
 from asyncio import Future
-from typing import Any, Callable, Generic
+from typing import Any, Callable, Generic, Optional
 
 from typing_extensions import TypeVar, TypeAlias, Awaitable
 from pydantic import ValidationError, parse_obj_as
 
+from .logger import LogLevel, Logger
 from ..internal_rpc_schema import AnyRPCSchemaMethodName, DuplexMessage, RPCMethod
 from .isocket import ISocket
 from ..util import dict_keys_to_camel
@@ -32,6 +33,7 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
     _can_respond_to: dict[ResponderSchemaMethodName, RPCMethod]
     _handlers: dict[ResponderSchemaMethodName, RPCHandler]
     _pending_calls: dict[str, Future[Any]]
+    _logger: Logger
 
     def __init__(
         self,
@@ -39,6 +41,7 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
         can_call: dict[CallerSchemaMethodName, RPCMethod],
         can_respond_to: dict[ResponderSchemaMethodName, RPCMethod],
         handlers: dict[ResponderSchemaMethodName, RPCHandler],
+        log_level: Optional[LogLevel] = None,
     ):
         self._communicator = communicator
         self._communicator.on_message = self._on_message
@@ -46,6 +49,7 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
         self._can_respond_to = can_respond_to
         self._handlers = handlers
         self._pending_calls = {}
+        self._logger = Logger(log_level=log_level, prefix=self.__class__.__name__)
 
         self.set_communicator(communicator)
 
@@ -62,36 +66,46 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
             if input.kind == "CALL":
                 try:
                     return await self._handle_received_call(input)
+                except TimeoutError as err:
+                    self._logger.debug(
+                        "Call timed out:",
+                        input,
+                        err,
+                    )
+                    self._logger.print_exception(err)
                 except KeyError as err:
-                    print(
-                        "[DuplexRPCClient] Received unsupported call:",
+                    self._logger.error(
+                        "Received unsupported call:",
                         input,
                         err,
-                        file=sys.stderr,
                     )
+                    self._logger.print_exception(err)
                 except ValidationError as err:
-                    print(
-                        "[DuplexRPCClient] Received invalid call:",
+                    self._logger.error(
+                        "Received invalid call:",
                         input,
                         err,
-                        file=sys.stderr,
                     )
+                    self._logger.print_exception(err)
                 except Exception as err:
-                    print(
-                        "[DuplexRPCClient] Failed handling call:",
+                    self._logger.error(
+                        "Failed handling call:",
                         input,
                         err,
-                        file=sys.stderr,
                     )
+                    self._logger.print_exception(err)
             elif input.kind == "RESPONSE":
                 try:
                     return await self._handle_received_response(input)
-                except KeyError:
-                    print("[DuplexRPCClient] Received unsupported response:", input)
-                except ValidationError:
-                    print("[DuplexRPCClient] Received invalid response:", input)
-                except:
-                    print("[DuplexRPCClient] Failed handling response:", input)
+                except KeyError as err:
+                    self._logger.error("Received unsupported response:", input, err)
+                    self._logger.print_exception(err)
+                except ValidationError as err:
+                    self._logger.error("Received invalid response:", input, err)
+                    self._logger.print_exception(err)
+                except Exception as err:
+                    self._logger.error("Failed handling response:", input, err)
+                    self._logger.print_exception(err)
 
         except ValidationError:
             pass
@@ -139,7 +153,7 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
             try:
                 task.result()
             except BaseException as err:
-                print("[DuplexRPCClient] Error sending message", err, file=sys.stderr)
+                self._logger.error("Error sending message", err)
 
         task = loop.create_task(self._communicator.send(message.json()), name="send")
         task.add_done_callback(handle_exceptions)
