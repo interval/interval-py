@@ -228,18 +228,18 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "boto3"
-version = "1.26.51"
+version = "1.26.52"
 description = "The AWS SDK for Python"
 category = "dev"
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "boto3-1.26.51-py3-none-any.whl", hash = "sha256:b4aefdc72191c40a0155511b9ce933c94dcbdd1834ffc1204e90a30e7849ef13"},
-    {file = "boto3-1.26.51.tar.gz", hash = "sha256:d599ce626b03e7236b0cda051c3cedc128fd75e0ec2f799fab9b2eabdf32d945"},
+    {file = "boto3-1.26.52-py3-none-any.whl", hash = "sha256:319ddb274f8f83b035b88a3b127c465bf6fe3e3fc2d668869b489e992c47ca77"},
+    {file = "boto3-1.26.52.tar.gz", hash = "sha256:0b1f82d4565ed875c7975ac0be5665e8d948613c01bcb0e49df6d4f5af670cc8"},
 ]
 
 [package.dependencies]
-botocore = ">=1.29.51,<1.30.0"
+botocore = ">=1.29.52,<1.30.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.6.0,<0.7.0"
 
@@ -248,14 +248,14 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.29.51"
+version = "1.29.52"
 description = "Low-level, data-driven core of boto 3."
 category = "dev"
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "botocore-1.29.51-py3-none-any.whl", hash = "sha256:bbb92420902b4d9e4b854fcfae20d1029f1c3396e0579894f115278bc51d6198"},
-    {file = "botocore-1.29.51.tar.gz", hash = "sha256:f2f521fbd2343879f3c2d42392c88f1e7f15ea147a6dc5a3dab7b8686d90fcb6"},
+    {file = "botocore-1.29.52-py3-none-any.whl", hash = "sha256:de55b6333fb13c66da9055972d7e4efff5dcc5a087478a2b70e99d888b29a24c"},
+    {file = "botocore-1.29.52.tar.gz", hash = "sha256:a0b89a33305cfa6251c6e1142deb7567e216e37e25363159f45fb81dc5b474e5"},
 ]
 
 [package.dependencies]
@@ -444,14 +444,14 @@ testing = ["pre-commit"]
 
 [[package]]
 name = "faker"
-version = "16.4.0"
+version = "16.6.0"
 description = "Faker is a Python package that generates fake data for you."
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "Faker-16.4.0-py3-none-any.whl", hash = "sha256:5420467fad3fa582094057754e5e81326cb1f51ab822bf9df96c077cfb35ae49"},
-    {file = "Faker-16.4.0.tar.gz", hash = "sha256:dcffdca8ec9a715982bcd5f53ee688dc4784cd112f9910f8f7183773eb3ec276"},
+    {file = "Faker-16.6.0-py3-none-any.whl", hash = "sha256:0a74514d654db0a3d37b9ca681f2d9182d2ec556f78b4f1a842a2ccc944660cd"},
+    {file = "Faker-16.6.0.tar.gz", hash = "sha256:dc8b2a8bf0d852d26eacf7763afd5e7d6e9e50d80ec648b51b8ecd3c505435fd"},
 ]
 
 [package.dependencies]
@@ -1081,21 +1081,6 @@ dotenv = ["python-dotenv (>=0.10.4)"]
 email = ["email-validator (>=1.0.3)"]
 
 [[package]]
-name = "pydantic-partial"
-version = "0.3.3"
-description = "Create partial models from your pydantic models. Partial models may allow None for certain or all fields."
-category = "main"
-optional = false
-python-versions = ">=3.9,<4.0"
-files = [
-    {file = "pydantic-partial-0.3.3.tar.gz", hash = "sha256:716b3e84b9c1ae392a1e9c6e8605e054b5d17f1a39dbe48ea3952d03098bb010"},
-    {file = "pydantic_partial-0.3.3-py3-none-any.whl", hash = "sha256:7b5a685082ccfa38c6c1935ad9cebd3d2a79411aa4876de4b8e485f3c548ff17"},
-]
-
-[package.dependencies]
-pydantic = ">=1.9.0,<2.0.0"
-
-[[package]]
 name = "pyee"
 version = "9.0.4"
 description = "A port of node.js's EventEmitter to python."
@@ -1142,14 +1127,14 @@ testutils = ["gitpython (>3)"]
 
 [[package]]
 name = "pytest"
-version = "7.2.0"
+version = "7.2.1"
 description = "pytest: simple powerful testing with Python"
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pytest-7.2.0-py3-none-any.whl", hash = "sha256:892f933d339f068883b6fd5a459f03d85bfcb355e4981e146d2c7616c21fef71"},
-    {file = "pytest-7.2.0.tar.gz", hash = "sha256:c4014eb40e10f11f355ad4e3c2fb2c6c6d1919c73f3b5a433de4708202cade59"},
+    {file = "pytest-7.2.1-py3-none-any.whl", hash = "sha256:c7c6ca206e93355074ae32f7403e8ea12163b1163c976fee7d4d84027c162be5"},
+    {file = "pytest-7.2.1.tar.gz", hash = "sha256:d45e0952f3727241918b8fd0f376f5ff6b301cc0777c6f9a556935c92d8a7d42"},
 ]
 
 [package.dependencies]
@@ -1632,4 +1617,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "13451a568279749da924ce6e8ebb91510a1fb7e73420df54b6f135e3ac417f5e"
+content-hash = "c6317615cf0157f52b5c712bbb90773ecbb23746ab81b652dc80acb3326658ed"
