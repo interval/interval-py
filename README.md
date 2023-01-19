@@ -1,6 +1,18 @@
 # interval-sdk
 
+## Installation
+
+`interval-sdk` is not yet published on pypi (soon!).
+
+In the meantime, you can install from git:
+
+```
+pip install git+https://github.com/interval/interval-py.git
+```
+
 ## API
+
+*Note:* Proper documentation is in progress!
 
 See `src/demos/basic.py` and `src/tests` for a better overview, but in short:
 
@@ -65,6 +77,8 @@ your editor to format on save using Black, or run `poe format` to format the
 code before committing changes.
 
 ## Tests
+
+*Note:* Tests currently require a local instance of the Interval backend.
 
 Tests use [pytest](https://docs.pytest.org/en/7.1.x/) and
 [playwright](https://playwright.dev/python/).
