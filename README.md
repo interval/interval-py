@@ -18,19 +18,15 @@ See `src/demos/basic.py` and `src/tests` for a better overview, but in short:
 from interval_sdk import Interval, IO
 
 # Initialize Interval
-interval = Interval(
-    "API_KEY",
-    endpoint="wss://interval.com/websocket",
-    log_level="debug",
-)
+interval = Interval("API_KEY")
 
 # Add an action using the function name as the slug
 @interval.action
 async def hello_interval():
     return {"hello": "from python!"}
 
-# Add an action using a custom slug (can contain periods and hyphens)
-@interval.action(slug='echo-message')
+# Add an action using a custom slug (can contain hyphens) and additional configuration
+@interval.action(slug='echo-message', unlisted=True)
 async def echo_message(io: IO):
     [message] = await io.group(io.input.text("Hello!", help_text="From python!"))
 
