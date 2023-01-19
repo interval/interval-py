@@ -1,4 +1,4 @@
-import asyncio, json
+import asyncio, json, signal
 from datetime import date, datetime
 from typing import Iterable, Optional, cast
 from typing_extensions import Literal, NotRequired
@@ -1129,5 +1129,8 @@ prod_task.add_done_callback(logger.handle_task_exceptions)
 dev_task = loop.create_task(interval.listen_async())
 dev_task.add_done_callback(logger.handle_task_exceptions)
 dev_task.add_done_callback(on_listened)
+
+for sig in {signal.SIGINT, signal.SIGTERM}:
+    loop.add_signal_handler(sig, loop.stop)
 
 loop.run_forever()

@@ -58,6 +58,20 @@ loop.create_task(interval.listen_async())
 loop.run_forever()
 ```
 
+If you are using `run_forever()`, you'll probably want to add signal handlers
+to close the loop gracefully on process termination:
+
+```python
+import asyncio, signal
+
+loop = asyncio.get_event_loop()
+loop.create_task(interval.listen_async())
+for sig in {signal.SIGINT, signal.SIGTERM}:
+    loop.add_signal_handler(sig, loop.stop)
+loop.run_forever()
+```
+
+
 ## Contributing
 
 This project uses [Poetry](https://python-poetry.org/) for dependency

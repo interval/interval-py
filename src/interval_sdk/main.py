@@ -1,4 +1,4 @@
-import asyncio, importlib.metadata, time, datetime
+import asyncio, importlib.metadata, time, datetime, signal
 from contextvars import ContextVar
 from dataclasses import dataclass
 from inspect import iscoroutine, signature, isfunction
@@ -503,6 +503,9 @@ class Interval:
         task = loop.create_task(self.listen_async())
         if done_callback is not None:
             task.add_done_callback(done_callback)
+
+        for sig in {signal.SIGINT, signal.SIGTERM}:
+            loop.add_signal_handler(sig, loop.stop)
         loop.run_forever()
 
     async def listen_async(self):
