@@ -347,34 +347,40 @@ async def select_single(io: IO):
     class Option(RichSelectOption):
         extraData: NotRequired[bool]
 
+    options: list[Option] = [
+        {
+            "label": "Red",
+            "value": "red",
+            "extraData": True,
+            "image": {
+                "url": "https://www.htmlcsscolor.com/preview/128x128/ff0000.png",
+                "alt": "The color red",
+                "size": "thumbnail",
+            },
+        },
+        {
+            "label": "Blue",
+            "value": "blue",
+            "image": {
+                "url": "https://www.htmlcsscolor.com/preview/128x128/0000ff.png",
+                "alt": "The color blue",
+                "size": "thumbnail",
+            },
+        },
+        {
+            "label": "Orange",
+            "value": "orange",
+            "image": {
+                "url": "https://www.htmlcsscolor.com/preview/128x128/FFA500.png",
+                "alt": "The color orange",
+                "size": "thumbnail",
+            },
+        },
+    ]
+
     selected = await io.select.single(
         "Your favorite color",
-        options=(
-            [
-                cast(
-                    Option,
-                    {
-                        "label": "Red",
-                        "value": "red",
-                        "extraData": True,
-                    },
-                ),
-                cast(
-                    Option,
-                    {
-                        "label": "Blue",
-                        "value": "blue",
-                    },
-                ),
-                cast(
-                    Option,
-                    {
-                        "label": "Orange",
-                        "value": "orange",
-                    },
-                ),
-            ]
-        ),
+        options=options,
     )
 
     print(selected)

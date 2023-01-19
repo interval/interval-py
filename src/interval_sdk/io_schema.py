@@ -126,11 +126,26 @@ class ButtonConfig(BaseModel):
     theme: Optional[ButtonTheme] = None
 
 
+ImageSize: TypeAlias = Literal["thumbnail", "small", "medium", "large"]
+
+
+class ImageDefinition(TypedDict):
+    url: str
+    alt: NotRequired[str]
+    size: NotRequired[ImageSize]
+
+
+class ImageDefinitionModel(BaseModel):
+    url: str
+    alt: Optional[str] = None
+    size: Optional[ImageSize] = None
+
+
 class RichSelectOption(TypedDict):
     label: ObjectLiteral
     value: ObjectLiteral
     description: NotRequired[str]
-    imageUrl: NotRequired[str]
+    image: NotRequired[ImageDefinition]
 
 
 PassthroughRichSelectOption = TypeVar(
@@ -142,7 +157,7 @@ class RichSelectOptionModel(BaseModel):
     label: ObjectLiteral
     value: ObjectLiteral
     description: Optional[str] = None
-    imageUrl: Optional[str] = None
+    image: Optional[ImageDefinitionModel] = None
 
 
 class KeyValueObjectModel(BaseModel):
@@ -311,14 +326,6 @@ SearchResultValue: TypeAlias = Union[
 PassthroughSearchResultValue = TypeVar(
     "PassthroughSearchResultValue", bound=SearchResultValue
 )
-
-ImageSize: TypeAlias = Literal["thumbnail", "small", "medium", "large"]
-
-
-class ImageDefinition(TypedDict):
-    url: str
-    alt: Optional[str]
-    size: Optional[ImageSize]
 
 
 class TableRowValueObject(TypedDict):
@@ -629,12 +636,6 @@ class DisplayMetadataProps(BaseModel):
 
 class DisplayObjectProps(BaseModel):
     data: KeyValueObjectModel
-
-
-class ImageDefinitionModel(BaseModel):
-    url: str
-    alt: Optional[str] = None
-    size: Optional[ImageSize] = None
 
 
 class DisplayImageProps(BaseModel):
