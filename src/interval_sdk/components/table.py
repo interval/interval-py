@@ -24,8 +24,6 @@ from ..io_schema import (
     TableRow,
     TableColumnDef,
     InternalTableRow,
-    TableRowModel,
-    TableRowValueModel,
     TableRowValueObject,
 )
 from ..util import (
@@ -70,7 +68,7 @@ def serialize_table_row(
     menu_builder: Optional[Callable[[TR], list[TableMenuItem]]] = None,
 ) -> InternalTableRow:
     row = cast(TR, serialize_dates(cast(SerializableRecord, row)))
-    rendered_row: TableRowModel = {}
+    rendered_row: TableRow = {}
     filter_values: list[str] = []
 
     for i, col in enumerate(columns):
@@ -104,9 +102,7 @@ def serialize_table_row(
             else:
                 filter_values.append(str(val))
 
-        rendered_row[accessor_key] = (
-            TableRowValueModel.parse_obj(val) if val is not None else None
-        )
+        rendered_row[accessor_key] = val
 
     return InternalTableRow(
         key=key,

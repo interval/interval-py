@@ -312,6 +312,14 @@ PassthroughSearchResultValue = TypeVar(
     "PassthroughSearchResultValue", bound=SearchResultValue
 )
 
+ImageSize: TypeAlias = Literal["thumbnail", "small", "medium", "large"]
+
+
+class ImageDefinition(TypedDict):
+    url: str
+    alt: Optional[str]
+    size: Optional[ImageSize]
+
 
 class TableRowValueObject(TypedDict):
     label: NotRequired[TableRowValuePrimitive]
@@ -335,13 +343,6 @@ TableRowValue: TypeAlias = Union[TableRowValueObject, TableRowValuePrimitive]
 TableRow: TypeAlias = Mapping[str, TableRowValue]
 
 
-class TableRowValueModel(BaseModel):
-    __root__: Union[TableRowValuePrimitive, TableRowValueObjectModel]
-
-
-TableRowModel: TypeAlias = dict[str, Optional[TableRowValueModel]]
-
-
 class TableMenuItem(TypedDict):
     label: str
     theme: NotRequired[Literal["danger"]]
@@ -362,7 +363,7 @@ class TableMenuItemModel(BaseModel):
 
 class InternalTableRow(BaseModel):
     key: str
-    data: TableRowModel
+    data: TableRow
     menu: list[TableMenuItemModel] = Field(default_factory=list)
     filterValue: Optional[str] = None
 
@@ -628,15 +629,6 @@ class DisplayMetadataProps(BaseModel):
 
 class DisplayObjectProps(BaseModel):
     data: KeyValueObjectModel
-
-
-ImageSize: TypeAlias = Literal["thumbnail", "small", "medium", "large"]
-
-
-class ImageDefinition(TypedDict):
-    url: str
-    alt: Optional[str]
-    size: Optional[ImageSize]
 
 
 class ImageDefinitionModel(BaseModel):
