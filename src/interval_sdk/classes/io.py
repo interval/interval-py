@@ -559,9 +559,12 @@ class IO:
                 if state.is_select_all:
                     selected_keys = [row.key for row in new_sorted]
 
-                props.data = new_sorted[
-                    state.offset : state.offset
-                    + min(state.page_size * 3, TABLE_DATA_BUFFER_SIZE)
+                props.data = [
+                    InternalTableRow.revalidate(row)
+                    for row in new_sorted[
+                        state.offset : state.offset
+                        + min(state.page_size * 3, TABLE_DATA_BUFFER_SIZE)
+                    ]
                 ]
                 props.selected_keys = selected_keys
                 props.total_records = len(new_sorted)
@@ -576,7 +579,10 @@ class IO:
                     columns=[
                         InternalTableColumn.parse_obj(col) for col in normalized_columns
                     ],
-                    data=serialized_rows[:TABLE_DATA_BUFFER_SIZE],
+                    data=[
+                        InternalTableRow.revalidate(row)
+                        for row in serialized_rows[:TABLE_DATA_BUFFER_SIZE]
+                    ],
                     min_selections=min_selections,
                     max_selections=max_selections,
                     total_records=len(serialized_rows),
@@ -1048,11 +1054,13 @@ class IO:
 
                     built_columns = columns_builder(data=fetched.data, columns=columns)
                     props.data = [
-                        serialize_table_row(
-                            key=str(i + state.offset),
-                            row=row,
-                            columns=built_columns,
-                            menu_builder=row_menu_items,
+                        InternalTableRow.revalidate(
+                            serialize_table_row(
+                                key=str(i + state.offset),
+                                row=row,
+                                columns=built_columns,
+                                menu_builder=row_menu_items,
+                            )
                         )
                         for (i, row) in enumerate(fetched.data)
                     ]
@@ -1067,9 +1075,12 @@ class IO:
                         state.sort_column,
                         state.sort_direction,
                     )
-                    props.data = new_sorted[
-                        state.offset : state.offset
-                        + min(state.page_size * 3, TABLE_DATA_BUFFER_SIZE)
+                    props.data = [
+                        InternalTableRow.revalidate(row)
+                        for row in new_sorted[
+                            state.offset : state.offset
+                            + min(state.page_size * 3, TABLE_DATA_BUFFER_SIZE)
+                        ]
                     ]
                     props.total_records = len(new_sorted)
 
@@ -1083,7 +1094,10 @@ class IO:
                     columns=[
                         InternalTableColumn.parse_obj(col) for col in normalized_columns
                     ],
-                    data=serialized_rows[:TABLE_DATA_BUFFER_SIZE],
+                    data=[
+                        InternalTableRow.revalidate(row)
+                        for row in serialized_rows[:TABLE_DATA_BUFFER_SIZE]
+                    ],
                     total_records=len(data) if data is not None else None,
                     default_page_size=default_page_size,
                     is_sortable=is_sortable,

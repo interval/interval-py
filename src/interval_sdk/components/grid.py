@@ -59,7 +59,8 @@ def serialize_grid_item(
                 for v in item.values()
             ]
 
-    return InternalGridItem(
+    # skip validation here, it will be performed again when being sent
+    return InternalGridItem.construct(
         key=key,
         data=GridItemModel.parse_obj(render_item(item)),
         filterValue=" ".join(filter_values).lower(),

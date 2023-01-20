@@ -1,6 +1,7 @@
-from typing import Optional, Union, TYPE_CHECKING
+from typing import Any, Optional, TypeVar, Union, TYPE_CHECKING
+
 from typing_extensions import override
-from pydantic import BaseModel as PydanticBaseModel
+from pydantic import BaseModel as PydanticBaseModel, validate_model
 from pydantic.generics import GenericModel as PydanticGenericModel
 
 from .util import json_loads_camel, json_dumps_snake
@@ -15,6 +16,9 @@ class NotInitializedError(Exception):
 
 class IntervalError(Exception):
     pass
+
+
+BaseModelSelf = TypeVar("BaseModelSelf", bound="BaseModel")
 
 
 class BaseModel(PydanticBaseModel):
@@ -42,6 +46,18 @@ class BaseModel(PydanticBaseModel):
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
         )
+
+    def revalidate(self: BaseModelSelf) -> BaseModelSelf:
+        """
+        Revalidates an existing model, for actually validating models which were
+        created with .construct() for performance.
+        Based on PydanticBaseModel.from_orm().
+        """
+        obj: Any = self._decompose_class(self)
+        _values, _fields_set, validation_error = validate_model(self.__class__, obj)
+        if validation_error:
+            raise validation_error
+        return self
 
 
 class GenericModel(PydanticGenericModel):

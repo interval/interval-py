@@ -16,7 +16,7 @@ from typing import (
 from datetime import date, time, datetime
 from uuid import UUID
 import io, json, sys
-from typing_extensions import NotRequired, TypedDict, TypeAlias
+from typing_extensions import NotRequired, TypedDict, TypeAlias, override
 from pydantic import (
     BaseModel as PydanticBaseModel,
     Field,
@@ -375,6 +375,20 @@ class InternalTableRow(BaseModel):
     menu: list[TableMenuItemModel] = Field(default_factory=list)
     filterValue: Optional[str] = None
 
+    @override
+    def revalidate(self) -> "InternalTableRowModel":
+        return cast("InternalTableRowModel", super().revalidate())
+
+
+class InternalTableRowModel(InternalTableRow):
+    """
+    Marker subclass of InternalTableRow that indicates the data is definitely validated.
+    We do this model creation and validation in separate steps for performance and to avoid
+    redefining the model structure.
+    """
+
+    pass
+
 
 class SelectTableReturnModel(BaseModel):
     key: str
@@ -561,7 +575,7 @@ class ConfirmIdentityProps(BaseModel):
 
 
 class SelectTableProps(BaseModel):
-    data: list[InternalTableRow]
+    data: list[InternalTableRowModel]
     help_text: Optional[str]
     columns: list[InternalTableColumn]
     min_selections: Optional[PositiveInt]
@@ -665,7 +679,7 @@ class DisplayGridState(BaseModel):
 
 class DisplayTableProps(BaseModel):
     help_text: Optional[str] = None
-    data: list[InternalTableRow]
+    data: list[InternalTableRowModel]
     columns: list[InternalTableColumn]
     default_page_size: Optional[PositiveInt] = None
     is_sortable: bool = True

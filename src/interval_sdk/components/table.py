@@ -104,7 +104,8 @@ def serialize_table_row(
 
         rendered_row[accessor_key] = val
 
-    return InternalTableRow(
+    # skip validation here, it will be performed again when being sent
+    return InternalTableRow.construct(
         key=key,
         data=rendered_row,
         filterValue=" ".join(filter_values).lower(),
