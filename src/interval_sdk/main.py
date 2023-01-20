@@ -609,10 +609,7 @@ class Interval:
                         self._logger.warn(
                             "Failed resending pending IO call:", response.kind
                         )
-                        if (
-                            response.kind == "CANCELED"
-                            or response.kind == "TRANSACTION_CLOSED"
-                        ):
+                        if response.kind in ("CANCELED", "TRANSACTION_CLOSED"):
                             self._logger.debug(
                                 "Aborting resending pending IO call:", response
                             )

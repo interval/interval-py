@@ -54,6 +54,7 @@ exclude = [
 	"**/__pycache__",
 	"**/.venv",
 	"examples",
+	"releases",
 ]
 
 [tool.ruff]

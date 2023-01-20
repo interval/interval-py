@@ -387,8 +387,6 @@ class InternalTableRowModel(InternalTableRow):
     redefining the model structure.
     """
 
-    pass
-
 
 class SelectTableReturnModel(BaseModel):
     key: str

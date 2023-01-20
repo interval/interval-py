@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "0-37-0"
+version = "0.37.0"
+authors = []
+description = "Tests for the listed release version."
+
+[tool.poe.tasks]
+test = "pytest -n auto --maxprocesses 8 --dist loadgroup"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+interval-sdk = { version = "0.37.0.dev1", extras = ["aiodns"] }
+
+[tool.poetry.group.dev.dependencies]
+poethepoet = "^0.13.1"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.1.1"
+pytest-xdist = "^3.1.0"
+pytest-asyncio = "^0.18.2"
+pytest-playwright = "^0.3.0"
+playwright = "^1.20.0"
+faker = "^16.4.0"
+boto3 = "^1.26.51"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
