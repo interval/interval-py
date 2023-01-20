@@ -20,6 +20,7 @@ from typing_extensions import NotRequired, TypedDict, TypeAlias
 from pydantic import (
     BaseModel as PydanticBaseModel,
     Field,
+    PositiveInt,
     StrictBool,
     StrictInt,
     StrictFloat,
@@ -453,10 +454,10 @@ class InputTextProps(BaseModel):
     placeholder: Optional[str]
     default_value: Optional[str]
     multiline: Optional[bool]
-    lines: Optional[int]
+    lines: Optional[PositiveInt]
     disabled: Optional[bool]
-    min_length: Optional[int]
-    max_length: Optional[int]
+    min_length: Optional[PositiveInt]
+    max_length: Optional[PositiveInt]
 
 
 class InputEmailProps(BaseModel):
@@ -563,15 +564,15 @@ class SelectTableProps(BaseModel):
     data: list[InternalTableRow]
     help_text: Optional[str]
     columns: list[InternalTableColumn]
-    min_selections: Optional[int]
-    max_selections: Optional[int]
+    min_selections: Optional[PositiveInt]
+    max_selections: Optional[PositiveInt]
     disabled: Optional[bool]
-    default_page_size: Optional[int] = None
+    default_page_size: Optional[PositiveInt] = None
     is_sortable: bool = True
     is_filterable: bool = True
 
     # private props
-    total_records: int
+    total_records: PositiveInt
     selected_keys: Optional[list[str]] = None
 
 
@@ -579,8 +580,8 @@ class SelectTableState(BaseModel):
     query_term: Optional[str] = None
     sort_column: Optional[str] = None
     sort_direction: Optional[Literal["asc", "desc"]] = None
-    offset: int = 0
-    page_size: int
+    offset: PositiveInt = 0
+    page_size: PositiveInt
     is_select_all: bool = False
 
 
@@ -600,8 +601,8 @@ class SelectMultipleProps(BaseModel):
     options: list[LabelValueModel]
     help_text: Optional[str]
     default_value: list[LabelValueModel] = []
-    min_selections: Optional[int]
-    max_selections: Optional[int]
+    min_selections: Optional[PositiveInt]
+    max_selections: Optional[PositiveInt]
     disabled: Optional[bool]
 
 
@@ -648,29 +649,29 @@ class DisplayImageProps(BaseModel):
 class DisplayGridProps(BaseModel):
     help_text: Optional[str] = None
     data: list[InternalGridItem]
-    ideal_column_width: Optional[int] = None
-    default_page_size: Optional[int] = None
+    ideal_column_width: Optional[PositiveInt] = None
+    default_page_size: Optional[PositiveInt] = None
     is_filterable: bool = True
     # private props
-    total_records: Optional[int] = None
+    total_records: Optional[PositiveInt] = None
     is_async: bool
 
 
 class DisplayGridState(BaseModel):
     query_term: Optional[str] = None
-    offset: int = 0
-    page_size: int
+    offset: PositiveInt = 0
+    page_size: PositiveInt
 
 
 class DisplayTableProps(BaseModel):
     help_text: Optional[str] = None
     data: list[InternalTableRow]
     columns: list[InternalTableColumn]
-    default_page_size: Optional[int] = None
+    default_page_size: Optional[PositiveInt] = None
     is_sortable: bool = True
     is_filterable: bool = True
     # private props
-    total_records: Optional[int] = None
+    total_records: Optional[PositiveInt] = None
     is_async: bool
 
 
@@ -678,8 +679,8 @@ class DisplayTableState(BaseModel):
     query_term: Optional[str] = None
     sort_column: Optional[str] = None
     sort_direction: Optional[Literal["asc", "desc"]] = None
-    offset: int = 0
-    page_size: int
+    offset: PositiveInt = 0
+    page_size: PositiveInt
 
 
 class DisplayVideoProps(BaseModel):
@@ -691,13 +692,13 @@ class DisplayVideoProps(BaseModel):
 
 
 class DisplayProgressStepsSteps(BaseModel):
-    completed: int
-    total: int
+    completed: PositiveInt
+    total: PositiveInt
 
 
 class DisplayProgressStepsProps(BaseModel):
     steps: DisplayProgressStepsSteps
-    current_step: Optional[int]
+    current_step: Optional[PositiveInt]
     subtitle: Optional[str]
 
 
