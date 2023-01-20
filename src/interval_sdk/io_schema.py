@@ -652,10 +652,10 @@ class DisplayObjectProps(BaseModel):
 
 
 class DisplayImageProps(BaseModel):
-    url: Optional[str]
-    alt: Optional[str]
-    height: Optional[ImageSize]
-    width: Optional[ImageSize]
+    url: Optional[str] = None
+    alt: Optional[str] = None
+    height: Optional[ImageSize] = None
+    width: Optional[ImageSize] = None
 
 
 class DisplayGridProps(BaseModel):
