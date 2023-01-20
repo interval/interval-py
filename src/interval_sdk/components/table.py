@@ -65,7 +65,7 @@ def serialize_table_row(
     key: str,
     row: TR,
     columns: Iterable[TableColumnDef],
-    menu_builder: Optional[Callable[[TR], list[TableMenuItem]]] = None,
+    menu_builder: Optional[Callable[[TR], Iterable[TableMenuItem]]] = None,
 ) -> InternalTableRow:
     row = cast(TR, serialize_dates(cast(SerializableRecord, row)))
     rendered_row: TableRow = {}
