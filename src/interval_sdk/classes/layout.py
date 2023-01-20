@@ -4,6 +4,8 @@ from typing import Any, Callable, Optional, Union
 
 from typing_extensions import Literal, TypeAlias, Awaitable
 
+from pydantic import Field
+
 from ..classes.io_promise import DisplayIOPromise
 from ..types import BaseModel
 from ..io_schema import ButtonItem, ButtonItemModel, IORender, dump_io_render
@@ -52,7 +54,7 @@ class BasicLayoutModel(BaseModel):
     description: Optional[str] = None
     children: Optional[IORender] = None
     menu_items: Optional[list[ButtonItemModel]] = None
-    errors: list[PageError] = []
+    errors: list[PageError] = Field(default_factory=list)
 
     class Config:
         json_dumps = json_dumps_basic_layout_model

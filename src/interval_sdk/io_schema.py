@@ -600,7 +600,7 @@ class SelectSingleState(BaseModel):
 class SelectMultipleProps(BaseModel):
     options: list[LabelValueModel]
     help_text: Optional[str]
-    default_value: list[LabelValueModel] = []
+    default_value: list[LabelValueModel] = Field(default_factory=list)
     min_selections: Optional[PositiveInt]
     max_selections: Optional[PositiveInt]
     disabled: Optional[bool]
