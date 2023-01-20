@@ -884,7 +884,7 @@ class IO:
             label: str,
             *,
             route: Optional[str] = None,
-            params: Optional[dict[str, Any]] = None,
+            params: Optional[SerializableRecord] = None,
             theme: LinkTheme = "default",
             url: Optional[str] = None,
         ) -> DisplayIOPromise[Literal["DISPLAY_LINK"], None]:

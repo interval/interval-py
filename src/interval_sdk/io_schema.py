@@ -633,10 +633,10 @@ LinkTheme: TypeAlias = Literal["default", "danger"]
 
 
 class DisplayLinkProps(BaseModel):
-    route: Optional[str]
-    url: Optional[str]
-    params: Optional[dict[str, Any]]
-    theme: Optional[LinkTheme]
+    route: Optional[str] = None
+    url: Optional[str] = None
+    params: Optional[SerializableRecord] = None
+    theme: Optional[LinkTheme] = None
 
 
 MetadataLayout: TypeAlias = Literal["card", "list", "grid"]
