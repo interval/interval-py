@@ -32,6 +32,8 @@ from ..io_schema import (
     GridItem,
     InputTextProps,
     InternalTableRow,
+    MetaItemDefinition,
+    MetaItemDefinitionModel,
     SelectTableReturnModel,
     SelectTableState,
     InputEmailProps,
@@ -921,7 +923,7 @@ class IO:
             self,
             label: str,
             *,
-            data: KeyValueObject,
+            data: Iterable[MetaItemDefinition],
             layout: MetadataLayout = "grid",
         ) -> DisplayIOPromise[Literal["DISPLAY_METADATA"], None]:
             c = Component(
@@ -929,7 +931,7 @@ class IO:
                 label=label,
                 initial_props=DisplayMetadataProps(
                     layout=layout,
-                    data=KeyValueObjectModel.parse_obj(data),
+                    data=[MetaItemDefinitionModel.parse_obj(item) for item in data],
                 ),
             )
             return DisplayIOPromise(c, renderer=self._renderer)

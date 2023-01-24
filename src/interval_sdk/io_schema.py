@@ -643,8 +643,28 @@ class DisplayLinkProps(BaseModel):
 MetadataLayout: TypeAlias = Literal["card", "list", "grid"]
 
 
+class MetaItemDefinition(TypedDict):
+    label: str
+    value: NotRequired[Optional[ObjectLiteral]]
+    url: NotRequired[str]
+    image: NotRequired[ImageDefinition]
+    route: NotRequired[str]
+    params: NotRequired[SerializableRecord]
+
+
+class MetaItemDefinitionModel(BaseModel):
+    label: str
+    value: Optional[ObjectLiteral] = None
+    url: Optional[str] = None
+    image: Optional[ImageDefinitionModel] = None
+    route: Optional[str] = None
+    params: Optional[SerializableRecord] = None
+    # private prop
+    error: Optional[str] = None
+
+
 class DisplayMetadataProps(BaseModel):
-    data: KeyValueObjectModel
+    data: list[MetaItemDefinitionModel]
     layout: MetadataLayout
 
 

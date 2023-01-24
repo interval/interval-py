@@ -24,7 +24,12 @@ from interval_sdk import (
     FileUrlSet,
 )
 from interval_sdk.classes.io_promise import KeyedIONamespace
-from interval_sdk.io_schema import LabelValue, RenderableSearchResult, RichSelectOption
+from interval_sdk.io_schema import (
+    LabelValue,
+    MetaItemDefinition,
+    RenderableSearchResult,
+    RichSelectOption,
+)
 
 from . import Transaction, Config
 from .data.mock_db import MockDb
@@ -239,7 +244,7 @@ async def test_display_metadata(
 ):
     @interval.action("io.display.metadata")
     async def display_metadata(io: IO):
-        data = [
+        data: list[MetaItemDefinition] = [
             {
                 "label": "Is true",
                 "value": True,
@@ -271,7 +276,7 @@ async def test_display_metadata(
             {
                 "label": "Action link",
                 "value": "Click me",
-                "action": "helloCurrentUser",
+                "route": "helloCurrentUser",
                 "params": {"message": "Hello from metadata!"},
             },
             {
@@ -279,8 +284,7 @@ async def test_display_metadata(
                 "value": "Optional caption",
                 "image": {
                     "url": "https://picsum.photos/200/300",
-                    "width": "small",
-                    "height": "small",
+                    "size": "small",
                 },
             },
         ]
