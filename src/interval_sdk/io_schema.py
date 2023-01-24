@@ -704,27 +704,6 @@ class DisplayVideoProps(BaseModel):
     muted: bool
 
 
-class DisplayProgressStepsSteps(BaseModel):
-    completed: PositiveInt
-    total: PositiveInt
-
-
-class DisplayProgressStepsProps(BaseModel):
-    steps: DisplayProgressStepsSteps
-    current_step: Optional[PositiveInt]
-    subtitle: Optional[str]
-
-
-class DisplayProgressthroughListItem(BaseModel):
-    label: str
-    is_complete: bool
-    result_description: Optional[str]
-
-
-class DisplayProgressThroughListProps(BaseModel):
-    items: list[DisplayProgressthroughListItem]
-
-
 class SearchProps(BaseModel):
     help_text: Optional[str]
     results: list[InnerRenderableSearchResultModel]
@@ -878,23 +857,6 @@ display_schema: dict[DisplayMethodName, MethodDef] = {
     ),
     "DISPLAY_VIDEO": MethodDef(
         props=DisplayVideoProps,
-        state=None,
-        returns=None,
-    ),
-    "DISPLAY_PROGRESS_STEPS": MethodDef(
-        props=DisplayProgressStepsProps,
-        state=None,
-        returns=None,
-        immediate=True,
-    ),
-    "DISPLAY_PROGRESS_INDETERMINATE": MethodDef(
-        props={},
-        state=None,
-        returns=None,
-        immediate=True,
-    ),
-    "DISPLAY_PROGRESS_THROUGH_LIST": MethodDef(
-        props=DisplayProgressThroughListProps,
         state=None,
         returns=None,
     ),
