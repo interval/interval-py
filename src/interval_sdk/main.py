@@ -235,6 +235,7 @@ class Interval:
     _page_futures: dict[str, asyncio.Task]
     _io_response_handlers: dict[str, IOResponseHandler]
     _pending_io_calls: dict[str, str]
+    _pending_page_layouts: dict[str, str]
     _transaction_loading_states: dict[str, LoadingState]
 
     _isocket: Optional[ISocket] = None
@@ -291,6 +292,7 @@ class Interval:
         self._page_futures = {}
         self._io_response_handlers = {}
         self._pending_io_calls = {}
+        self._pending_page_layouts = {}
         self._transaction_loading_states = {}
         self._routes = {}
         self._action_definitions = []
@@ -636,6 +638,71 @@ class Interval:
                 )
                 await asyncio.sleep(self._retry_interval_seconds)
 
+    async def _resend_pending_page_layouts(
+        self, page_keys_to_resend: Optional[list[str]] = None
+    ):
+        if not self._is_connected:
+            return
+
+        if page_keys_to_resend is None:
+            to_resend: dict[str, str] = dict(self._pending_page_layouts)
+        else:
+            to_resend: dict[str, str] = {}
+            for id in page_keys_to_resend:
+                try:
+                    to_resend[id] = self._pending_page_layouts[id]
+                except KeyError:
+                    pass
+
+        while len(to_resend) > 0:
+            items = list(to_resend.items())
+            responses = await asyncio.gather(
+                *(
+                    self._send(
+                        "SEND_PAGE",
+                        SendPageInputs(
+                            page_key=page_key,
+                            page=page,
+                        ).dict(),
+                    )
+                    for page_key, page in items
+                ),
+                return_exceptions=True,
+            )
+            for i, response in enumerate(responses):
+                page_key = items[i][0]
+                if isinstance(response, BaseException):
+                    if isinstance(response, IOError):
+                        self._logger.warn(
+                            "Failed resending pending page layout:", response.kind
+                        )
+                        if response.kind in ("CANCELED", "TRANSACTION_CLOSED"):
+                            self._logger.debug(
+                                "Aborting resending pending page layout:", response
+                            )
+                            try:
+                                del to_resend[page_key]
+                            except KeyError:
+                                pass
+                            try:
+                                del self._pending_page_layouts[page_key]
+                            except KeyError:
+                                pass
+                else:
+                    del to_resend[page_key]
+                    if not response:
+                        # Unsuccessful, don't retry again
+                        try:
+                            del self._pending_page_layouts[page_key]
+                        except KeyError:
+                            pass
+
+            if len(to_resend) > 0:
+                self._logger.debug(
+                    f"Trying again in {self._retry_interval_seconds}s..."
+                )
+                await asyncio.sleep(self._retry_interval_seconds)
+
     async def _resend_transaction_loading_states(
         self, ids_to_resend: Optional[list[str]] = None
     ):
@@ -730,6 +797,7 @@ class Interval:
                     await asyncio.gather(
                         self._resend_pending_io_calls(),
                         self._resend_transaction_loading_states(),
+                        self._resend_pending_page_layouts(),
                     )
                 except Exception as err:
                     self._log.prod("Unable to reconnect. Retrying in 3s...")
@@ -997,11 +1065,15 @@ class Interval:
 
                     for _ in range(MAX_PAGE_RETRIES):
                         try:
+                            serialized_page = page_layout.json(exclude_unset=True)
+                            self._pending_page_layouts[
+                                inputs.page_key
+                            ] = serialized_page
                             await self._send(
                                 "SEND_PAGE",
                                 SendPageInputs(
                                     page_key=inputs.page_key,
-                                    page=page_layout.json(exclude_unset=True),
+                                    page=serialized_page,
                                 ).dict(),
                             )
                             return
@@ -1215,6 +1287,11 @@ class Interval:
 
             try:
                 del self._io_response_handlers[inputs.page_key]
+            except KeyError:
+                pass
+
+            try:
+                del self._pending_page_layouts[inputs.page_key]
             except KeyError:
                 pass
 
