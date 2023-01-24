@@ -20,6 +20,7 @@ from typing_extensions import NotRequired, TypedDict, TypeAlias, override
 from pydantic import (
     BaseModel as PydanticBaseModel,
     Field,
+    NonNegativeInt,
     PositiveInt,
     StrictBool,
     StrictInt,
@@ -592,7 +593,7 @@ class SelectTableState(BaseModel):
     query_term: Optional[str] = None
     sort_column: Optional[str] = None
     sort_direction: Optional[Literal["asc", "desc"]] = None
-    offset: PositiveInt = 0
+    offset: NonNegativeInt = 0
     page_size: PositiveInt
     is_select_all: bool = False
 
@@ -665,13 +666,13 @@ class DisplayGridProps(BaseModel):
     default_page_size: Optional[PositiveInt] = None
     is_filterable: bool = True
     # private props
-    total_records: Optional[PositiveInt] = None
+    total_records: Optional[NonNegativeInt] = None
     is_async: bool
 
 
 class DisplayGridState(BaseModel):
     query_term: Optional[str] = None
-    offset: PositiveInt = 0
+    offset: NonNegativeInt = 0
     page_size: PositiveInt
 
 
@@ -683,7 +684,7 @@ class DisplayTableProps(BaseModel):
     is_sortable: bool = True
     is_filterable: bool = True
     # private props
-    total_records: Optional[PositiveInt] = None
+    total_records: Optional[NonNegativeInt] = None
     is_async: bool
 
 
@@ -691,7 +692,7 @@ class DisplayTableState(BaseModel):
     query_term: Optional[str] = None
     sort_column: Optional[str] = None
     sort_direction: Optional[Literal["asc", "desc"]] = None
-    offset: PositiveInt = 0
+    offset: NonNegativeInt = 0
     page_size: PositiveInt
 
 
