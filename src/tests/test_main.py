@@ -1434,6 +1434,7 @@ async def test_loading(
 
     @interval.action
     async def loading():
+        io = io_var.get()
         ctx = action_ctx_var.get()
 
         await asyncio.sleep(0.5)
@@ -1444,6 +1445,16 @@ async def test_loading(
         await ctx.loading.start()
         await asyncio.sleep(0.5)
         await ctx.loading.update(description="Description only")
+        await asyncio.sleep(0.5)
+
+        async def log_after_delay():
+            await asyncio.sleep(0.2)
+            await ctx.loading.start("Loading something in the background")
+
+        _ = asyncio.create_task(log_after_delay())
+
+        await io.display.markdown("Are you ready to do something else?")
+
         await asyncio.sleep(0.5)
         await ctx.loading.update(
             title="With progress",
@@ -1471,6 +1482,18 @@ async def test_loading(
         page.locator('[data-pw-description]:has-text("Description only")')
     ).to_be_visible()
     await expect(page.locator("[data-pw-title]")).to_be_hidden()
+
+    await expect(
+        page.locator("text=Are you ready to do something else?")
+    ).to_be_visible()
+
+    await page.wait_for_timeout(1000)
+
+    await expect(
+        page.locator("text=Are you ready to do something else?")
+    ).to_be_visible()
+
+    await transactions.press_continue()
 
     await expect(
         page.locator('[data-pw-title]:has-text("With progress")')

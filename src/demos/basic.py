@@ -202,10 +202,20 @@ async def log_test():
 @prod.action()
 @interval.action()
 async def loading_test():
+    io = io_var.get()
     ctx = action_ctx_var.get()
     await ctx.loading.start("Fetching users...")
 
     await asyncio.sleep(1)
+
+    async def log_after_delay():
+        await asyncio.sleep(0.2)
+        await ctx.log("Loading something in the background")
+        await ctx.loading.start("Loading something in the background")
+
+    _ = asyncio.create_task(log_after_delay())
+
+    await io.display.markdown("Are you ready to do something else?")
 
     num_users = 100
 
