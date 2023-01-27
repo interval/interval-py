@@ -1,11 +1,17 @@
 import math, re
-from datetime import date, datetime
+from datetime import date, time, datetime, timezone
 from typing import Any, Callable, Union
 from typing_extensions import TypeAlias, Literal
 
-TypeAnnotation: TypeAlias = Literal["number", "Date", "regexp", "set", "map"]
+LeafTypeAnnotation: TypeAlias = Literal["number", "Date", "regexp", "set", "map"]
 
-ISO_DATE_FORMAT_MICROSECONDS = "%Y-%m-%dT%H:%M:%S.%fZ"
+CustomTypeAnnotation: TypeAlias = tuple[Literal["custom"], str]
+
+CompositeTypeAnnotation: TypeAlias = CustomTypeAnnotation
+
+TypeAnnotation: TypeAlias = Union[LeafTypeAnnotation, CompositeTypeAnnotation]
+
+ISO_DATE_FORMAT_MICROSECONDS = "%Y-%m-%dT%H:%M:%S.%f%zZ"
 
 REGEXP_FLAGS = {
     "i": re.I,
@@ -36,12 +42,31 @@ def transform_value(value: Any) -> Union[tuple[Any, TypeAnnotation], None]:
         value = datetime(value.year, value.month, value.day)
 
     if isinstance(value, datetime):
-        return (value.isoformat(sep="T", timespec="milliseconds") + "Z", "Date")
+        date_str = value.astimezone(tz=timezone.utc).isoformat(
+            sep="T", timespec="milliseconds"
+        )
+
+        if "+" in date_str:
+            date_str = date_str[: date_str.index("+")]
+
+        return (
+            date_str + "Z",
+            "Date",
+        )
+
+    if isinstance(value, time):
+        return (value.isoformat(), ("custom", "time"))
 
     return None
 
 
 def untransform_value(value: Any, type: TypeAnnotation) -> Any:
+    if isinstance(type, (tuple, list)):
+        if type[0] == "custom":
+            if type[1] == "time":
+                [h, m, s] = [int(part) for part in str(value).split(":")]
+                return time(h, m, s)
+
     if type == "number":
         return float(value)
     if type == "regexp":
@@ -58,10 +83,14 @@ def untransform_value(value: Any, type: TypeAnnotation) -> Any:
         return {key: val for [key, val] in value}
 
     if type == "Date":
-        value = str(value)[:-1] + "000Z"
-        d = datetime.strptime(value, ISO_DATE_FORMAT_MICROSECONDS)
-        time = d.time()
-        if time.hour == 0 and time.minute == 0 and time.second == 0:
+        value = str(value)[:-1] + "000+00:00Z"
+        d = (
+            datetime.strptime(value, ISO_DATE_FORMAT_MICROSECONDS)
+            .astimezone()
+            .replace(tzinfo=None)
+        )
+        time_part = d.time()
+        if time_part.hour == 0 and time_part.minute == 0 and time_part.second == 0:
             # if it looks like a timeless date we'll make it one
             return d.date()
         return d

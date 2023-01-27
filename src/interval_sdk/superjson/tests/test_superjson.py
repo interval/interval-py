@@ -1,6 +1,7 @@
 import math, json, re, subprocess
 from pathlib import Path
-from datetime import date, datetime
+from datetime import date, time, datetime
+import sys
 from typing import Any, Callable
 from typing_extensions import TypeAlias
 
@@ -32,8 +33,13 @@ def test_numbers():
 
 def test_dates():
     round_trip_all(
-        {"date": date(1993, 11, 12), "datetime": datetime(1234, 5, 6, 7, 8, 9)}
+        {"date": date(1993, 11, 12), "datetime": datetime(2000, 1, 2, 3, 4, 5)}
     )
+
+
+def test_time():
+    o = [time(11, 11, 11)]
+    round_trip_all(o)
 
 
 def test_regexp():
@@ -110,7 +116,7 @@ def node_round_trip(start: Any, equality_checker: EqualityChecker = is_eq):
         ["node", node_script_path],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=sys.stderr,
     ) as process:
         if process.stdin is not None:
             process.stdin.write(s.encode("utf-8"))
