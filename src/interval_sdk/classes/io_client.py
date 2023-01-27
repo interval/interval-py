@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from typing_extensions import TypeAlias, TypeVar, Any, Awaitable
 
-from pydantic import parse_obj_as
+from interval_sdk import superjson
 
 from ..io_schema import ButtonConfig, MethodName, IORender, IOResponse
 from .component import Component, IOPromiseValidator
@@ -89,6 +89,11 @@ class IOClient:
 
             if len(response.values) != len(components):
                 raise Exception("Mismatch in return array length")
+
+            if response.values_meta is not None:
+                response.values = superjson.deserialize(
+                    response.values, response.values_meta
+                )
 
             if response.kind == "RETURN":
 

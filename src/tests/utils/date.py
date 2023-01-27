@@ -1,6 +1,19 @@
+import re
+from datetime import date, datetime
+from typing import Union
+
 from playwright.async_api import Page, expect
 
 from .. import Transaction
+
+DATE_FORMAT = "%b %-d, %Y"
+TIME_FORMAT = "%-I:%M %p"
+
+
+def format_date(val: Union[date, datetime]) -> str:
+    if isinstance(val, datetime):
+        return val.strftime(f"{DATE_FORMAT}, {TIME_FORMAT}")
+    return val.strftime(DATE_FORMAT)
 
 
 async def input_date(page: Page):

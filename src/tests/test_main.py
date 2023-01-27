@@ -33,7 +33,7 @@ from interval_sdk.io_schema import (
 
 from . import Transaction, Config
 from .data.mock_db import MockDb
-from .utils.date import input_date, input_time
+from .utils.date import format_date, input_date, input_time
 
 
 @pytest.fixture
@@ -934,7 +934,7 @@ async def test_input_date(
 
     await transactions.press_continue()
     await transactions.expect_success(
-        year=2022, month=2, day=25, py_date=date(2022, 2, 25).isoformat()
+        year=2022, month=2, day=25, py_date=format_date(date(2022, 2, 25))
     )
 
 
@@ -1018,7 +1018,7 @@ class TestInputDatetime:
             day=25,
             hour=14,
             minute=36,
-            py_datetime=datetime(2022, 2, 25, 14, 36).isoformat(),
+            py_datetime=format_date(datetime(2022, 2, 25, 14, 36)),
         )
 
     async def test_input_datetime_default(
@@ -1048,7 +1048,7 @@ class TestInputDatetime:
             day=23,
             hour=13,
             minute=25,
-            py_datetime=datetime(2020, 6, 23, 13, 25).isoformat(),
+            py_datetime=format_date(datetime(2020, 6, 23, 13, 25)),
         )
 
     async def test_input_datetime_min_max(
