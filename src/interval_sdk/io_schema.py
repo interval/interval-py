@@ -977,8 +977,12 @@ class IOResponse(PydanticBaseModel):
     values_meta: Optional[Any] = None
 
     class Config:
-        json_loads = json_loads_some_snake("transaction_id", "input_group_key")
-        json_dumps = json_dumps_some_snake("transaction_id", "input_group_key")
+        json_loads = json_loads_some_snake(
+            "transaction_id", "input_group_key", "values_meta"
+        )
+        json_dumps = json_dumps_some_snake(
+            "transaction_id", "input_group_key", "values_meta"
+        )
 
 
 def dump_method(method_name: MethodName) -> str:

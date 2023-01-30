@@ -5,8 +5,7 @@ from uuid import uuid4
 
 from typing_extensions import TypeAlias, TypeVar, Any, Awaitable
 
-from interval_sdk import superjson
-
+from .. import superjson
 from ..io_schema import ButtonConfig, MethodName, IORender, IOResponse
 from .component import Component, IOPromiseValidator
 from .io_error import IOError
