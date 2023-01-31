@@ -14,6 +14,8 @@ from typing_extensions import TypeVarTuple, Unpack, TypeAlias, Awaitable, TypeVa
 
 from pydantic import parse_obj_as, ValidationError, BaseModel as PydanticBaseModel
 
+from interval_sdk import superjson
+
 from ..io_schema import (
     ButtonConfig,
     ComponentMultipleProps,
@@ -166,12 +168,16 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
 
     @property
     def render_info(self):
+        props, meta = superjson.serialize(
+            dict_keys_to_camel(self.instance.props.dict(exclude_defaults=True))
+            if self.instance.props is not None
+            else {}
+        )
         return ComponentRenderInfo(
             method_name=self.instance.method_name,
             label=self.instance.label,
-            props=dict_keys_to_camel(self.instance.props.dict(exclude_defaults=True))
-            if self.instance.props is not None
-            else {},
+            props=props,
+            props_meta=meta,
             is_stateful=self.instance.is_stateful,
             is_optional=self.instance.is_optional,
             is_multiple=self.instance.is_multiple,

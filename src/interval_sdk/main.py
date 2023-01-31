@@ -2,13 +2,15 @@ import asyncio, importlib.metadata, time, datetime, signal
 from contextvars import ContextVar
 from dataclasses import dataclass
 from inspect import iscoroutine, signature, isfunction
-from typing import Any, Optional, Callable, cast, Union
+from typing import Any, Optional, Callable, Union
 from urllib.parse import urlparse, urlunparse
 from uuid import uuid4, UUID
 
 import aiohttp
 import websockets, websockets.client, websockets.exceptions
 from pydantic import parse_raw_as
+
+from interval_sdk import superjson
 
 
 from .io_schema import (
@@ -69,10 +71,7 @@ from .internal_rpc_schema import (
     InitializeHostReturns,
 )
 from .util import (
-    DeserializableRecord,
-    ensure_serialized,
     isoformat_datetime,
-    serialize_dates,
     deserialize_dates,
 )
 from .handlers import IntervalActionHandler, IntervalPageHandler, IOResponseHandler
@@ -137,20 +136,16 @@ class Interval:
             params: Optional[SerializableRecord] = None,
         ) -> QueuedAction:
             try:
-                params = cast(DeserializableRecord, serialize_dates(params))
+                meta = None
                 if params is not None:
-                    try:
-                        ensure_serialized(params)
-                    except ValueError as e:
-                        raise IntervalError(
-                            "Invalid params, please pass an object of primitives."
-                        ) from e
+                    params, meta = superjson.serialize(params)
 
                 try:
                     data = EnqueueActionInputs(
                         slug=slug,
                         assignee=assignee_email,
                         params=params,
+                        params_meta=meta,
                     ).json()
                 except ValueError as e:
                     raise IntervalError("Invalid input.") from e
@@ -210,7 +205,9 @@ class Interval:
                     )
 
                 return QueuedAction(
-                    id=response.id, assignee=response.assignee, params=response.params
+                    id=response.id,
+                    assignee=response.assignee,
+                    params=superjson.deserialize(response.params, response.params_meta),
                 )
             except IntervalError as err:
                 raise err
@@ -235,6 +232,7 @@ class Interval:
     _page_futures: dict[str, asyncio.Task]
     _io_response_handlers: dict[str, IOResponseHandler]
     _pending_io_calls: dict[str, str]
+    _pending_page_layouts: dict[str, str]
     _transaction_loading_states: dict[str, LoadingState]
 
     _isocket: Optional[ISocket] = None
@@ -291,6 +289,7 @@ class Interval:
         self._page_futures = {}
         self._io_response_handlers = {}
         self._pending_io_calls = {}
+        self._pending_page_layouts = {}
         self._transaction_loading_states = {}
         self._routes = {}
         self._action_definitions = []
@@ -636,6 +635,71 @@ class Interval:
                 )
                 await asyncio.sleep(self._retry_interval_seconds)
 
+    async def _resend_pending_page_layouts(
+        self, page_keys_to_resend: Optional[list[str]] = None
+    ):
+        if not self._is_connected:
+            return
+
+        if page_keys_to_resend is None:
+            to_resend: dict[str, str] = dict(self._pending_page_layouts)
+        else:
+            to_resend: dict[str, str] = {}
+            for id in page_keys_to_resend:
+                try:
+                    to_resend[id] = self._pending_page_layouts[id]
+                except KeyError:
+                    pass
+
+        while len(to_resend) > 0:
+            items = list(to_resend.items())
+            responses = await asyncio.gather(
+                *(
+                    self._send(
+                        "SEND_PAGE",
+                        SendPageInputs(
+                            page_key=page_key,
+                            page=page,
+                        ).dict(),
+                    )
+                    for page_key, page in items
+                ),
+                return_exceptions=True,
+            )
+            for i, response in enumerate(responses):
+                page_key = items[i][0]
+                if isinstance(response, BaseException):
+                    if isinstance(response, IOError):
+                        self._logger.warn(
+                            "Failed resending pending page layout:", response.kind
+                        )
+                        if response.kind in ("CANCELED", "TRANSACTION_CLOSED"):
+                            self._logger.debug(
+                                "Aborting resending pending page layout:", response
+                            )
+                            try:
+                                del to_resend[page_key]
+                            except KeyError:
+                                pass
+                            try:
+                                del self._pending_page_layouts[page_key]
+                            except KeyError:
+                                pass
+                else:
+                    del to_resend[page_key]
+                    if not response:
+                        # Unsuccessful, don't retry again
+                        try:
+                            del self._pending_page_layouts[page_key]
+                        except KeyError:
+                            pass
+
+            if len(to_resend) > 0:
+                self._logger.debug(
+                    f"Trying again in {self._retry_interval_seconds}s..."
+                )
+                await asyncio.sleep(self._retry_interval_seconds)
+
     async def _resend_transaction_loading_states(
         self, ids_to_resend: Optional[list[str]] = None
     ):
@@ -730,6 +794,7 @@ class Interval:
                     await asyncio.gather(
                         self._resend_pending_io_calls(),
                         self._resend_transaction_loading_states(),
+                        self._resend_pending_page_layouts(),
                     )
                 except Exception as err:
                     self._log.prod("Unable to reconnect. Retrying in 3s...")
@@ -810,11 +875,15 @@ class Interval:
 
             self._io_response_handlers[inputs.transaction_id] = client.on_response
 
+            params = inputs.params
+            if params is not None and inputs.params_meta is not None:
+                params = superjson.deserialize(params, inputs.params_meta)
+
             action_ctx = ActionContext(
                 transaction_id=inputs.transaction_id,
                 logger=self._logger,
                 user=inputs.user,
-                params=deserialize_dates(inputs.params),
+                params=deserialize_dates(params),
                 environment=inputs.environment,
                 organization=self.organization,
                 action=inputs.action,
@@ -865,9 +934,12 @@ class Interval:
                         ):
                             resp = dict(resp.items())
 
+                        data, meta = superjson.serialize(resp)
+
                         result = ActionResult(
                             status="SUCCESS",
-                            data=IOFunctionReturnModel.parse_obj(serialize_dates(resp)),
+                            data=IOFunctionReturnModel.parse_obj(data),
+                            meta=meta,
                         )
                     except IOError as ioerr:
                         raise ioerr
@@ -944,7 +1016,10 @@ class Interval:
                 self._logger.error("No page handler found for slug", inputs.page.slug)
                 return OpenPageReturnsError(message="No page handler found.")
 
-            # TODO superjson paramsMeta
+            params = inputs.params
+            if params is not None and inputs.params_meta is not None:
+                params = superjson.deserialize(params, inputs.params_meta)
+
             page_ctx = PageContext(
                 user=inputs.user,
                 params=deserialize_dates(inputs.params),
@@ -997,11 +1072,15 @@ class Interval:
 
                     for _ in range(MAX_PAGE_RETRIES):
                         try:
+                            serialized_page = page_layout.json(exclude_unset=True)
+                            self._pending_page_layouts[
+                                inputs.page_key
+                            ] = serialized_page
                             await self._send(
                                 "SEND_PAGE",
                                 SendPageInputs(
                                     page_key=inputs.page_key,
-                                    page=page_layout.json(exclude_unset=True),
+                                    page=serialized_page,
                                 ).dict(),
                             )
                             return
@@ -1215,6 +1294,11 @@ class Interval:
 
             try:
                 del self._io_response_handlers[inputs.page_key]
+            except KeyError:
+                pass
+
+            try:
+                del self._pending_page_layouts[inputs.page_key]
             except KeyError:
                 pass
 

@@ -537,7 +537,7 @@ class IO:
             min_selections: Optional[int] = None,
             max_selections: Optional[int] = None,
             disabled: Optional[bool] = None,
-            default_page_size: Optional[int] = None,
+            default_page_size: Optional[Union[int, float]] = None,
             is_sortable: bool = True,
             is_filterable: bool = True,
         ) -> InputIOPromise[Literal["SELECT_TABLE"], list[TR]]:
@@ -999,7 +999,7 @@ class IO:
             row_menu_items: Optional[Callable[[TR], Iterable[TableMenuItem]]] = None,
             help_text: Optional[str] = None,
             columns: Optional[Iterable[Union[TableColumnDef, str]]] = None,
-            default_page_size: Optional[int] = None,
+            default_page_size: Optional[Union[int, float]] = None,
             is_sortable: bool = True,
             is_filterable: bool = True,
         ) -> DisplayIOPromise[Literal["DISPLAY_TABLE"], None]:
@@ -1015,7 +1015,7 @@ class IO:
             row_menu_items: Optional[Callable[[TR], Iterable[TableMenuItem]]] = None,
             help_text: Optional[str] = None,
             columns: Optional[Iterable[Union[TableColumnDef, str]]] = None,
-            default_page_size: Optional[int] = None,
+            default_page_size: Optional[Union[int, float]] = None,
             is_sortable: bool = True,
             is_filterable: bool = True,
         ) -> DisplayIOPromise[Literal["DISPLAY_TABLE"], None]:
@@ -1030,7 +1030,7 @@ class IO:
             row_menu_items: Optional[Callable[[TR], Iterable[TableMenuItem]]] = None,
             help_text: Optional[str] = None,
             columns: Optional[Iterable[Union[TableColumnDef, str]]] = None,
-            default_page_size: Optional[int] = None,
+            default_page_size: Optional[Union[int, float]] = None,
             is_sortable: bool = True,
             is_filterable: bool = True,
         ) -> DisplayIOPromise[Literal["DISPLAY_TABLE"], None]:
@@ -1126,7 +1126,7 @@ class IO:
             render_item: Callable[[GI], GridItem],
             help_text: Optional[str] = None,
             ideal_column_width: Optional[int] = None,
-            default_page_size: Optional[int] = None,
+            default_page_size: Optional[Union[int, float]] = None,
             is_filterable: bool = True,
         ) -> DisplayIOPromise[Literal["DISPLAY_GRID"], None]:
             ...
@@ -1141,7 +1141,7 @@ class IO:
             render_item: Callable[[GI], GridItem],
             help_text: Optional[str] = None,
             ideal_column_width: Optional[int] = None,
-            default_page_size: Optional[int] = None,
+            default_page_size: Optional[Union[int, float]] = None,
             is_filterable: bool = True,
         ) -> DisplayIOPromise[Literal["DISPLAY_GRID"], None]:
             ...
@@ -1155,7 +1155,7 @@ class IO:
             render_item: Callable[[GI], GridItem],
             help_text: Optional[str] = None,
             ideal_column_width: Optional[int] = None,
-            default_page_size: Optional[int] = None,
+            default_page_size: Optional[Union[int, float]] = None,
             is_filterable: bool = True,
         ) -> DisplayIOPromise[Literal["DISPLAY_GRID"], None]:
             serialized_items = (

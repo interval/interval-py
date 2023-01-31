@@ -186,6 +186,7 @@ class EnqueueActionInputs(BaseModel):
     slug: str
     assignee: Optional[str]
     params: Optional[SerializableRecord]
+    params_meta: Optional[Any] = None
 
 
 class EnqueueActionReturnsSuccess(BaseModel):
@@ -211,8 +212,9 @@ class DequeueActionInputs(BaseModel):
 class DequeueActionReturnsSuccess(BaseModel):
     type: Literal["success"] = "success"
     id: str
-    assignee: Optional[str]
-    params: Optional[SerializableRecord]
+    assignee: Optional[str] = None
+    params: Optional[SerializableRecord] = None
+    params_meta: Optional[Any] = None
 
 
 class DequeueActionReturnsError(BaseModel):
@@ -470,6 +472,7 @@ class StartTransactionInputs(BaseModel):
     environment: ActionEnvironment
     user: ContextUser
     params: SerializableRecord
+    params_meta: Optional[Any] = None
 
 
 class OpenPageInputs(BaseModel):
@@ -479,6 +482,7 @@ class OpenPageInputs(BaseModel):
     environment: ActionEnvironment
     user: ContextUser
     params: SerializableRecord
+    params_meta: Optional[Any] = None
 
 
 class OpenPageReturnsSuccess(BaseModel):
