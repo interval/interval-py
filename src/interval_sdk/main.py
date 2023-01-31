@@ -2,13 +2,15 @@ import asyncio, importlib.metadata, time, datetime, signal
 from contextvars import ContextVar
 from dataclasses import dataclass
 from inspect import iscoroutine, signature, isfunction
-from typing import Any, Optional, Callable, cast, Union
+from typing import Any, Optional, Callable, Union
 from urllib.parse import urlparse, urlunparse
 from uuid import uuid4, UUID
 
 import aiohttp
 import websockets, websockets.client, websockets.exceptions
 from pydantic import parse_raw_as
+
+from interval_sdk import superjson
 
 
 from .io_schema import (
@@ -69,10 +71,7 @@ from .internal_rpc_schema import (
     InitializeHostReturns,
 )
 from .util import (
-    DeserializableRecord,
-    ensure_serialized,
     isoformat_datetime,
-    serialize_dates,
     deserialize_dates,
 )
 from .handlers import IntervalActionHandler, IntervalPageHandler, IOResponseHandler
@@ -137,20 +136,16 @@ class Interval:
             params: Optional[SerializableRecord] = None,
         ) -> QueuedAction:
             try:
-                params = cast(DeserializableRecord, serialize_dates(params))
+                meta = None
                 if params is not None:
-                    try:
-                        ensure_serialized(params)
-                    except ValueError as e:
-                        raise IntervalError(
-                            "Invalid params, please pass an object of primitives."
-                        ) from e
+                    params, meta = superjson.serialize(params)
 
                 try:
                     data = EnqueueActionInputs(
                         slug=slug,
                         assignee=assignee_email,
                         params=params,
+                        params_meta=meta,
                     ).json()
                 except ValueError as e:
                     raise IntervalError("Invalid input.") from e
@@ -210,7 +205,9 @@ class Interval:
                     )
 
                 return QueuedAction(
-                    id=response.id, assignee=response.assignee, params=response.params
+                    id=response.id,
+                    assignee=response.assignee,
+                    params=superjson.deserialize(response.params, response.params_meta),
                 )
             except IntervalError as err:
                 raise err
@@ -878,11 +875,15 @@ class Interval:
 
             self._io_response_handlers[inputs.transaction_id] = client.on_response
 
+            params = inputs.params
+            if params is not None and inputs.params_meta is not None:
+                params = superjson.deserialize(params, inputs.params_meta)
+
             action_ctx = ActionContext(
                 transaction_id=inputs.transaction_id,
                 logger=self._logger,
                 user=inputs.user,
-                params=deserialize_dates(inputs.params),
+                params=deserialize_dates(params),
                 environment=inputs.environment,
                 organization=self.organization,
                 action=inputs.action,
@@ -933,9 +934,12 @@ class Interval:
                         ):
                             resp = dict(resp.items())
 
+                        data, meta = superjson.serialize(resp)
+
                         result = ActionResult(
                             status="SUCCESS",
-                            data=IOFunctionReturnModel.parse_obj(serialize_dates(resp)),
+                            data=IOFunctionReturnModel.parse_obj(data),
+                            meta=meta,
                         )
                     except IOError as ioerr:
                         raise ioerr
@@ -1012,7 +1016,10 @@ class Interval:
                 self._logger.error("No page handler found for slug", inputs.page.slug)
                 return OpenPageReturnsError(message="No page handler found.")
 
-            # TODO superjson paramsMeta
+            params = inputs.params
+            if params is not None and inputs.params_meta is not None:
+                params = superjson.deserialize(params, inputs.params_meta)
+
             page_ctx = PageContext(
                 user=inputs.user,
                 params=deserialize_dates(inputs.params),

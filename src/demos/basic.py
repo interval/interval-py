@@ -1,4 +1,4 @@
-import asyncio, json, signal
+import asyncio, json, signal, math
 from datetime import date, datetime
 from typing import Iterable, Optional, cast
 from typing_extensions import Literal, NotRequired
@@ -164,7 +164,7 @@ async def handler(display: IO.Display):
         description=description(),
         children=[
             display.markdown("Hey!"),
-            display.table("Tables?", data=data),
+            display.table("Tables?", data=data, default_page_size=math.inf),
         ],
     )
 
@@ -665,6 +665,7 @@ async def table_test(io: IO):
                 "params": {"message": f"Hi from {row['a']}!"},
             },
         ],
+        default_page_size=math.inf,
     )
 
     print(selected)
@@ -716,7 +717,7 @@ async def data():
         render_item=lambda x: {
             "title": f"Item {x}",
         },
-        default_page_size=10,
+        default_page_size=math.inf,
         is_filterable=False,
     )
 

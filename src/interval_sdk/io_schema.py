@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
+import math
 import traceback
 from typing import (
     Union,
@@ -21,10 +22,12 @@ from pydantic import (
     BaseModel as PydanticBaseModel,
     Field,
     NonNegativeInt,
+    PositiveFloat,
     PositiveInt,
     StrictBool,
     StrictInt,
     StrictFloat,
+    validator,
 )
 from pydantic.fields import ModelField
 
@@ -99,6 +102,7 @@ class ComponentRenderInfo(GenericModel, Generic[MN]):
     method_name: MN
     label: str
     props: Any
+    props_meta: Optional[Any] = None
     is_stateful: bool
     is_optional: bool
     is_multiple: bool
@@ -308,6 +312,7 @@ class ActionResult(BaseModel):
     schema_version: Literal[0, 1] = 1
     status: Literal["SUCCESS", "FAILURE"]
     data: IOFunctionReturnModel
+    meta: Optional[Any] = None
 
     class Config:
         json_dumps = json.dumps
@@ -580,13 +585,20 @@ class SelectTableProps(BaseModel):
     min_selections: Optional[PositiveInt]
     max_selections: Optional[PositiveInt]
     disabled: Optional[bool]
-    default_page_size: Optional[PositiveInt] = None
+    default_page_size: Optional[Union[PositiveInt, PositiveFloat]] = None
     is_sortable: bool = True
     is_filterable: bool = True
 
     # private props
     total_records: PositiveInt
     selected_keys: Optional[list[str]] = None
+
+    @validator("default_page_size")
+    def int_or_inf(cls, v):
+        if isinstance(v, float) and not math.isinf(v):
+            v = int(v)
+
+        return v
 
 
 class SelectTableState(BaseModel):
@@ -682,12 +694,19 @@ class DisplayImageProps(BaseModel):
 class DisplayGridProps(BaseModel):
     help_text: Optional[str] = None
     data: list[InternalGridItem]
-    ideal_column_width: Optional[PositiveInt] = None
-    default_page_size: Optional[PositiveInt] = None
+    ideal_column_width: Optional[Union[PositiveInt, PositiveFloat]] = None
+    default_page_size: Optional[Union[PositiveInt, PositiveFloat]] = None
     is_filterable: bool = True
     # private props
     total_records: Optional[NonNegativeInt] = None
     is_async: bool
+
+    @validator("default_page_size")
+    def int_or_inf(cls, v):
+        if isinstance(v, float) and not math.isinf(v):
+            v = int(v)
+
+        return v
 
 
 class DisplayGridState(BaseModel):
@@ -700,12 +719,19 @@ class DisplayTableProps(BaseModel):
     help_text: Optional[str] = None
     data: list[InternalTableRowModel]
     columns: list[InternalTableColumn]
-    default_page_size: Optional[PositiveInt] = None
+    default_page_size: Optional[Union[PositiveInt, PositiveFloat]] = None
     is_sortable: bool = True
     is_filterable: bool = True
     # private props
     total_records: Optional[NonNegativeInt] = None
     is_async: bool
+
+    @validator("default_page_size")
+    def int_or_inf(cls, v):
+        if isinstance(v, float) and not math.isinf(v):
+            v = int(v)
+
+        return v
 
 
 class DisplayTableState(BaseModel):
@@ -948,10 +974,15 @@ class IOResponse(PydanticBaseModel):
     transaction_id: str
     kind: Literal["RETURN", "SET_STATE", "CANCELED"]
     values: list[Any]
+    values_meta: Optional[Any] = None
 
     class Config:
-        json_loads = json_loads_some_snake("transaction_id", "input_group_key")
-        json_dumps = json_dumps_some_snake("transaction_id", "input_group_key")
+        json_loads = json_loads_some_snake(
+            "transaction_id", "input_group_key", "values_meta"
+        )
+        json_dumps = json_dumps_some_snake(
+            "transaction_id", "input_group_key", "values_meta"
+        )
 
 
 def dump_method(method_name: MethodName) -> str:

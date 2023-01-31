@@ -33,7 +33,7 @@ from interval_sdk.io_schema import (
 
 from . import Transaction, Config
 from .data.mock_db import MockDb
-from .utils.date import input_date, input_time
+from .utils.date import format_date, input_date, input_time
 
 
 @pytest.fixture
@@ -677,7 +677,7 @@ async def test_select_single(
     await transactions.press_continue()
 
     await transactions.expect_success(
-        basic=date(2022, 7, 20).isoformat(),
+        basic=format_date(date(2022, 7, 20)),
         basic_type="date",
         label="Editor",
         value=2,
@@ -735,36 +735,40 @@ async def test_select_multiple(
     await transactions.console()
     await transactions.run("io.select.multiple")
 
-    date_val = date(2022, 6, 20).isoformat()
+    # no such thing as timeless dates on frontend currently
+    d = datetime(2022, 6, 20)
+    date_val = format_date(d)
+    # we did this manually when returning because return keys must be strings
+    date_str = str(d.date())
 
     await expect(page.locator("text=Select zero or more")).to_be_visible()
-    await page.click(f'input[type="checkbox"][value="{date_val}"]')
+    await page.click(f'label:has-text("{date_val}")')
     await page.click('input[type="checkbox"][value="true"]')
     await page.click('input[type="checkbox"][value="3"]')
     await transactions.press_continue()
 
     await expect(page.locator("text=Optionally modify the selection")).to_be_visible()
     await expect(
-        page.locator(f'input[type="checkbox"][value="{date_val}"]')
+        page.locator(f'label:has-text("{date_val}") input[type="checkbox"]')
     ).to_be_checked()
     await expect(page.locator('input[type="checkbox"][value="true"]')).to_be_checked()
     await expect(page.locator('input[type="checkbox"][value="3"]')).to_be_checked()
 
     await transactions.press_continue()
     await transactions.expect_validation_error("Please make no more than 2 selections.")
-    await page.click(f'input[type="checkbox"][value="{date_val}"]')
+    await page.click(f'label:has-text("{date_val}")')
     await page.click('input[type="checkbox"][value="true"]')
     await page.click('input[type="checkbox"][value="3"]')
     await transactions.press_continue()
     await transactions.expect_validation_error("Please make at least 1 selection.")
 
-    await page.click(f'input[type="checkbox"][value="{date_val}"]')
+    await page.click(f'label:has-text("{date_val}")')
     await page.click('input[type="checkbox"][value="3"]')
     await transactions.press_continue()
 
     await transactions.expect_success(
         **{
-            date_val: True,
+            date_str: True,
             "True": False,
             "3": True,
             "extraData": True,
@@ -934,7 +938,7 @@ async def test_input_date(
 
     await transactions.press_continue()
     await transactions.expect_success(
-        year=2022, month=2, day=25, py_date=date(2022, 2, 25).isoformat()
+        year=2022, month=2, day=25, py_date=format_date(date(2022, 2, 25))
     )
 
 
@@ -1018,7 +1022,7 @@ class TestInputDatetime:
             day=25,
             hour=14,
             minute=36,
-            py_datetime=datetime(2022, 2, 25, 14, 36).isoformat(),
+            py_datetime=format_date(datetime(2022, 2, 25, 14, 36)),
         )
 
     async def test_input_datetime_default(
@@ -1048,7 +1052,7 @@ class TestInputDatetime:
             day=23,
             hour=13,
             minute=25,
-            py_datetime=datetime(2020, 6, 23, 13, 25).isoformat(),
+            py_datetime=format_date(datetime(2020, 6, 23, 13, 25)),
         )
 
     async def test_input_datetime_min_max(
