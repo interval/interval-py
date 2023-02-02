@@ -48,7 +48,8 @@ import asyncio
 
 # This is what synchronous `listen()` does under the hood
 loop = asyncio.get_event_loop()
-loop.create_task(interval.listen_async())
+task = loop.create_task(interval.listen_async())
+task.add_done_callback(lambda _: loop.stop())
 loop.run_forever()
 ```
 
@@ -59,7 +60,8 @@ to close the loop gracefully on process termination:
 import asyncio, signal
 
 loop = asyncio.get_event_loop()
-loop.create_task(interval.listen_async())
+task = loop.create_task(interval.listen_async())
+task.add_done_callback(lambda _: loop.stop())
 for sig in {signal.SIGINT, signal.SIGTERM}:
     loop.add_signal_handler(sig, loop.stop)
 loop.run_forever()

@@ -495,13 +495,10 @@ class Interval:
         if not response:
             raise IntervalError("Failed sending redirect")
 
-    def listen(
-        self, done_callback: Optional[Callable[[asyncio.Task[None]], None]] = None
-    ):
+    def listen(self):
         loop = asyncio.get_event_loop()
         task = loop.create_task(self.listen_async())
-        if done_callback is not None:
-            task.add_done_callback(done_callback)
+        task.add_done_callback(lambda _: loop.stop())
 
         for sig in {signal.SIGINT, signal.SIGTERM}:
             loop.add_signal_handler(sig, loop.stop)
@@ -772,15 +769,23 @@ class Interval:
                 await asyncio.sleep(self._retry_interval_seconds)
 
     async def _create_socket_connection(self, instance_id: UUID):
+        initially_connected = False
+
         async def on_close(code: int, reason: str):
             if self._intentionally_closed:
                 self._intentionally_closed = False
                 return
 
+            if not initially_connected:
+                self._log.error(
+                    f"Failed to connect to Interval (code {code}). Reason: {reason}"
+                )
+                return
+
             if not self._is_connected:
                 return
 
-            self._log.prod(
+            self._log.error(
                 f"Lost connection to Interval (code {code}). Reason: {reason}"
             )
             self._log.prod("Reconnecting...")

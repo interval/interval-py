@@ -85,8 +85,7 @@ class ISocket:
             await self.on_open()
 
         loop = asyncio.get_running_loop()
-        fut = loop.create_future()
-        self.on_authenticated = fut
+        self.on_authenticated = loop.create_future()
 
         self._connection_future = asyncio.gather(
             # websockets can only have one consumer I think
@@ -97,12 +96,16 @@ class ISocket:
         def on_complete(fut: Future):
             try:
                 fut.result()
+            except asyncio.CancelledError:
+                pass
             except BaseException as err:
-                self._logger.error("Encountered connection loop error", err)
+                self._logger.error("Encountered connection loop error")
+                self._logger.print_exception(err)
+
             self._connection_future = None
 
         self._connection_future.add_done_callback(on_complete)
-        await asyncio.wait_for(fut, self._connect_timeout)
+        await asyncio.wait_for(self.on_authenticated, self._connect_timeout)
 
     async def _consumer_handler(
         self, ws: websockets.client.WebSocketClientProtocol
@@ -197,6 +200,9 @@ class ISocket:
 
     async def _handle_close(self, code: int, reason: str):
         self.is_closed = True
+
+        if not self.on_authenticated.done():
+            self.on_authenticated.cancel()
 
         if self._connection_future is not None:
             self._connection_future.cancel()
