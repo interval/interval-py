@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "interval-sdk"
-version = "0.37.1-dev2"
+version = "0.37.1-dev3"
 description = "Python SDK for Interval."
 authors = [
 	"Jacob Mischka <jacob@interval.com>",
