@@ -4,6 +4,7 @@ from typing import (
     Any,
     Callable,
     Generic,
+    Iterable,
     Optional,
     Type,
     Literal,
@@ -411,7 +412,7 @@ class ActionContext:
         self,
         message: str,
         title: Optional[str] = None,
-        delivery: Optional[list[DeliveryInstruction]] = None,
+        delivery: Optional[Iterable[DeliveryInstruction]] = None,
         idempotency_key: Optional[str] = None,
     ):
         return await self._notify(
