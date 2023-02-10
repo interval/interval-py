@@ -1,7 +1,7 @@
 import asyncio
 import inspect
 from typing import Optional, cast, Callable
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from typing_extensions import TypeAlias, TypeVar, Any, Awaitable
 
@@ -20,13 +20,15 @@ class IOClient:
     Sender: TypeAlias = Callable[[IORender], Awaitable[None]]
     _logger: Logger
     _send: Sender
-    _on_response_handler: Optional[Callable[[IOResponse], Awaitable[None]]] = None
+    _on_response_handlers: dict[UUID, Callable[[IOResponse], Awaitable[None]]]
+    _previous_input_group_key: UUID | None = None
 
     _is_canceled = False
 
     def __init__(self, logger: Logger, send: Sender):
         self._logger = logger
         self._send = send
+        self._on_response_handlers = {}
 
         self.io = IO(self.render_components)
 
@@ -35,12 +37,30 @@ class IOClient:
         return self._is_canceled
 
     async def on_response(self, response: IOResponse):
-        if self._on_response_handler is not None:
-            try:
-                await self._on_response_handler(response)
-            except Exception as err:
-                self._logger.error("Error in on_response_handler:", err)
-                self._logger.print_exception(err)
+        input_group_key = (
+            response.input_group_key
+            if response.input_group_key is not None
+            else self._previous_input_group_key
+        )
+
+        if input_group_key is None or input_group_key == "UNKNOWN":
+            self._logger.error("Received response without an input group key")
+            return
+
+        try:
+
+            input_group_handler = self._on_response_handlers[input_group_key]
+
+            if input_group_handler is not None:
+                try:
+                    await input_group_handler(response)
+                except Exception as err:
+                    self._logger.error("Error in input group response handler:", err)
+                    self._logger.print_exception(err)
+        except KeyError:
+            self._logger.error(
+                "No response handler defined for input group key", input_group_key
+            )
 
     async def render_components(
         self,
@@ -73,11 +93,13 @@ class IOClient:
 
         async def on_response_handler(response: IOResponse):
             nonlocal validation_error_message, is_returned
-            if response.input_group_key != str(input_group_key):
+            if response.input_group_key != input_group_key:
                 self._logger.debug("Received response for other input group")
                 return
 
-            if self._is_canceled or is_returned:
+            if (self._is_canceled or is_returned) and (
+                response.kind == "RETURN" or response.kind == "CANCELED"
+            ):
                 self._logger.debug("Received response after IO call complete")
                 return
 
@@ -147,7 +169,8 @@ class IOClient:
                 task = loop.create_task(render())
                 task.add_done_callback(self._logger.handle_task_exceptions)
 
-        self._on_response_handler = on_response_handler
+        self._on_response_handlers[input_group_key] = on_response_handler
+        self._previous_input_group_key = input_group_key
 
         for c in components:
             c.on_state_change = render

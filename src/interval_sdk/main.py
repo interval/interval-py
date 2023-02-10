@@ -39,6 +39,7 @@ from .internal_rpc_schema import (
     ActionDefinition,
     ActionEnvironment,
     ClosePageInputs,
+    CloseTransactionInputs,
     DeliveryInstruction,
     DeliveryInstructionModel,
     EnqueueActionInputs,
@@ -228,7 +229,7 @@ class Interval:
     _reinitialize_batch_timeout_seconds: float = 0.2
     _num_isocket_producers: int
 
-    _page_io_clients: dict[str, IOClient]
+    _io_clients: dict[str, IOClient]
     _page_futures: dict[str, asyncio.Task]
     _io_response_handlers: dict[str, IOResponseHandler]
     _pending_io_calls: dict[str, str]
@@ -285,7 +286,7 @@ class Interval:
         self._reinitialize_batch_timeout_seconds = reinitialize_batch_timeout
         self._num_isocket_producers = num_message_producers
 
-        self._page_io_clients = {}
+        self._io_clients = {}
         self._page_futures = {}
         self._io_response_handlers = {}
         self._pending_io_calls = {}
@@ -775,6 +776,28 @@ class Interval:
                 )
                 await asyncio.sleep(self._retry_interval_seconds)
 
+    def _close_transaction(self, transaction_id: str):
+        self._logger.debug("Closing transaction", transaction_id)
+        try:
+            del self._pending_io_calls[transaction_id]
+        except KeyError:
+            pass
+
+        try:
+            del self._transaction_loading_states[transaction_id]
+        except KeyError:
+            pass
+
+        try:
+            del self._io_response_handlers[transaction_id]
+        except KeyError:
+            pass
+
+        try:
+            del self._io_clients[transaction_id]
+        except KeyError:
+            pass
+
     async def _create_socket_connection(self, instance_id: UUID):
         initially_connected = False
 
@@ -908,6 +931,8 @@ class Interval:
                 ),
             )
 
+            self._io_clients[inputs.transaction_id] = client
+
             async def handle_action():
                 try:
                     result: ActionResult
@@ -991,18 +1016,15 @@ class Interval:
                     self._log.debug("Uncaught exception:", err)
                     self._log.print_exception(err)
                 finally:
-                    try:
-                        del self._pending_io_calls[inputs.transaction_id]
-                    except KeyError:
-                        pass
-                    try:
-                        del self._io_response_handlers[inputs.transaction_id]
-                    except KeyError:
-                        pass
+                    if not inputs.postpone_complete_cleanup:
+                        self._close_transaction(inputs.transaction_id)
 
             task = loop.create_task(handle_action(), name="handle_action")
             # this should never be hit, exceptions handled in function
             task.add_done_callback(self._logger.handle_task_exceptions)
+
+        async def close_transaction(inputs: CloseTransactionInputs) -> None:
+            self._close_transaction(inputs.transaction_id)
 
         async def io_response(inputs: IOResponseInputs) -> None:
             self._log.debug("Got IO response", inputs)
@@ -1114,7 +1136,7 @@ class Interval:
 
             client = IOClient(logger=self._logger, send=handle_send)
 
-            self._page_io_clients[inputs.page_key] = client
+            self._io_clients[inputs.page_key] = client
             self._io_response_handlers[inputs.page_key] = client.on_response
 
             def page_error(
@@ -1293,7 +1315,7 @@ class Interval:
         async def close_page(inputs: ClosePageInputs) -> None:
             self._logger.debug("CLOSE_PAGE", inputs)
             try:
-                del self._page_io_clients[inputs.page_key]
+                del self._io_clients[inputs.page_key]
             except KeyError:
                 pass
 
@@ -1320,6 +1342,7 @@ class Interval:
             can_respond_to=host_schema,
             handlers={
                 "START_TRANSACTION": start_transaction,
+                "CLOSE_TRANSACTION": close_transaction,
                 "IO_RESPONSE": io_response,
                 "OPEN_PAGE": open_page,
                 "CLOSE_PAGE": close_page,

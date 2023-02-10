@@ -469,11 +469,16 @@ class PageContext:
 
 class StartTransactionInputs(BaseModel):
     transaction_id: str
+    postpone_complete_cleanup: bool = False
     action: ActionInfo
     environment: ActionEnvironment
     user: ContextUser
     params: SerializableRecord
     params_meta: Optional[Any] = None
+
+
+class CloseTransactionInputs(BaseModel):
+    transaction_id: str
 
 
 class OpenPageInputs(BaseModel):
@@ -509,6 +514,7 @@ class ClosePageInputs(BaseModel):
 HostSchemaMethodName = Literal[
     "IO_RESPONSE",
     "START_TRANSACTION",
+    "CLOSE_TRANSACTION",
     "OPEN_PAGE",
     "CLOSE_PAGE",
 ]
@@ -521,6 +527,10 @@ host_schema: HostSchema = {
     ),
     "START_TRANSACTION": RPCMethod(
         inputs=StartTransactionInputs,
+        returns=None,
+    ),
+    "CLOSE_TRANSACTION": RPCMethod(
+        inputs=CloseTransactionInputs,
         returns=None,
     ),
     "OPEN_PAGE": RPCMethod(

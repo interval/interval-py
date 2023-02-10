@@ -969,8 +969,8 @@ class IORender(BaseModel):
 
 
 class IOResponse(PydanticBaseModel):
-    id: UUID
-    input_group_key: Optional[str] = None
+    id: Union[UUID, Literal["UNKNOWN"]]
+    input_group_key: Optional[Union[UUID, Literal["UNKNOWN"]]] = None
     transaction_id: str
     kind: Literal["RETURN", "SET_STATE", "CANCELED"]
     values: list[Any]
