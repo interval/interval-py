@@ -1287,6 +1287,7 @@ class Interval:
                         self._page_futures[render_task.get_name()] = render_task
                 except Exception as err:
                     self._logger.error("Error in page:", err)
+                    errors.append(page_error(err, layout_key="children"))
                     page_layout = BasicLayoutModel(kind="BASIC", errors=errors)
 
                     await self._send(
