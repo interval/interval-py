@@ -144,7 +144,7 @@ async def test_group(interval: Interval, page: BrowserPage, transactions: Transa
     button = page.locator('button:has-text("Custom label")')
     await expect(button).to_be_visible()
     await expect(button).to_have_class(re.compile("bg-red-500"))
-    await transactions.press_continue("Custom label")
+    await transactions.press_continue()
 
     await page.click("text=Text")
     await page.keyboard.type("Hello")
