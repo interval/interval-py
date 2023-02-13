@@ -906,7 +906,11 @@ class Interval:
                     ).dict(),
                 )
 
-            client = IOClient(logger=self._logger, send=send)
+            client = IOClient(
+                logger=self._logger,
+                send=send,
+                display_resolves_immediately=inputs.display_resolves_immediately,
+            )
 
             self._io_response_handlers[inputs.transaction_id] = client.on_response
 
@@ -1016,7 +1020,7 @@ class Interval:
                     self._log.debug("Uncaught exception:", err)
                     self._log.print_exception(err)
                 finally:
-                    if not inputs.postpone_complete_cleanup:
+                    if not inputs.display_resolves_immediately:
                         self._close_transaction(inputs.transaction_id)
 
             task = loop.create_task(handle_action(), name="handle_action")

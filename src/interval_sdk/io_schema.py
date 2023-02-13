@@ -928,7 +928,12 @@ class IOSchema(Generic[MN]):
         return cls.method_def.props
 
 
-def resolves_immediately(method_name: MethodName) -> bool:
+def resolves_immediately(
+    method_name: MethodName, *, display_resolves_immediately: Optional[bool] = False
+) -> bool:
+    if display_resolves_immediately and method_name.startswith("DISPLAY_"):
+        return True
+
     return io_schema[method_name].immediate
 
 

@@ -23,6 +23,7 @@ from ..io_schema import (
     MN,
     io_schema,
     ComponentRenderInfo,
+    resolves_immediately,
 )
 from ..types import GenericModel
 from ..util import dict_keys_to_snake, dict_keys_to_camel
@@ -78,6 +79,8 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
         ] = None,
         is_optional: bool = False,
         validator: Optional[IOPromiseValidator] = None,
+        *,
+        display_resolves_immediately: Optional[bool] = None,
     ):
         self.schema = io_schema[method_name]
         self.instance = ComponentInstance[MN, PropsModel_co, StateModel_co](
@@ -93,6 +96,11 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
 
         loop = asyncio.get_running_loop()
         self._fut = loop.create_future()
+
+        if resolves_immediately(
+            method_name, display_resolves_immediately=display_resolves_immediately
+        ):
+            self._fut.set_result(None)
 
     async def handle_validation(self, return_value: Any) -> Optional[str]:
         try:

@@ -469,7 +469,7 @@ class PageContext:
 
 class StartTransactionInputs(BaseModel):
     transaction_id: str
-    postpone_complete_cleanup: bool = False
+    display_resolves_immediately: bool = False
     action: ActionInfo
     environment: ActionEnvironment
     user: ContextUser

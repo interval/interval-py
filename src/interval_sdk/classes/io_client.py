@@ -25,12 +25,21 @@ class IOClient:
 
     _is_canceled = False
 
-    def __init__(self, logger: Logger, send: Sender):
+    def __init__(
+        self,
+        logger: Logger,
+        send: Sender,
+        *,
+        display_resolves_immediately: Optional[bool] = None
+    ):
         self._logger = logger
         self._send = send
         self._on_response_handlers = {}
 
-        self.io = IO(self.render_components)
+        self.io = IO(
+            self.render_components,
+            display_resolves_immediately=display_resolves_immediately,
+        )
 
     @property
     def is_canceled(self) -> bool:

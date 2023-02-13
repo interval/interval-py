@@ -144,6 +144,7 @@ class IO:
     @dataclass
     class Input:
         _renderer: ComponentRenderer
+        _display_resolves_immediately: Optional[bool]
 
         def text(
             self,
@@ -171,6 +172,7 @@ class IO:
                     min_length=min_length,
                     max_length=max_length,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
             return InputIOPromise(c, renderer=self._renderer)
 
@@ -192,6 +194,7 @@ class IO:
                     disabled=disabled,
                     placeholder=placeholder,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
             return InputIOPromise(c, renderer=self._renderer)
 
@@ -257,6 +260,7 @@ class IO:
                     placeholder=placeholder,
                     currency=currency,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
 
             def get_value(val: float):
@@ -283,6 +287,7 @@ class IO:
                     default_value=default_value,
                     disabled=disabled,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
             return InputIOPromise(c, renderer=self._renderer)
 
@@ -304,6 +309,7 @@ class IO:
                     placeholder=placeholder,
                     default_value=default_value,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
             return InputIOPromise(c, renderer=self._renderer)
 
@@ -330,6 +336,7 @@ class IO:
                     disabled=disabled,
                     placeholder=placeholder,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
 
             def get_value(val: Any) -> ParseResult:
@@ -375,6 +382,7 @@ class IO:
                     if max is not None
                     else None,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
 
             def get_value(val: DateModel) -> date:
@@ -410,6 +418,7 @@ class IO:
                     if max is not None
                     else None,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
 
             def get_value(val: TimeModel) -> time:
@@ -461,6 +470,7 @@ class IO:
                     if max is not None
                     else None,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
 
             def get_value(val: DateTimeModel) -> datetime:
@@ -507,6 +517,7 @@ class IO:
                     file_urls=[],
                 ),
                 handle_state_change=handle_state_change,
+                display_resolves_immediately=self._display_resolves_immediately,
             )
 
             def get_value(val: InnerFileModel) -> IntervalFile:
@@ -525,6 +536,7 @@ class IO:
     @dataclass
     class Select:
         _renderer: ComponentRenderer
+        _display_resolves_immediately: Optional[bool]
 
         def table(
             self,
@@ -600,6 +612,7 @@ class IO:
                     is_filterable=is_filterable,
                 ),
                 handle_state_change=handle_state_change,
+                display_resolves_immediately=self._display_resolves_immediately,
             )
 
             def get_value(val: list[SelectTableReturnModel]) -> list[TR]:
@@ -705,6 +718,7 @@ class IO:
                     searchable=searchable,
                     disabled=disabled,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
             option_map = {
                 option
@@ -828,6 +842,7 @@ class IO:
                     max_selections=max_selections,
                     disabled=disabled,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
 
             option_map = {
@@ -848,6 +863,7 @@ class IO:
     @dataclass
     class Display:
         _renderer: ComponentRenderer
+        _display_resolves_immediately: Optional[bool]
 
         def code(
             self,
@@ -863,6 +879,7 @@ class IO:
                     code=code,
                     language=language,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
@@ -884,6 +901,7 @@ class IO:
                     if menu_items is not None
                     else None,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
@@ -905,6 +923,7 @@ class IO:
                     theme=theme,
                     url=url,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
@@ -916,6 +935,7 @@ class IO:
                 method_name="DISPLAY_MARKDOWN",
                 label=label,
                 initial_props=None,
+                display_resolves_immediately=self._display_resolves_immediately,
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
@@ -933,6 +953,7 @@ class IO:
                     layout=layout,
                     data=[MetaItemDefinitionModel.parse_obj(item) for item in data],
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
@@ -948,6 +969,7 @@ class IO:
                 initial_props=DisplayObjectProps(
                     data=KeyValueObjectModel.parse_obj(data),
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
@@ -986,6 +1008,7 @@ class IO:
                     height=size,
                     width=size,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
@@ -1113,6 +1136,7 @@ class IO:
                     is_async=get_data is not None,
                 ),
                 handle_state_change=handle_state_change,
+                display_resolves_immediately=self._display_resolves_immediately,
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
@@ -1211,6 +1235,7 @@ class IO:
                     is_async=get_data is not None,
                 ),
                 handle_state_change=handle_state_change,
+                display_resolves_immediately=self._display_resolves_immediately,
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
@@ -1253,12 +1278,14 @@ class IO:
                     height=height if height is not None else size,
                     width=width if width is not None else size,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
             return DisplayIOPromise(c, renderer=self._renderer)
 
     @dataclass
     class Experimental:
         _renderer: ComponentRenderer
+        _display_resolves_immediately: Optional[bool]
 
         def spreadsheet(
             self,
@@ -1279,10 +1306,12 @@ class IO:
                     if default_value is not None
                     else None,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
             )
             return InputIOPromise(c, renderer=self._renderer)
 
     _renderer: ComponentRenderer
+    _display_resolves_immediately: Optional[bool]
     input: Input
     select: Select
     display: Display
@@ -1291,12 +1320,23 @@ class IO:
     def __init__(
         self,
         renderer: ComponentRenderer,
+        *,
+        display_resolves_immediately: Optional[bool] = None,
     ):
         self._renderer = renderer
-        self.input = self.Input(renderer)
-        self.select = self.Select(renderer)
-        self.display = self.Display(renderer)
-        self.experimental = self.Experimental(renderer)
+        self._display_resolves_immediately = display_resolves_immediately
+        self.input = self.Input(
+            renderer, _display_resolves_immediately=display_resolves_immediately
+        )
+        self.select = self.Select(
+            renderer, _display_resolves_immediately=display_resolves_immediately
+        )
+        self.display = self.Display(
+            renderer, _display_resolves_immediately=display_resolves_immediately
+        )
+        self.experimental = self.Experimental(
+            renderer, _display_resolves_immediately=display_resolves_immediately
+        )
 
     def confirm(
         self,
@@ -1309,6 +1349,7 @@ class IO:
             initial_props=ConfirmProps(
                 help_text=help_text,
             ),
+            display_resolves_immediately=self._display_resolves_immediately,
         )
         return ExclusiveIOPromise(c, renderer=self._renderer)
 
@@ -1325,6 +1366,7 @@ class IO:
                 if grace_period is not None
                 else None,
             ),
+            display_resolves_immediately=self._display_resolves_immediately,
         )
         return ExclusiveIOPromise(c, renderer=self._renderer)
 
@@ -1543,6 +1585,7 @@ class IO:
                 else None,
             ),
             handle_state_change=handle_state_change,
+            display_resolves_immediately=self._display_resolves_immediately,
         )
 
         # Reassign this here so get_default_value modifies the working results list
