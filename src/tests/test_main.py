@@ -443,6 +443,23 @@ class TestInputNumber:
         await transactions.press_continue()
         await transactions.expect_success(sum=25)
 
+        await transactions.restart()
+
+        await page.click("text=Enter a number")
+        await page.fill('input[inputmode="numeric"]', "-12")
+        await transactions.press_continue()
+
+        await page.click("text=Enter a second number")
+        await page.fill('input[inputmode="numeric"]', "-15")
+        await transactions.press_continue()
+        await transactions.expect_validation_error(
+            "Please enter a number greater than or equal to -11."
+        )
+        await page.fill('input[inputmode="numeric"]', "12")
+
+        await transactions.press_continue()
+        await transactions.expect_success(sum=0)
+
     async def test_currency(
         self, interval: Interval, page: BrowserPage, transactions: Transaction
     ):
