@@ -149,7 +149,7 @@ async def test_group(interval: Interval, page: BrowserPage, transactions: Transa
     button = page.locator('button:has-text("Custom label")')
     await expect(button).to_be_visible()
     await expect(button).to_have_class(re.compile("bg-red-500"))
-    await transactions.press_continue("Custom label")
+    await transactions.press_continue()
 
     await page.click("text=Text")
     await page.keyboard.type("Hello")
@@ -442,6 +442,23 @@ class TestInputNumber:
 
         await transactions.press_continue()
         await transactions.expect_success(sum=25)
+
+        await transactions.restart()
+
+        await page.click("text=Enter a number")
+        await page.fill('input[inputmode="numeric"]', "-12")
+        await transactions.press_continue()
+
+        await page.click("text=Enter a second number")
+        await page.fill('input[inputmode="numeric"]', "-15")
+        await transactions.press_continue()
+        await transactions.expect_validation_error(
+            "Please enter a number greater than or equal to -11."
+        )
+        await page.fill('input[inputmode="numeric"]', "12")
+
+        await transactions.press_continue()
+        await transactions.expect_success(sum=0)
 
     async def test_currency(
         self, interval: Interval, page: BrowserPage, transactions: Transaction
