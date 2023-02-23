@@ -1,4 +1,4 @@
-import asyncio, importlib.metadata, time, datetime, signal
+import asyncio, importlib.metadata, datetime, signal
 from contextvars import ContextVar
 from dataclasses import dataclass
 from inspect import iscoroutine, signature, isfunction
@@ -74,6 +74,7 @@ from .internal_rpc_schema import (
 from .util import (
     isoformat_datetime,
     deserialize_dates,
+    time_ms,
 )
 from .handlers import IntervalActionHandler, IntervalPageHandler, IOResponseHandler
 from .types import IntervalError, NotInitializedError
@@ -485,7 +486,7 @@ class Interval:
                     data=data,
                     index=index,
                     # expects time in milliseconds for JS Dates
-                    timestamp=time.time_ns() // 1000000,
+                    timestamp=time_ms(),
                 ).dict(),
             )
         except Exception as err:
@@ -1372,6 +1373,7 @@ class Interval:
                     groups=self._page_definitions,
                     sdk_name=SDK_NAME,
                     sdk_version=sdk_version,
+                    timestamp=time_ms(),
                 ).dict(exclude_none=True),
             )
         except Exception as err:
