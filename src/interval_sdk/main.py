@@ -877,6 +877,7 @@ class Interval:
 
             if inputs.transaction_id in self._io_response_handlers:
                 self._logger.debug("Transaction already started, not starting again")
+                return
 
             slug = inputs.action.slug
             handler = self._action_handlers.get(slug, None)
