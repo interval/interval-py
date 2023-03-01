@@ -2,6 +2,7 @@ import json, re
 from typing import Any, Iterable, Mapping, Optional, Tuple, Callable, Union, cast
 from datetime import date, time, datetime
 from typing_extensions import TypeAlias, TypeVar
+from time import time_ns
 
 from pydantic import StrictBool, StrictFloat, StrictInt
 
@@ -263,3 +264,7 @@ def format_datetime(d: datetime) -> str:
 
 def isoformat_datetime(d: datetime) -> str:
     return d.isoformat(timespec="milliseconds") + "Z"
+
+
+def time_ms() -> int:
+    return time_ns() // 1000000

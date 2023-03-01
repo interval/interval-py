@@ -151,6 +151,7 @@ class PageDefinition(BaseModel):
 class InitializeHostInputs(BaseModel):
     sdk_name: str
     sdk_version: str
+    timestamp: int
     actions: list[ActionDefinition]
     groups: list[PageDefinition]
 
