@@ -119,6 +119,9 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
             return "Received invalid response."
 
     def set_return_value(self, value: Any):
+        if self._fut.done():
+            return
+
         try:
             parsed = self.parse_return_value(value)
             self._fut.set_result(parsed)
