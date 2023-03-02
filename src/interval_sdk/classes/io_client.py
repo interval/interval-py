@@ -184,9 +184,19 @@ class IOClient:
         for c in components:
             c.on_state_change = render
 
+        def resolve_immediates(t: asyncio.Task):
+            try:
+                t.result()
+                for c in components:
+                    if c.resolves_immediately:
+                        c.set_return_value(None)
+            except Exception as err:
+                self._logger.warn("Failed resolving component immediately", err)
+
         # initial render
         task = loop.create_task(render())
         task.add_done_callback(self._logger.handle_task_exceptions)
+        task.add_done_callback(resolve_immediates)
 
         return_futures = [component.return_value for component in components]
 

@@ -178,6 +178,12 @@ interval.routes.add("new_page", page)
 
 
 @interval.action
+async def input_right_after_display(io: IO):
+    await io.display.link("Display", url="")
+    await io.input.text("Text")
+
+
+@interval.action
 async def keyed_group(io: IO):
     res = await io.group(
         name=io.input.text("Name"),

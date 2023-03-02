@@ -68,6 +68,7 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
     instance: ComponentInstance[MN, PropsModel_co, StateModel_co]
     on_state_change: Optional[Callable[[], Awaitable[None]]] = None
     validator: Optional[IOPromiseValidator] = None
+    resolves_immediately: bool = False
 
     def __init__(
         self,
@@ -96,11 +97,9 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
 
         loop = asyncio.get_running_loop()
         self._fut = loop.create_future()
-
-        if resolves_immediately(
+        self.resolves_immediately = resolves_immediately(
             method_name, display_resolves_immediately=display_resolves_immediately
-        ):
-            self._fut.set_result(None)
+        )
 
     async def handle_validation(self, return_value: Any) -> Optional[str]:
         try:
