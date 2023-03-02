@@ -184,6 +184,14 @@ async def input_right_after_display(io: IO):
 
 
 @interval.action
+async def loading_after_display(io: IO, ctx: ActionContext):
+    await io.display.heading("Hello from display")
+    await ctx.loading.start("Waiting for external system")
+    await asyncio.sleep(2.0)
+    await io.display.markdown("Done!")
+
+
+@interval.action
 async def keyed_group(io: IO):
     res = await io.group(
         name=io.input.text("Name"),
