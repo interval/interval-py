@@ -131,93 +131,6 @@ class Interval:
             except KeyError:
                 pass
 
-        async def enqueue(
-            self,
-            slug: str,
-            assignee_email: Optional[str] = None,
-            params: Optional[SerializableRecord] = None,
-        ) -> QueuedAction:
-            try:
-                meta = None
-                if params is not None:
-                    params, meta = superjson.serialize(params)
-
-                try:
-                    data = EnqueueActionInputs(
-                        slug=slug,
-                        assignee=assignee_email,
-                        params=params,
-                        params_meta=meta,
-                    ).json()
-                except ValueError as e:
-                    raise IntervalError("Invalid input.") from e
-
-                async with aiohttp.ClientSession(
-                    headers=self._interval._api_headers
-                ) as session:
-                    async with session.post(
-                        self._interval._get_api_address("actions/enqueue"), data=data
-                    ) as resp:
-                        try:
-                            text = await resp.text()
-                            response = parse_raw_as(EnqueueActionReturns, text)
-                        except Exception as e:
-                            raise IntervalError("Received invalid API response.") from e
-
-                if response.type == "error":
-                    raise IntervalError(
-                        f"There was a problem enqueueing the action: {response.message}."
-                    )
-
-                return QueuedAction(
-                    id=response.id, assignee=assignee_email, params=params
-                )
-            except IntervalError as err:
-                raise err
-            except Exception as err:
-                raise IntervalError(
-                    "There was a problem enqueueing the action."
-                ) from err
-
-        async def dequeue(self, id: str) -> QueuedAction:
-            try:
-                try:
-                    data = DequeueActionInputs(id=id).json()
-                except ValueError as err:
-                    raise IntervalError("Invalid input.") from err
-
-                async with aiohttp.ClientSession(
-                    headers=self._interval._api_headers
-                ) as session:
-                    async with session.post(
-                        self._interval._get_api_address("actions/dequeue"), data=data
-                    ) as resp:
-                        try:
-                            response = parse_raw_as(
-                                DequeueActionReturns, await resp.text()
-                            )
-                        except Exception as err:
-                            raise IntervalError(
-                                "Received invalid API response."
-                            ) from err
-
-                if response.type == "error":
-                    raise IntervalError(
-                        f"There was a problem enqueueing the action: {response.message}."
-                    )
-
-                return QueuedAction(
-                    id=response.id,
-                    assignee=response.assignee,
-                    params=superjson.deserialize(response.params, response.params_meta),
-                )
-            except IntervalError as err:
-                raise err
-            except Exception as err:
-                raise IntervalError(
-                    "There was a problem dequeueing the action."
-                ) from err
-
     _logger: Logger
     _endpoint: str = "wss://interval.com/websocket"
     _http_endpoint: str
@@ -1438,3 +1351,76 @@ class Interval:
 
         self._reinitialize_task = loop.create_task(self._reinitialize_routes())
         self._reinitialize_task.add_done_callback(on_complete)
+
+    async def enqueue(
+        self,
+        slug: str,
+        assignee_email: Optional[str] = None,
+        params: Optional[SerializableRecord] = None,
+    ) -> QueuedAction:
+        try:
+            meta = None
+            if params is not None:
+                params, meta = superjson.serialize(params)
+
+            try:
+                data = EnqueueActionInputs(
+                    slug=slug,
+                    assignee=assignee_email,
+                    params=params,
+                    params_meta=meta,
+                ).json()
+            except ValueError as e:
+                raise IntervalError("Invalid input.") from e
+
+            async with aiohttp.ClientSession(headers=self._api_headers) as session:
+                async with session.post(
+                    self._get_api_address("actions/enqueue"), data=data
+                ) as resp:
+                    try:
+                        text = await resp.text()
+                        response = parse_raw_as(EnqueueActionReturns, text)
+                    except Exception as e:
+                        raise IntervalError("Received invalid API response.") from e
+
+            if response.type == "error":
+                raise IntervalError(
+                    f"There was a problem enqueueing the action: {response.message}."
+                )
+
+            return QueuedAction(id=response.id, assignee=assignee_email, params=params)
+        except IntervalError as err:
+            raise err
+        except Exception as err:
+            raise IntervalError("There was a problem enqueueing the action.") from err
+
+    async def dequeue(self, id: str) -> QueuedAction:
+        try:
+            try:
+                data = DequeueActionInputs(id=id).json()
+            except ValueError as err:
+                raise IntervalError("Invalid input.") from err
+
+            async with aiohttp.ClientSession(headers=self._api_headers) as session:
+                async with session.post(
+                    self._get_api_address("actions/dequeue"), data=data
+                ) as resp:
+                    try:
+                        response = parse_raw_as(DequeueActionReturns, await resp.text())
+                    except Exception as err:
+                        raise IntervalError("Received invalid API response.") from err
+
+            if response.type == "error":
+                raise IntervalError(
+                    f"There was a problem enqueueing the action: {response.message}."
+                )
+
+            return QueuedAction(
+                id=response.id,
+                assignee=response.assignee,
+                params=superjson.deserialize(response.params, response.params_meta),
+            )
+        except IntervalError as err:
+            raise err
+        except Exception as err:
+            raise IntervalError("There was a problem dequeueing the action.") from err
