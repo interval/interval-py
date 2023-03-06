@@ -184,6 +184,25 @@ InitializeHostReturns = Annotated[
 ]
 
 
+class BeginHostShutdownInputs(BaseModel):
+    pass
+
+
+class BeginHostShutdownReturnsSuccess(BaseModel):
+    type: Literal["success"] = "success"
+
+
+class BeginHostShutdownReturnsError(BaseModel):
+    type: Literal["error"] = "error"
+    message: Optional[str] = None
+
+
+BeginHostShutdownReturns = Annotated[
+    Union[BeginHostShutdownReturnsSuccess, BeginHostShutdownReturnsError],
+    Field(discriminator="type"),
+]
+
+
 class EnqueueActionInputs(BaseModel):
     slug: str
     assignee: Optional[str]
@@ -241,6 +260,7 @@ WSServerSchemaMethodName = Literal[
     "LEAVE_PAGE",
     "MARK_TRANSACTION_COMPLETE",
     "INITIALIZE_HOST",
+    "BEGIN_HOST_SHUTDOWN",
     "ENQUEUE_ACTION",
     "DEQUEUE_ACTION",
 ]
@@ -291,6 +311,10 @@ ws_server_schema: WSServerSchema = {
     "INITIALIZE_HOST": RPCMethod(
         inputs=InitializeHostInputs,
         returns=InitializeHostReturns,
+    ),
+    "BEGIN_HOST_SHUTDOWN": RPCMethod(
+        inputs=BeginHostShutdownInputs,
+        returns=BeginHostShutdownReturns,
     ),
     "ENQUEUE_ACTION": RPCMethod(
         inputs=EnqueueActionInputs,
