@@ -427,7 +427,7 @@ class GridItemImageModel(BaseModel):
 
 
 class GridItem(TypedDict):
-    title: NotRequired[Optional[str]]
+    label: NotRequired[Optional[str]]
     description: NotRequired[Optional[str]]
     image: NotRequired[Optional[GridItemImage]]
     menu: NotRequired[list[TableMenuItem]]
@@ -437,7 +437,7 @@ class GridItem(TypedDict):
 
 
 class GridItemModel(BaseModel):
-    title: Optional[str] = None
+    label: Optional[str] = None
     description: Optional[str] = None
     image: Optional[GridItemImageModel] = None
     menu: Optional[list[TableMenuItemModel]] = None

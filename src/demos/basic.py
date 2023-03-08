@@ -729,7 +729,7 @@ async def data():
         help_text="With static data",
         data=list(range(100)),
         render_item=lambda x: {
-            "title": f"Item {x}",
+            "label": f"Item {x}",
         },
         default_page_size=math.inf,
         is_filterable=False,
@@ -742,7 +742,7 @@ async def get_data():
 
     def render_item(state: str) -> GridItem:
         return {
-            "title": state,
+            "label": state,
             "description": f"The great state of {state}",
             "image": {
                 "url": get_state_image(state),
