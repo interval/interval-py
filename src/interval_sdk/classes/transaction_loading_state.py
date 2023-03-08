@@ -6,7 +6,7 @@ from ..types import BaseModel
 
 
 class LoadingState(BaseModel):
-    title: Optional[str] = None
+    label: Optional[str] = None
     description: Optional[str] = None
     items_in_queue: Optional[int] = None
     items_completed: Optional[int] = None
@@ -40,13 +40,13 @@ class TransactionLoadingState:
 
     async def start(
         self,
-        title: Optional[str] = None,
+        label: Optional[str] = None,
         description: Optional[str] = None,
         items_in_queue: Optional[int] = None,
     ):
         self._state = LoadingState()
-        if title is not None:
-            self._state.title = title
+        if label is not None:
+            self._state.label = label
         if description is not None:
             self._state.description = description
         if items_in_queue is not None:
@@ -57,20 +57,20 @@ class TransactionLoadingState:
 
     async def update(
         self,
-        title: Optional[str] = None,
+        label: Optional[str] = None,
         description: Optional[str] = None,
         items_in_queue: Optional[int] = None,
     ):
         if self._state is None:
             self._logger.warn("Please call `loading.start` before `loading.update`")
             return await self.start(
-                title=title,
+                label=label,
                 description=description,
                 items_in_queue=items_in_queue,
             )
 
-        if title is not None:
-            self._state.title = title
+        if label is not None:
+            self._state.label = label
         if description is not None:
             self._state.description = description
         if items_in_queue is not None:

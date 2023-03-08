@@ -62,7 +62,6 @@ class LeavePageInputs(BaseModel):
 
 class SendLoadingCallInputs(LoadingState):
     transaction_id: str
-    label: Optional[str] = None
 
 
 class SendLogInputs(BaseModel):

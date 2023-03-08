@@ -1453,7 +1453,7 @@ async def test_loading(
     await transactions.console()
     await transactions.run("loading")
 
-    await expect(page.locator('[data-pw-title]:has-text("Bare title")')).to_be_visible()
+    await expect(page.locator('[data-pw-label]:has-text("Bare title")')).to_be_visible()
     await expect(page.locator("[data-pw-description]")).to_be_hidden()
 
     await expect(
@@ -1461,15 +1461,15 @@ async def test_loading(
     ).to_be_visible()
 
     await expect(page.locator("[data-pw-description]")).to_be_hidden()
-    await expect(page.locator("[data-pw-title]")).to_be_hidden()
+    await expect(page.locator("[data-pw-label]")).to_be_hidden()
 
     await expect(
         page.locator('[data-pw-description]:has-text("Description only")')
     ).to_be_visible()
-    await expect(page.locator("[data-pw-title]")).to_be_hidden()
+    await expect(page.locator("[data-pw-label]")).to_be_hidden()
 
     await expect(
-        page.locator('[data-pw-title]:has-text("With progress")')
+        page.locator('[data-pw-label]:has-text("With progress")')
     ).to_be_visible()
 
     for i in range(items_in_queue):
