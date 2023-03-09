@@ -26,12 +26,12 @@ close_task: Optional[asyncio.Task[None]] = None
 async def handle_close_inner():
     try:
         print("Closing...")
-        await interval.gracefully_shutdown()
+        await interval.safely_close()
         print("Closed!")
     except Exception as err:
         print("Failed closing gracefully", file=sys.stderr)
         print("Closing forcibly")
-        await interval.close()
+        await interval.immediately_close()
 
 
 def stop_loop(fut: asyncio.Future[None]):

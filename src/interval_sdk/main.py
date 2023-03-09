@@ -519,7 +519,7 @@ class Interval:
         self._create_rpc_client()
         await self._initialize_host()
 
-    async def close(self):
+    async def immediately_close(self):
         self._shutdown_fut = None
         self._intentionally_closed = True
         self._server_rpc = None
@@ -529,7 +529,7 @@ class Interval:
 
         self._is_connected = False
 
-    async def gracefully_shutdown(self):
+    async def safely_close(self):
         response = await self._send("BEGIN_HOST_SHUTDOWN", {})
 
         if response.type == "error":
@@ -540,7 +540,7 @@ class Interval:
             )
 
         if len(self._io_response_handlers) == 0:
-            await self.close()
+            await self.immediately_close()
             return
 
         loop = asyncio.get_running_loop()
@@ -549,7 +549,7 @@ class Interval:
         await self._shutdown_fut
 
         self._shutdown_fut = None
-        await self.close()
+        await self.immediately_close()
 
     async def notify(
         self,
