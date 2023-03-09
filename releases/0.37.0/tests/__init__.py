@@ -105,7 +105,7 @@ class Transaction:
 
     async def expect_success(self, *args: str, **kwargs: str | int | float | bool):
         await expect(
-            self.page.locator('[data-test-id="result-type"]:has-text("Success")')
+            self.page.locator('[data-test-id="result-type"]:has-text("Completed")')
         ).to_be_visible()
 
         if len(kwargs) is not None or len(args) is not None:
