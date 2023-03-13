@@ -6,7 +6,13 @@ from uuid import UUID, uuid4
 from typing_extensions import TypeAlias, TypeVar, Any, Awaitable
 
 from .. import superjson
-from ..io_schema import ButtonConfig, MethodName, IORender, IOResponse
+from ..io_schema import (
+    ButtonConfig,
+    SubmitButtonModel,
+    MethodName,
+    IORender,
+    IOResponse,
+)
 from .component import Component, IOPromiseValidator
 from .io_error import IOError
 from .io import IO
@@ -76,7 +82,8 @@ class IOClient:
         components: list[Component],
         group_validator: Optional[IOPromiseValidator] = None,
         continue_button: Optional[ButtonConfig] = None,
-    ) -> list[Any]:
+        submit_buttons: Optional[list[SubmitButtonModel]] = None,
+    ) -> tuple[list[Any], Optional[str]]:
         if self._is_canceled:
             raise IOError("TRANSACTION_CLOSED")
 
@@ -93,11 +100,13 @@ class IOClient:
                 kind="RENDER",
                 validation_error_message=validation_error_message,
                 continue_button=continue_button,
+                submit_buttons=submit_buttons,
             )
 
             await self._send(packed)
 
         loop = asyncio.get_running_loop()
+        submit_value_future = loop.create_future()
         fut = loop.create_future()
 
         async def on_response_handler(response: IOResponse):
@@ -164,6 +173,7 @@ class IOClient:
                         return
 
                 is_returned = True
+                submit_value_future.set_result(response.submit_value)
 
                 for i, value in enumerate(response.values):
                     components[i].set_return_value(value)
@@ -202,4 +212,7 @@ class IOClient:
 
         # Actually does return a list, just says Tuple for variadic type
         # https://github.com/python/typeshed/blob/4d23919200d9e89486f4d9e2587f82314d4af0f6/stdlib/asyncio/tasks.pyi#L82-L85
-        return cast(list[Any], await asyncio.gather(*return_futures))
+        return (
+            cast(list[Any], await asyncio.gather(*return_futures)),
+            cast(Optional[str], await submit_value_future),
+        )

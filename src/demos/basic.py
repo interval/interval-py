@@ -1108,6 +1108,28 @@ async def redirect_url(io: IO, ctx: ActionContext):
     return {"url": url}
 
 
+@interval.action
+async def with_submit(io: IO):
+    # resp = await io.group(
+    #     name=io.input.text("Name"),
+    #     num=io.input.number("Number?").optional(),
+    # ).with_submit(
+    resp = await io.group(io.input.text("text"), io.input.number("int"),).with_submit(
+        [
+            {
+                "label": "Make it negative",
+                "value": "negative",
+                "theme": "danger",
+            },
+            {
+                "label": "Do nothing",
+            },
+        ]
+    )
+    print(resp)
+    return "Hello, world!"
+
+
 @interval.action(unlisted=True)
 async def unlisted_action():
     return "Hello, world!"

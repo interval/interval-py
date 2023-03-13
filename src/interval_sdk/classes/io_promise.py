@@ -34,6 +34,8 @@ from ..io_schema import (
     ComponentMultipleProps,
     input_schema,
     ButtonConfig,
+    SubmitButton,
+    SubmitButtonModel,
     DisplayMethodName,
     InputMethodName,
     MethodName,
@@ -65,8 +67,10 @@ class IOPromise(Generic[MN_co, Output_co]):
         self._value_getter = get_value
 
     def __await__(self) -> Generator[Any, None, Output_co]:
-        res = yield from self._renderer([self._component], None, None).__await__()
-        return self._get_value(res[0])
+        return_values, submit_value = yield from self._renderer(
+            [self._component], None, None, None
+        ).__await__()
+        return self._get_value(return_values[0])
 
     def _get_value(self, val: Any) -> Output_co:
         if self._value_getter is not None:
@@ -165,8 +169,10 @@ class OptionalIOPromise(InputIOPromise[Input_MN_co, Output_co]):
 
     @override
     def __await__(self) -> Generator[Any, None, Optional[Output_co]]:
-        res = yield from self._renderer([self._component], None, None).__await__()
-        return self._get_value(res[0])
+        return_values, submit_value = yield from self._renderer(
+            [self._component], None, None, None
+        ).__await__()
+        return self._get_value(return_values[0])
 
     def _get_value(self, val: Any) -> Optional[Output_co]:
         if val is None:
@@ -272,8 +278,10 @@ class MultipleIOPromise(
 
     @override
     def __await__(self) -> Generator[Any, None, list[Output_co]]:
-        res = yield from self._renderer([self._component], None, None).__await__()
-        return self._get_value(res[0])
+        return_values, submit_value = yield from self._renderer(
+            [self._component], None, None, None
+        ).__await__()
+        return self._get_value(return_values[0])
 
     def _get_value(self, val: list[Any]) -> list[Output_co]:
         if self._single_value_getter is not None:
@@ -383,6 +391,7 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
     _renderer: ComponentRenderer
     _validator: "Optional[IOGroupPromiseValidator[Unpack[GroupOutput]]]" = None
     _continue_button: Optional[ButtonConfig] = None
+    _submit_buttons: Optional[list[SubmitButtonModel]] = None
 
     def __init__(
         self,
@@ -412,24 +421,30 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
 
     def __await__(self) -> Generator[Any, None, Union[tuple[Unpack[GroupOutput]], KeyedIONamespace]]:  # type: ignore
         if self._kw_io_promises is not None and len(self._kw_io_promises) > 0:
-            res = yield from self._renderer(
+            return_values, submit_value = yield from self._renderer(
                 [p._component for p in self._kw_io_promises.values()],
                 self._handle_validation,
                 self._continue_button,
+                self._submit_buttons,
             ).__await__()
             res_dict = {
-                key: res[i] for i, key in enumerate(self._kw_io_promises.keys())
+                key: return_values[i]
+                for i, key in enumerate(self._kw_io_promises.keys())
             }
             return KeyedIONamespace(**res_dict)
         else:
-            res = yield from self._renderer(
+            return_values, submit_value = yield from self._renderer(
                 [p._component for p in self._io_promises],
                 self._handle_validation,
                 self._continue_button,
+                self._submit_buttons,
             ).__await__()
             return cast(
                 tuple[Unpack[GroupOutput]],
-                [self._io_promises[i]._get_value(val) for (i, val) in enumerate(res)],
+                [
+                    self._io_promises[i]._get_value(val)
+                    for (i, val) in enumerate(return_values)
+                ],
             )
 
     async def _handle_validation(self, return_values: list[Any]) -> Optional[str]:
@@ -479,4 +494,13 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
         theme: Optional[ButtonTheme] = None,
     ) -> "IOGroupPromise[Unpack[GroupOutput]]":
         self._continue_button = ButtonConfig(label=label, theme=theme)
+        return self
+
+    def with_submit(
+        self: "IOGroupPromise[Unpack[GroupOutput]]",
+        submit_buttons: list[SubmitButton],
+    ) -> "IOGroupPromise[Unpack[GroupOutput]]":
+        self._submit_buttons = [
+            SubmitButtonModel.parse_obj(item) for item in submit_buttons
+        ]
         return self

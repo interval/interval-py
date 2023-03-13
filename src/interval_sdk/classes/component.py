@@ -18,6 +18,7 @@ from interval_sdk import superjson
 
 from ..io_schema import (
     ButtonConfig,
+    SubmitButtonModel,
     ComponentMultipleProps,
     MethodDef,
     MN,
@@ -197,6 +198,11 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
 
 
 ComponentRenderer: TypeAlias = Callable[
-    [list[Component], Optional[IOPromiseValidator], Optional[ButtonConfig]],
+    [
+        list[Component],
+        Optional[IOPromiseValidator],
+        Optional[ButtonConfig],
+        Optional[list[SubmitButtonModel]],
+    ],
     Awaitable[list[Any]],
 ]

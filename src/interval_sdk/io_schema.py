@@ -132,6 +132,18 @@ class ButtonConfig(BaseModel):
     theme: Optional[ButtonTheme] = None
 
 
+class SubmitButton(TypedDict):
+    label: str
+    value: NotRequired[str]
+    theme: NotRequired[ButtonTheme]
+
+
+class SubmitButtonModel(BaseModel):
+    label: str
+    value: Optional[str]
+    theme: Optional[ButtonTheme] = None
+
+
 ImageSize: TypeAlias = Literal["thumbnail", "small", "medium", "large"]
 
 
@@ -968,6 +980,7 @@ class IORender(BaseModel):
     kind: Literal["RENDER"] = "RENDER"
     validation_error_message: Optional[str] = None
     continue_button: Optional[ButtonConfig] = None
+    submit_buttons: Optional[list[SubmitButtonModel]] = None
 
     class Config:
         json_dumps = json_dumps_io_render
@@ -980,13 +993,14 @@ class IOResponse(PydanticBaseModel):
     kind: Literal["RETURN", "SET_STATE", "CANCELED"]
     values: list[Any]
     values_meta: Optional[Any] = None
+    submit_value: Optional[str] = None
 
     class Config:
         json_loads = json_loads_some_snake(
-            "transaction_id", "input_group_key", "values_meta"
+            "transaction_id", "input_group_key", "values_meta", "submit_value"
         )
         json_dumps = json_dumps_some_snake(
-            "transaction_id", "input_group_key", "values_meta"
+            "transaction_id", "input_group_key", "values_meta", "submit_value"
         )
 
 
