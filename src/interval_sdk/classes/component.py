@@ -204,5 +204,5 @@ ComponentRenderer: TypeAlias = Callable[
         Optional[ButtonConfig],
         Optional[list[SubmitButtonModel]],
     ],
-    Awaitable[list[Any]],
+    Awaitable[tuple[list[Any], Optional[str]]],
 ]

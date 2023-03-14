@@ -79,6 +79,17 @@ class IOPromise(Generic[MN_co, Output_co]):
 
         return val
 
+    def with_submit(
+        self,
+        submit_buttons: list[SubmitButton],
+    ) -> "WithSubmitIOPromise[MN_co, Output_co]":
+        return WithSubmitIOPromise[MN_co, Output_co](
+            self._component,
+            self._renderer,
+            submit_buttons,
+            self._value_getter,
+        )
+
 
 class ExclusiveIOPromise(IOPromise[MN_co, Output_co]):
     pass
@@ -86,6 +97,34 @@ class ExclusiveIOPromise(IOPromise[MN_co, Output_co]):
 
 class GroupableIOPromise(IOPromise[MN_co, Output_co]):
     pass
+
+
+class WithSubmitIOPromise(GroupableIOPromise[MN_co, Output_co]):
+    _submit_buttons: list[SubmitButtonModel]
+
+    def __init__(
+        self,
+        component: Component,
+        renderer: ComponentRenderer,
+        submit_buttons: list[SubmitButton],
+        get_value: Optional[Callable[[Any], Output_co]] = None,
+    ):
+        super().__init__(
+            component=component,
+            renderer=renderer,
+            get_value=get_value,
+        )
+        self._submit_buttons = parse_obj_as(list[SubmitButtonModel], submit_buttons)
+
+    @override
+    def __await__(self) -> Generator[Any, None, SubmitReturn[Output_co]]:
+        return_values, submit_value = yield from self._renderer(
+            [self._component], None, None, self._submit_buttons
+        ).__await__()
+        return SubmitReturn(
+            submit_value=cast(str, submit_value),
+            response=self._get_value(return_values[0]),
+        )
 
 
 class DisplayIOPromise(GroupableIOPromise[Display_MN_co, Output_co]):
@@ -180,6 +219,64 @@ class OptionalIOPromise(InputIOPromise[Input_MN_co, Output_co]):
             return None
 
         return super()._get_value(val)
+
+    def with_submit(
+        self,
+        submit_buttons: list[SubmitButton],
+    ) -> "OptionalWithSubmitIOPromise[Input_MN_co, Output_co]":
+        return OptionalWithSubmitIOPromise[Input_MN_co, Output_co](
+            self._component,
+            self._renderer,
+            submit_buttons,
+            self._value_getter,
+        )
+
+
+class OptionalWithSubmitIOPromise(GroupableIOPromise[MN_co, Output_co]):
+    _submit_buttons: list[SubmitButtonModel]
+
+    def __init__(
+        self,
+        component: Component,
+        renderer: ComponentRenderer,
+        submit_buttons: list[SubmitButton],
+        get_value: Optional[Callable[[Any], Output_co]] = None,
+    ):
+        component.instance.is_optional = True
+        component.validator = None
+        super().__init__(
+            component=component,
+            renderer=renderer,
+            get_value=get_value,
+        )
+        self._submit_buttons = parse_obj_as(list[SubmitButtonModel], submit_buttons)
+
+    @override
+    def __await__(self) -> Generator[Any, None, SubmitReturn[Optional[Output_co]]]:
+        return_values, submit_value = yield from self._renderer(
+            [self._component], None, None, self._submit_buttons
+        ).__await__()
+        return SubmitReturn(
+            submit_value=cast(str, submit_value),
+            response=self._get_value(return_values[0]),
+        )
+
+    def _get_value(self, val: Any) -> Optional[Output_co]:
+        if val is None:
+            return None
+
+        return super()._get_value(val)
+
+    def with_submit(
+        self,
+        submit_buttons: list[SubmitButton],
+    ) -> "OptionalWithSubmitIOPromise[MN_co, Output_co]":
+        return OptionalWithSubmitIOPromise[MN_co, Output_co](
+            self._component,
+            self._renderer,
+            submit_buttons,
+            self._value_getter,
+        )
 
 
 DefaultValue = TypeVar("DefaultValue")
@@ -563,7 +660,8 @@ class WithSubmitIOGroupPromise(Generic[Unpack[GroupOutput]]):
                 for i, key in enumerate(self._kw_io_promises.keys())
             }
             return SubmitReturn(
-                submit_value=submit_value, response=KeyedIONamespace(**res_dict)
+                submit_value=cast(str, submit_value),
+                response=KeyedIONamespace(**res_dict),
             )
         else:
             return_values, submit_value = yield from self._renderer(
@@ -573,7 +671,7 @@ class WithSubmitIOGroupPromise(Generic[Unpack[GroupOutput]]):
                 self._submit_buttons,
             ).__await__()
             return SubmitReturn(
-                submit_value=submit_value,
+                submit_value=cast(str, submit_value),
                 response=cast(
                     tuple[Unpack[GroupOutput]],
                     [

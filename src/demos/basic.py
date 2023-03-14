@@ -1109,24 +1109,74 @@ async def redirect_url(io: IO, ctx: ActionContext):
 
 
 @interval.action
-async def with_submit(io: IO):
-    # resp = await io.group(
-    #     name=io.input.text("Name"),
-    #     num=io.input.number("Number?").optional(),
-    # ).with_submit(
-    resp = await io.group(io.input.text("text"), io.input.number("int"),).with_submit(
+async def with_submit(io: IO, ctx: ActionContext):
+    ret = (
+        await io.input.number("A number, if you will")
+        .optional()
+        .with_submit(
+            [
+                {
+                    "label": "Make it negative",
+                    "value": "negative",
+                    "theme": "danger",
+                },
+                {
+                    "label": "Do nothing",
+                },
+            ]
+        )
+    )
+
+    await ctx.log(ret.submit_value, ret.response)
+
+    number = ret.response
+    if number != None and ret.submit_value == "negative":
+        number = -number
+
+    await io.display.heading(f"The number is now {number}").with_submit(
         [
             {
-                "label": "Make it negative",
-                "value": "negative",
-                "theme": "danger",
+                "label": "OK!",
+            }
+        ]
+    )
+
+    ret = (
+        await io.input.file("Planet")
+        .multiple()
+        .with_submit(
+            [
+                {
+                    "label": "Delete",
+                    "theme": "danger",
+                    "value": "delete",
+                },
+                {
+                    "label": "Save for later",
+                    "value": "save",
+                },
+            ]
+        )
+    )
+
+    await ctx.log(ret.submit_value, [f.name for f in ret.response])
+
+    ret = await io.group(
+        name=io.input.text("Name"),
+        description=io.input.rich_text("Description").optional(),
+    ).with_submit(
+        [
+            {
+                "label": "Sign me up",
             },
             {
-                "label": "Do nothing",
+                "label": "Skip",
+                "theme": "secondary",
             },
         ]
     )
-    print(resp)
+    await ctx.log(ret.submit_value, ret.response)
+
     return "Hello, world!"
 
 
