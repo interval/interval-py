@@ -99,7 +99,7 @@ class GroupableIOPromise(IOPromise[MN_co, Output_co]):
     pass
 
 
-class WithSubmitIOPromise(GroupableIOPromise[MN_co, Output_co]):
+class WithSubmitIOPromise(IOPromise[MN_co, Output_co]):
     _submit_buttons: list[SubmitButtonModel]
 
     def __init__(
@@ -232,7 +232,7 @@ class OptionalIOPromise(InputIOPromise[Input_MN_co, Output_co]):
         )
 
 
-class OptionalWithSubmitIOPromise(GroupableIOPromise[MN_co, Output_co]):
+class OptionalWithSubmitIOPromise(IOPromise[MN_co, Output_co]):
     _submit_buttons: list[SubmitButtonModel]
 
     def __init__(
