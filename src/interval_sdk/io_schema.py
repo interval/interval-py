@@ -144,6 +144,15 @@ class SubmitButtonModel(BaseModel):
     theme: Optional[ButtonTheme] = None
 
 
+SubmitResponse = TypeVar("SubmitResponse")
+
+
+@dataclass
+class SubmitReturn(Generic[SubmitResponse]):
+    submit_value: str
+    response: SubmitResponse
+
+
 ImageSize: TypeAlias = Literal["thumbnail", "small", "medium", "large"]
 
 
@@ -962,6 +971,12 @@ def dump_io_render(io_render: dict[str, Any]) -> dict[str, Any]:
             if val is None:
                 continue
             obj[snake_to_camel(key)] = dict_keys_to_camel(dict_strip_none(val))
+        elif key == "submit_buttons":
+            if val is None:
+                continue
+            obj[snake_to_camel(key)] = [
+                dict_keys_to_camel(dict_strip_none(info)) for info in val
+            ]
         else:
             obj[snake_to_camel(key)] = val
 

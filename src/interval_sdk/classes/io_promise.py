@@ -34,6 +34,7 @@ from ..io_schema import (
     ComponentMultipleProps,
     input_schema,
     ButtonConfig,
+    SubmitReturn,
     SubmitButton,
     SubmitButtonModel,
     DisplayMethodName,
@@ -391,7 +392,6 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
     _renderer: ComponentRenderer
     _validator: "Optional[IOGroupPromiseValidator[Unpack[GroupOutput]]]" = None
     _continue_button: Optional[ButtonConfig] = None
-    _submit_buttons: Optional[list[SubmitButtonModel]] = None
 
     def __init__(
         self,
@@ -419,13 +419,13 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
     def __await__(self) -> Generator[Any, None, tuple[Unpack[GroupOutput]]]:
         ...
 
-    def __await__(self) -> Generator[Any, None, Union[tuple[Unpack[GroupOutput]], KeyedIONamespace]]:  # type: ignore
+    def __await__(self) -> Generator[Any, None, Union[tuple[Unpack[GroupOutput]], KeyedIONamespace, SubmitReturn]]:  # type: ignore
         if self._kw_io_promises is not None and len(self._kw_io_promises) > 0:
-            return_values, submit_value = yield from self._renderer(
+            return_values, _submit_value = yield from self._renderer(
                 [p._component for p in self._kw_io_promises.values()],
                 self._handle_validation,
                 self._continue_button,
-                self._submit_buttons,
+                None,
             ).__await__()
             res_dict = {
                 key: return_values[i]
@@ -433,11 +433,11 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
             }
             return KeyedIONamespace(**res_dict)
         else:
-            return_values, submit_value = yield from self._renderer(
+            return_values, _submit_value = yield from self._renderer(
                 [p._component for p in self._io_promises],
                 self._handle_validation,
                 self._continue_button,
-                self._submit_buttons,
+                None,
             ).__await__()
             return cast(
                 tuple[Unpack[GroupOutput]],
@@ -499,7 +499,144 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
     def with_submit(
         self: "IOGroupPromise[Unpack[GroupOutput]]",
         submit_buttons: list[SubmitButton],
+    ) -> "WithSubmitIOGroupPromise[Unpack[GroupOutput]]":
+        return WithSubmitIOGroupPromise(
+            self._renderer,
+            self._io_promises,
+            submit_buttons,
+            self._kw_io_promises,
+        )
+
+
+class WithSubmitIOGroupPromise(Generic[Unpack[GroupOutput]]):
+    _io_promises: tuple[GroupableIOPromise[MethodName, Any], ...]
+    _kw_io_promises: Optional[dict[str, GroupableIOPromise[MethodName, Any]]] = None
+    _renderer: ComponentRenderer
+    _validator: "Optional[IOGroupPromiseValidator[Unpack[GroupOutput]]]" = None
+    _continue_button: Optional[ButtonConfig] = None
+    _submit_buttons: Optional[list[SubmitButtonModel]] = None
+
+    def __init__(
+        self,
+        renderer: ComponentRenderer,
+        io_promises: tuple[GroupableIOPromise[MethodName, Any], ...],
+        submit_buttons: list[SubmitButton],
+        kw_io_promises: Optional[dict[str, GroupableIOPromise[MethodName, Any]]] = None,
+    ):
+        self._renderer = renderer
+        self._io_promises = io_promises
+        self._submit_buttons = [
+            SubmitButtonModel.parse_obj(item) for item in submit_buttons
+        ]
+        self._kw_io_promises = kw_io_promises
+
+    @overload
+    def __await__(
+        self: "WithSubmitIOGroupPromise[KeyedIONamespace]",
+    ) -> Generator[Any, None, SubmitReturn[KeyedIONamespace]]:
+        """Fallback typing for calls with keyword arguments."""
+        ...
+
+    @overload
+    def __await__(
+        self: "WithSubmitIOGroupPromise[list[Any]]",
+    ) -> Generator[Any, None, SubmitReturn[list[Any]]]:
+        """Fallback typing for calls with 10 or more arguments."""
+        ...
+
+    @overload
+    def __await__(
+        self,
+    ) -> Generator[Any, None, SubmitReturn[tuple[Unpack[GroupOutput]]]]:
+        ...
+
+    def __await__(self) -> Generator[Any, None, SubmitReturn[Union[tuple[Unpack[GroupOutput]], KeyedIONamespace]]]:  # type: ignore
+        if self._kw_io_promises is not None and len(self._kw_io_promises) > 0:
+            return_values, submit_value = yield from self._renderer(
+                [p._component for p in self._kw_io_promises.values()],
+                self._handle_validation,
+                self._continue_button,
+                self._submit_buttons,
+            ).__await__()
+            res_dict = {
+                key: return_values[i]
+                for i, key in enumerate(self._kw_io_promises.keys())
+            }
+            return SubmitReturn(
+                submit_value=submit_value, response=KeyedIONamespace(**res_dict)
+            )
+        else:
+            return_values, submit_value = yield from self._renderer(
+                [p._component for p in self._io_promises],
+                self._handle_validation,
+                self._continue_button,
+                self._submit_buttons,
+            ).__await__()
+            return SubmitReturn(
+                submit_value=submit_value,
+                response=cast(
+                    tuple[Unpack[GroupOutput]],
+                    [
+                        self._io_promises[i]._get_value(val)
+                        for (i, val) in enumerate(return_values)
+                    ],
+                ),
+            )
+            return
+
+    async def _handle_validation(self, return_values: list[Any]) -> Optional[str]:
+        if self._validator is None:
+            return None
+
+        if self._kw_io_promises is not None and len(self._kw_io_promises) > 0:
+            io_promises = list(self._kw_io_promises.values())
+            values = {
+                key: io_promises[index]._get_value(return_values[index])
+                for index, key in enumerate(self._kw_io_promises.keys())
+            }
+            ret = self._validator(**values)  # type: ignore
+        else:
+            io_promises = self._io_promises
+            values = [
+                io_promises[index]._get_value(v)
+                for index, v in enumerate(return_values)
+            ]
+            ret = self._validator(*values)  # type: ignore
+        return cast(Optional[str], await ret if inspect.isawaitable(ret) else ret)
+
+    @overload
+    def validate(
+        self: "IOGroupPromise[KeyedIONamespace]",
+        validator: "Callable[..., Optional[Union[str, Awaitable[Optional[str]]]]]",
     ) -> "IOGroupPromise[Unpack[GroupOutput]]":
+        ...
+
+    @overload
+    def validate(
+        self: "IOGroupPromise[Unpack[GroupOutput]]",
+        validator: "Optional[IOGroupPromiseValidator[Unpack[GroupOutput]]]",
+    ) -> "IOGroupPromise[Unpack[GroupOutput]]":
+        ...
+
+    def validate(  # type: ignore
+        self: "WithSubmitIOGroupPromise[Unpack[GroupOutput]]",
+        validator: "Optional[IOGroupPromiseValidator[Unpack[GroupOutput]]]",
+    ) -> "WithSubmitIOGroupPromise[Unpack[GroupOutput]]":
+        self._validator = validator
+        return self
+
+    def continue_button_options(
+        self: "WithSubmitIOGroupPromise[Unpack[GroupOutput]]",
+        label: Optional[str] = None,
+        theme: Optional[ButtonTheme] = None,
+    ) -> "WithSubmitIOGroupPromise[Unpack[GroupOutput]]":
+        self._continue_button = ButtonConfig(label=label, theme=theme)
+        return self
+
+    def with_submit(
+        self: "WithSubmitIOGroupPromise[Unpack[GroupOutput]]",
+        submit_buttons: list[SubmitButton],
+    ) -> "WithSubmitIOGroupPromise[Unpack[GroupOutput]]":
         self._submit_buttons = [
             SubmitButtonModel.parse_obj(item) for item in submit_buttons
         ]
