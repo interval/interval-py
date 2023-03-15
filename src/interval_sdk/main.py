@@ -155,6 +155,7 @@ class Interval:
         DuplexRPCClient[WSServerSchemaMethodName, HostSchemaMethodName]
     ] = None
     _intentionally_closed = False
+    _shutdown_fut: Optional[asyncio.Future[None]] = None
     _is_connected = False
     _is_initialized = False
 
@@ -431,7 +432,8 @@ class Interval:
         self._create_rpc_client()
         await self._initialize_host()
 
-    async def close(self):
+    async def immediately_close(self):
+        self._shutdown_fut = None
         self._intentionally_closed = True
         self._server_rpc = None
         if self._isocket is not None:
@@ -439,6 +441,28 @@ class Interval:
             self._isocket = None
 
         self._is_connected = False
+
+    async def safely_close(self):
+        response = await self._send("BEGIN_HOST_SHUTDOWN", {})
+
+        if response.type == "error":
+            raise IntervalError(
+                response.message
+                if response.message is not None
+                else "Unknown error sending shutdown request."
+            )
+
+        if len(self._io_response_handlers) == 0:
+            await self.immediately_close()
+            return
+
+        loop = asyncio.get_running_loop()
+        self._shutdown_fut = loop.create_future()
+
+        await self._shutdown_fut
+
+        self._shutdown_fut = None
+        await self.immediately_close()
 
     async def notify(
         self,
@@ -712,6 +736,13 @@ class Interval:
         except KeyError:
             pass
 
+        if (
+            self._shutdown_fut is not None
+            and not self._shutdown_fut.done()
+            and len(self._io_response_handlers) == 0
+        ):
+            self._shutdown_fut.set_result(None)
+
     async def _create_socket_connection(self, instance_id: UUID):
         initially_connected = False
 
@@ -785,6 +816,9 @@ class Interval:
             raise NotInitializedError("ISocket not initialized")
 
         async def start_transaction(inputs: StartTransactionInputs) -> None:
+            if self._shutdown_fut is not None:
+                return
+
             if self.organization is None:
                 self._logger.error("No organization defined")
                 return
@@ -956,6 +990,9 @@ class Interval:
 
         async def open_page(inputs: OpenPageInputs) -> OpenPageReturns:
             self._logger.debug("OPEN_PAGE", inputs)
+
+            if self._shutdown_fut is not None:
+                return OpenPageReturnsError(message="Host shutting down.")
 
             if self.organization is None:
                 self._logger.error("No organization defined")
@@ -1255,6 +1292,13 @@ class Interval:
                 del self._pending_page_layouts[inputs.page_key]
             except KeyError:
                 pass
+
+            if (
+                self._shutdown_fut is not None
+                and not self._shutdown_fut.done()
+                and len(self._io_response_handlers) == 0
+            ):
+                self._shutdown_fut.set_result(None)
 
         self._server_rpc = DuplexRPCClient(
             communicator=self._isocket,
