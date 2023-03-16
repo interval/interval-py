@@ -132,25 +132,25 @@ class ButtonConfig(BaseModel):
     theme: Optional[ButtonTheme] = None
 
 
-class SubmitButton(TypedDict):
+class ChoiceButton(TypedDict):
     label: str
     value: NotRequired[str]
     theme: NotRequired[ButtonTheme]
 
 
-class SubmitButtonModel(BaseModel):
+class ChoiceButtonConfig(BaseModel):
     label: str
     value: Optional[str]
     theme: Optional[ButtonTheme] = None
 
 
-SubmitResponse = TypeVar("SubmitResponse")
+ChoiceReturnValue = TypeVar("ChoiceReturnValue")
 
 
 @dataclass
-class SubmitReturn(Generic[SubmitResponse]):
-    submit_value: str
-    response: SubmitResponse
+class ChoiceReturn(Generic[ChoiceReturnValue]):
+    choice: str
+    return_value: ChoiceReturnValue
 
 
 ImageSize: TypeAlias = Literal["thumbnail", "small", "medium", "large"]
@@ -971,7 +971,7 @@ def dump_io_render(io_render: dict[str, Any]) -> dict[str, Any]:
             if val is None:
                 continue
             obj[snake_to_camel(key)] = dict_keys_to_camel(dict_strip_none(val))
-        elif key == "submit_buttons":
+        elif key == "choices":
             if val is None:
                 continue
             obj[snake_to_camel(key)] = [
@@ -995,7 +995,7 @@ class IORender(BaseModel):
     kind: Literal["RENDER"] = "RENDER"
     validation_error_message: Optional[str] = None
     continue_button: Optional[ButtonConfig] = None
-    submit_buttons: Optional[list[SubmitButtonModel]] = None
+    choice_buttons: Optional[list[ChoiceButtonConfig]] = None
 
     class Config:
         json_dumps = json_dumps_io_render
@@ -1008,14 +1008,14 @@ class IOResponse(PydanticBaseModel):
     kind: Literal["RETURN", "SET_STATE", "CANCELED"]
     values: list[Any]
     values_meta: Optional[Any] = None
-    submit_value: Optional[str] = None
+    choice: Optional[str] = None
 
     class Config:
         json_loads = json_loads_some_snake(
-            "transaction_id", "input_group_key", "values_meta", "submit_value"
+            "transaction_id", "input_group_key", "values_meta"
         )
         json_dumps = json_dumps_some_snake(
-            "transaction_id", "input_group_key", "values_meta", "submit_value"
+            "transaction_id", "input_group_key", "values_meta"
         )
 
 

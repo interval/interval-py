@@ -18,7 +18,7 @@ from interval_sdk import superjson
 
 from ..io_schema import (
     ButtonConfig,
-    SubmitButtonModel,
+    ChoiceButtonConfig,
     ComponentMultipleProps,
     MethodDef,
     MN,
@@ -202,7 +202,7 @@ ComponentRenderer: TypeAlias = Callable[
         list[Component],
         Optional[IOPromiseValidator],
         Optional[ButtonConfig],
-        Optional[list[SubmitButtonModel]],
+        Optional[list[ChoiceButtonConfig]],
     ],
     Awaitable[tuple[list[Any], Optional[str]]],
 ]

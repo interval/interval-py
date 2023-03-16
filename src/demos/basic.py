@@ -234,7 +234,7 @@ async def loading_test():
     num_users = 100
 
     await ctx.loading.start(
-        title="Exporting users",
+        label="Exporting users",
         description="We're exporting all users. This may take a while.",
         items_in_queue=num_users,
     )
@@ -1109,11 +1109,11 @@ async def redirect_url(io: IO, ctx: ActionContext):
 
 
 @interval.action
-async def with_submit(io: IO, ctx: ActionContext):
+async def with_choices(io: IO, ctx: ActionContext):
     ret = (
         await io.input.number("A number, if you will")
         .optional()
-        .with_submit(
+        .with_choices(
             [
                 {
                     "label": "Make it negative",
@@ -1127,13 +1127,13 @@ async def with_submit(io: IO, ctx: ActionContext):
         )
     )
 
-    await ctx.log(ret.submit_value, ret.response)
+    await ctx.log(ret.choice, ret.return_value)
 
-    number = ret.response
-    if number != None and ret.submit_value == "negative":
+    number = ret.return_value
+    if number != None and ret.choice == "negative":
         number = -number
 
-    await io.display.heading(f"The number is now {number}").with_submit(
+    await io.display.heading(f"The number is now {number}").with_choices(
         [
             {
                 "label": "OK!",
@@ -1144,7 +1144,7 @@ async def with_submit(io: IO, ctx: ActionContext):
     ret = (
         await io.input.file("Planet")
         .multiple()
-        .with_submit(
+        .with_choices(
             [
                 {
                     "label": "Delete",
@@ -1159,12 +1159,12 @@ async def with_submit(io: IO, ctx: ActionContext):
         )
     )
 
-    await ctx.log(ret.submit_value, [f.name for f in ret.response])
+    await ctx.log(ret.choice, [f.name for f in ret.return_value])
 
     ret = await io.group(
         name=io.input.text("Name"),
         description=io.input.rich_text("Description").optional(),
-    ).with_submit(
+    ).with_choices(
         [
             {
                 "label": "Sign me up",
@@ -1175,7 +1175,7 @@ async def with_submit(io: IO, ctx: ActionContext):
             },
         ]
     )
-    await ctx.log(ret.submit_value, ret.response)
+    await ctx.log(ret.choice, ret.return_value)
 
     return "Hello, world!"
 

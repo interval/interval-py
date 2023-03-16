@@ -34,9 +34,9 @@ from ..io_schema import (
     ComponentMultipleProps,
     input_schema,
     ButtonConfig,
-    SubmitReturn,
-    SubmitButton,
-    SubmitButtonModel,
+    ChoiceReturn,
+    ChoiceButton,
+    ChoiceButtonConfig,
     DisplayMethodName,
     InputMethodName,
     MethodName,
@@ -68,7 +68,7 @@ class IOPromise(Generic[MN_co, Output_co]):
         self._value_getter = get_value
 
     def __await__(self) -> Generator[Any, None, Output_co]:
-        return_values, submit_value = yield from self._renderer(
+        return_values, choice = yield from self._renderer(
             [self._component], None, None, None
         ).__await__()
         return self._get_value(return_values[0])
@@ -79,14 +79,14 @@ class IOPromise(Generic[MN_co, Output_co]):
 
         return val
 
-    def with_submit(
+    def with_choices(
         self,
-        submit_buttons: list[SubmitButton],
-    ) -> "WithSubmitIOPromise[MN_co, Output_co]":
-        return WithSubmitIOPromise[MN_co, Output_co](
+        choices: list[ChoiceButton],
+    ) -> "WithChoicesIOPromise[MN_co, Output_co]":
+        return WithChoicesIOPromise[MN_co, Output_co](
             self._component,
             self._renderer,
-            submit_buttons,
+            choices,
             self._value_getter,
         )
 
@@ -99,14 +99,14 @@ class GroupableIOPromise(IOPromise[MN_co, Output_co]):
     pass
 
 
-class WithSubmitIOPromise(IOPromise[MN_co, Output_co]):
-    _submit_buttons: list[SubmitButtonModel]
+class WithChoicesIOPromise(IOPromise[MN_co, Output_co]):
+    _choices: list[ChoiceButtonConfig]
 
     def __init__(
         self,
         component: Component,
         renderer: ComponentRenderer,
-        submit_buttons: list[SubmitButton],
+        choices: list[ChoiceButton],
         get_value: Optional[Callable[[Any], Output_co]] = None,
     ):
         super().__init__(
@@ -114,16 +114,16 @@ class WithSubmitIOPromise(IOPromise[MN_co, Output_co]):
             renderer=renderer,
             get_value=get_value,
         )
-        self._submit_buttons = parse_obj_as(list[SubmitButtonModel], submit_buttons)
+        self._choices = parse_obj_as(list[ChoiceButtonConfig], choices)
 
     @override
-    def __await__(self) -> Generator[Any, None, SubmitReturn[Output_co]]:
-        return_values, submit_value = yield from self._renderer(
-            [self._component], None, None, self._submit_buttons
+    def __await__(self) -> Generator[Any, None, ChoiceReturn[Output_co]]:
+        return_values, choice = yield from self._renderer(
+            [self._component], None, None, self._choices
         ).__await__()
-        return SubmitReturn(
-            submit_value=cast(str, submit_value),
-            response=self._get_value(return_values[0]),
+        return ChoiceReturn(
+            choice=cast(str, choice),
+            return_value=self._get_value(return_values[0]),
         )
 
 
@@ -209,7 +209,7 @@ class OptionalIOPromise(InputIOPromise[Input_MN_co, Output_co]):
 
     @override
     def __await__(self) -> Generator[Any, None, Optional[Output_co]]:
-        return_values, submit_value = yield from self._renderer(
+        return_values, choice = yield from self._renderer(
             [self._component], None, None, None
         ).__await__()
         return self._get_value(return_values[0])
@@ -220,26 +220,26 @@ class OptionalIOPromise(InputIOPromise[Input_MN_co, Output_co]):
 
         return super()._get_value(val)
 
-    def with_submit(
+    def with_choices(
         self,
-        submit_buttons: list[SubmitButton],
-    ) -> "OptionalWithSubmitIOPromise[Input_MN_co, Output_co]":
-        return OptionalWithSubmitIOPromise[Input_MN_co, Output_co](
+        choices: list[ChoiceButton],
+    ) -> "OptionalWithChoicesIOPromise[Input_MN_co, Output_co]":
+        return OptionalWithChoicesIOPromise[Input_MN_co, Output_co](
             self._component,
             self._renderer,
-            submit_buttons,
+            choices,
             self._value_getter,
         )
 
 
-class OptionalWithSubmitIOPromise(IOPromise[MN_co, Output_co]):
-    _submit_buttons: list[SubmitButtonModel]
+class OptionalWithChoicesIOPromise(IOPromise[MN_co, Output_co]):
+    _choices: list[ChoiceButtonConfig]
 
     def __init__(
         self,
         component: Component,
         renderer: ComponentRenderer,
-        submit_buttons: list[SubmitButton],
+        choices: list[ChoiceButton],
         get_value: Optional[Callable[[Any], Output_co]] = None,
     ):
         component.instance.is_optional = True
@@ -249,16 +249,16 @@ class OptionalWithSubmitIOPromise(IOPromise[MN_co, Output_co]):
             renderer=renderer,
             get_value=get_value,
         )
-        self._submit_buttons = parse_obj_as(list[SubmitButtonModel], submit_buttons)
+        self._choices = parse_obj_as(list[ChoiceButtonConfig], choices)
 
     @override
-    def __await__(self) -> Generator[Any, None, SubmitReturn[Optional[Output_co]]]:
-        return_values, submit_value = yield from self._renderer(
-            [self._component], None, None, self._submit_buttons
+    def __await__(self) -> Generator[Any, None, ChoiceReturn[Optional[Output_co]]]:
+        return_values, choice = yield from self._renderer(
+            [self._component], None, None, self._choices
         ).__await__()
-        return SubmitReturn(
-            submit_value=cast(str, submit_value),
-            response=self._get_value(return_values[0]),
+        return ChoiceReturn(
+            choice=cast(str, choice),
+            return_value=self._get_value(return_values[0]),
         )
 
     def _get_value(self, val: Any) -> Optional[Output_co]:
@@ -267,14 +267,14 @@ class OptionalWithSubmitIOPromise(IOPromise[MN_co, Output_co]):
 
         return super()._get_value(val)
 
-    def with_submit(
+    def with_choices(
         self,
-        submit_buttons: list[SubmitButton],
-    ) -> "OptionalWithSubmitIOPromise[MN_co, Output_co]":
-        return OptionalWithSubmitIOPromise[MN_co, Output_co](
+        choices: list[ChoiceButton],
+    ) -> "OptionalWithChoicesIOPromise[MN_co, Output_co]":
+        return OptionalWithChoicesIOPromise[MN_co, Output_co](
             self._component,
             self._renderer,
-            submit_buttons,
+            choices,
             self._value_getter,
         )
 
@@ -376,7 +376,7 @@ class MultipleIOPromise(
 
     @override
     def __await__(self) -> Generator[Any, None, list[Output_co]]:
-        return_values, submit_value = yield from self._renderer(
+        return_values, choice = yield from self._renderer(
             [self._component], None, None, None
         ).__await__()
         return self._get_value(return_values[0])
@@ -516,9 +516,9 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
     def __await__(self) -> Generator[Any, None, tuple[Unpack[GroupOutput]]]:
         ...
 
-    def __await__(self) -> Generator[Any, None, Union[tuple[Unpack[GroupOutput]], KeyedIONamespace, SubmitReturn]]:  # type: ignore
+    def __await__(self) -> Generator[Any, None, Union[tuple[Unpack[GroupOutput]], KeyedIONamespace, ChoiceReturn]]:  # type: ignore
         if self._kw_io_promises is not None and len(self._kw_io_promises) > 0:
-            return_values, _submit_value = yield from self._renderer(
+            return_values, _choice = yield from self._renderer(
                 [p._component for p in self._kw_io_promises.values()],
                 self._handle_validation,
                 self._continue_button,
@@ -530,7 +530,7 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
             }
             return KeyedIONamespace(**res_dict)
         else:
-            return_values, _submit_value = yield from self._renderer(
+            return_values, _choice = yield from self._renderer(
                 [p._component for p in self._io_promises],
                 self._handle_validation,
                 self._continue_button,
@@ -593,86 +593,84 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
         self._continue_button = ButtonConfig(label=label, theme=theme)
         return self
 
-    def with_submit(
+    def with_choices(
         self: "IOGroupPromise[Unpack[GroupOutput]]",
-        submit_buttons: list[SubmitButton],
-    ) -> "WithSubmitIOGroupPromise[Unpack[GroupOutput]]":
-        return WithSubmitIOGroupPromise(
+        choices: list[ChoiceButton],
+    ) -> "WithChoicesIOGroupPromise[Unpack[GroupOutput]]":
+        return WithChoicesIOGroupPromise(
             self._renderer,
             self._io_promises,
-            submit_buttons,
+            choices,
             self._kw_io_promises,
         )
 
 
-class WithSubmitIOGroupPromise(Generic[Unpack[GroupOutput]]):
+class WithChoicesIOGroupPromise(Generic[Unpack[GroupOutput]]):
     _io_promises: tuple[GroupableIOPromise[MethodName, Any], ...]
     _kw_io_promises: Optional[dict[str, GroupableIOPromise[MethodName, Any]]] = None
     _renderer: ComponentRenderer
     _validator: "Optional[IOGroupPromiseValidator[Unpack[GroupOutput]]]" = None
     _continue_button: Optional[ButtonConfig] = None
-    _submit_buttons: Optional[list[SubmitButtonModel]] = None
+    _choices: Optional[list[ChoiceButtonConfig]] = None
 
     def __init__(
         self,
         renderer: ComponentRenderer,
         io_promises: tuple[GroupableIOPromise[MethodName, Any], ...],
-        submit_buttons: list[SubmitButton],
+        choices: list[ChoiceButton],
         kw_io_promises: Optional[dict[str, GroupableIOPromise[MethodName, Any]]] = None,
     ):
         self._renderer = renderer
         self._io_promises = io_promises
-        self._submit_buttons = [
-            SubmitButtonModel.parse_obj(item) for item in submit_buttons
-        ]
+        self._choices = [ChoiceButtonConfig.parse_obj(item) for item in choices]
         self._kw_io_promises = kw_io_promises
 
     @overload
     def __await__(
-        self: "WithSubmitIOGroupPromise[KeyedIONamespace]",
-    ) -> Generator[Any, None, SubmitReturn[KeyedIONamespace]]:
+        self: "WithChoicesIOGroupPromise[KeyedIONamespace]",
+    ) -> Generator[Any, None, ChoiceReturn[KeyedIONamespace]]:
         """Fallback typing for calls with keyword arguments."""
         ...
 
     @overload
     def __await__(
-        self: "WithSubmitIOGroupPromise[list[Any]]",
-    ) -> Generator[Any, None, SubmitReturn[list[Any]]]:
+        self: "WithChoicesIOGroupPromise[list[Any]]",
+    ) -> Generator[Any, None, ChoiceReturn[list[Any]]]:
         """Fallback typing for calls with 10 or more arguments."""
         ...
 
     @overload
     def __await__(
         self,
-    ) -> Generator[Any, None, SubmitReturn[tuple[Unpack[GroupOutput]]]]:
+    ) -> Generator[Any, None, ChoiceReturn[tuple[Unpack[GroupOutput]]]]:
         ...
 
-    def __await__(self) -> Generator[Any, None, SubmitReturn[Union[tuple[Unpack[GroupOutput]], KeyedIONamespace]]]:  # type: ignore
+    def __await__(self) -> Generator[Any, None, ChoiceReturn[Union[tuple[Unpack[GroupOutput]], KeyedIONamespace]]]:  # type: ignore
         if self._kw_io_promises is not None and len(self._kw_io_promises) > 0:
-            return_values, submit_value = yield from self._renderer(
+            return_values, choice = yield from self._renderer(
                 [p._component for p in self._kw_io_promises.values()],
                 self._handle_validation,
                 self._continue_button,
-                self._submit_buttons,
+                self._choices,
             ).__await__()
             res_dict = {
                 key: return_values[i]
                 for i, key in enumerate(self._kw_io_promises.keys())
             }
-            return SubmitReturn(
-                submit_value=cast(str, submit_value),
-                response=KeyedIONamespace(**res_dict),
+            return ChoiceReturn(
+                choice=cast(str, choice),
+                return_value=KeyedIONamespace(**res_dict),
             )
         else:
-            return_values, submit_value = yield from self._renderer(
+            return_values, choice = yield from self._renderer(
                 [p._component for p in self._io_promises],
                 self._handle_validation,
                 self._continue_button,
-                self._submit_buttons,
+                self._choices,
             ).__await__()
-            return SubmitReturn(
-                submit_value=cast(str, submit_value),
-                response=cast(
+            return ChoiceReturn(
+                choice=cast(str, choice),
+                return_value=cast(
                     tuple[Unpack[GroupOutput]],
                     [
                         self._io_promises[i]._get_value(val)
@@ -717,25 +715,23 @@ class WithSubmitIOGroupPromise(Generic[Unpack[GroupOutput]]):
         ...
 
     def validate(  # type: ignore
-        self: "WithSubmitIOGroupPromise[Unpack[GroupOutput]]",
+        self: "WithChoicesIOGroupPromise[Unpack[GroupOutput]]",
         validator: "Optional[IOGroupPromiseValidator[Unpack[GroupOutput]]]",
-    ) -> "WithSubmitIOGroupPromise[Unpack[GroupOutput]]":
+    ) -> "WithChoicesIOGroupPromise[Unpack[GroupOutput]]":
         self._validator = validator
         return self
 
     def continue_button_options(
-        self: "WithSubmitIOGroupPromise[Unpack[GroupOutput]]",
+        self: "WithChoicesIOGroupPromise[Unpack[GroupOutput]]",
         label: Optional[str] = None,
         theme: Optional[ButtonTheme] = None,
-    ) -> "WithSubmitIOGroupPromise[Unpack[GroupOutput]]":
+    ) -> "WithChoicesIOGroupPromise[Unpack[GroupOutput]]":
         self._continue_button = ButtonConfig(label=label, theme=theme)
         return self
 
-    def with_submit(
-        self: "WithSubmitIOGroupPromise[Unpack[GroupOutput]]",
-        submit_buttons: list[SubmitButton],
-    ) -> "WithSubmitIOGroupPromise[Unpack[GroupOutput]]":
-        self._submit_buttons = [
-            SubmitButtonModel.parse_obj(item) for item in submit_buttons
-        ]
+    def with_choices(
+        self: "WithChoicesIOGroupPromise[Unpack[GroupOutput]]",
+        choices: list[ChoiceButton],
+    ) -> "WithChoicesIOGroupPromise[Unpack[GroupOutput]]":
+        self._choices = [ChoiceButtonConfig.parse_obj(item) for item in choices]
         return self

@@ -83,7 +83,7 @@ class TransactionLoadingState:
     async def complete_one(self):
         if self._state is None or self._state.items_in_queue is None:
             self._logger.warn(
-                "Pleaes call `loading.start` with `items_in_queue` before `loading.complete_one`, nothing to complete."
+                "Please call `loading.start` with `items_in_queue` before `loading.complete_one`, nothing to complete."
             )
             return
 

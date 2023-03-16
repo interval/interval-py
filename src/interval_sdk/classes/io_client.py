@@ -8,7 +8,7 @@ from typing_extensions import TypeAlias, TypeVar, Any, Awaitable
 from .. import superjson
 from ..io_schema import (
     ButtonConfig,
-    SubmitButtonModel,
+    ChoiceButtonConfig,
     MethodName,
     IORender,
     IOResponse,
@@ -82,7 +82,7 @@ class IOClient:
         components: list[Component],
         group_validator: Optional[IOPromiseValidator] = None,
         continue_button: Optional[ButtonConfig] = None,
-        submit_buttons: Optional[list[SubmitButtonModel]] = None,
+        choice_buttons: Optional[list[ChoiceButtonConfig]] = None,
     ) -> tuple[list[Any], Optional[str]]:
         if self._is_canceled:
             raise IOError("TRANSACTION_CLOSED")
@@ -100,13 +100,13 @@ class IOClient:
                 kind="RENDER",
                 validation_error_message=validation_error_message,
                 continue_button=continue_button,
-                submit_buttons=submit_buttons,
+                choice_buttons=choice_buttons,
             )
 
             await self._send(packed)
 
         loop = asyncio.get_running_loop()
-        submit_value_future = loop.create_future()
+        choice_future = loop.create_future()
         fut = loop.create_future()
 
         async def on_response_handler(response: IOResponse):
@@ -173,7 +173,7 @@ class IOClient:
                         return
 
                 is_returned = True
-                submit_value_future.set_result(response.submit_value)
+                choice_future.set_result(response.choice)
 
                 for i, value in enumerate(response.values):
                     components[i].set_return_value(value)
@@ -214,5 +214,5 @@ class IOClient:
         # https://github.com/python/typeshed/blob/4d23919200d9e89486f4d9e2587f82314d4af0f6/stdlib/asyncio/tasks.pyi#L82-L85
         return (
             cast(list[Any], await asyncio.gather(*return_futures)),
-            cast(Optional[str], await submit_value_future),
+            cast(Optional[str], await choice_future),
         )
