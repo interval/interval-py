@@ -67,11 +67,16 @@ class Transaction:
         print("Starting test", slug)
         await self.page.click(f"[data-pw-run-slug='{slug}']")
 
-    async def press_continue(self):
+    async def press_continue(self, label: Optional[str] = None):
+        selector = 'button[data-pw="continue-button"]'
+
+        if label is not None:
+            selector += f":has-text('{label}')"
+
         await self.page.click(
-            'button[data-pw="continue-button"]',
+            selector,
             # avoids issues with the button being partially obstructed by popovers
-            position={"x": 0, "y": 0},
+            position={"x": 1, "y": 1},
         )
 
     async def restart(self):

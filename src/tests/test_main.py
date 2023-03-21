@@ -2341,3 +2341,213 @@ class TestValidation:
             C=True,
             D=False,
         )
+
+    async def test_with_choices_on_display(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def with_choices_on_display(io: IO):
+            ret = await io.display.markdown("Press OK").with_choices(
+                [
+                    {
+                        "label": "OK",
+                    },
+                ]
+            )
+
+            return {
+                "choice": ret.choice,
+            }
+
+        await transactions.console()
+        await transactions.run("with_choices_on_display")
+
+        await expect(page.locator("text=Press OK")).to_be_visible()
+        await transactions.press_continue("OK")
+        await transactions.expect_success(
+            choice="OK",
+        )
+
+    async def test_with_choices_on_input(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def with_choices_on_input(io: IO):
+            ret = (
+                await io.input.number("Enter a number")
+                .with_choices(
+                    [
+                        {
+                            "label": "Make it negative",
+                            "theme": "danger",
+                            "value": "negative",
+                        },
+                        {"label": "Do nothing"},
+                    ]
+                )
+                .optional()
+            )
+
+            return_value = ret.return_value
+
+            if return_value is not None and ret.choice == "negative":
+                return_value = -return_value
+
+            return {
+                "choice": ret.choice,
+                "return_value": return_value if return_value is not None else "Nothing",
+            }
+
+        await transactions.console()
+        await transactions.run("with_choices_on_input")
+
+        await expect(page.locator("text=Enter a number")).to_be_visible()
+        await page.fill("input", "24")
+        await transactions.press_continue("Make it negative")
+        await transactions.expect_success(
+            choice="negative",
+            return_value=-24,
+        )
+
+        await transactions.restart()
+
+        await expect(page.locator("text=Enter a number")).to_be_visible()
+        await page.fill("input", "-19")
+        await transactions.press_continue("Do nothing")
+        await transactions.expect_success(
+            choice="Do nothing",
+            return_value=-19,
+        )
+
+        await transactions.restart()
+
+        await expect(page.locator("text=Enter a number")).to_be_visible()
+        await transactions.press_continue("Do nothing")
+        await transactions.expect_success(
+            choice="Do nothing",
+            return_value="Nothing",
+        )
+
+    async def test_with_choices_with_multiple(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+        mock_db: MockDb,
+    ):
+        def render_user(user: MockDb.User):
+            return f"{user['firstName']} {user['lastName']} {({user['email']})}"
+
+        @interval.action
+        async def with_choices_with_multiple(io: IO):
+            async def handle_search(query: str) -> list[MockDb.User]:
+                return mock_db.find_users(query)
+
+            ret = (
+                await io.search(
+                    "Select some users",
+                    on_search=handle_search,
+                    render_result=render_user,
+                )
+                .multiple()
+                .with_choices(
+                    [
+                        {
+                            "label": "Delete them",
+                            "theme": "danger",
+                            "value": "delete",
+                        },
+                        {"label": "Do nothing"},
+                    ]
+                )
+            )
+
+            return {
+                "choice": ret.choice,
+                "return_value": ", ".join([render_user(u) for u in ret.return_value]),
+            }
+
+        await transactions.console()
+        await transactions.run("with_choices_with_multiple")
+
+        label = page.locator('label:has-text("Select some users")')
+        await expect(label).to_be_visible()
+
+        inputId = await label.get_attribute("for")
+        input = page.locator(f"#{inputId}")
+
+        async def search_and_select(query: str):
+            await input.click()
+            await input.fill(query)
+            await expect(page.locator('text="Loading..."')).to_be_visible()
+            await expect(page.locator('text="Loading..."')).to_be_hidden()
+            await page.click(
+                f"[data-pw-search-result]:has-text('{query}'):nth-child(1)"
+            )
+            await expect(
+                page.locator(f".iv-select__multi-value__label:has-text('{query}')")
+            ).to_be_visible()
+            await expect(
+                page.locator(
+                    f"[data-pw-search-result]:has-text('{query}'):nth-child(1)"
+                )
+            ).to_be_hidden()
+
+        await search_and_select("Jacob")
+        await search_and_select("Ryan")
+
+        await transactions.press_continue("Delete them")
+        await transactions.expect_success(
+            choice="delete",
+            return_value=f"{render_user(mock_db.find_users('Jacob')[0])}, {render_user(mock_db.find_users('Ryan')[0])}",
+        )
+
+    async def test_with_choices_on_group(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def with_choices_on_group(io: IO):
+            ret = await io.group(io.input.text("Important data")).with_choices(
+                [
+                    {
+                        "label": "Delete the data",
+                        "theme": "danger",
+                    },
+                    {
+                        "label": "Cancel",
+                        "theme": "secondary",
+                    },
+                ]
+            )
+
+            return {"choice": ret.choice, "return_value": ret.return_value[0]}
+
+        await transactions.console()
+        await transactions.run("with_choices_on_group")
+
+        await expect(page.locator("text=Important data")).to_be_visible()
+        await page.fill("input", "Student loans")
+        await transactions.press_continue("Delete the data")
+        await transactions.expect_success(
+            choice="Delete the data",
+            return_value="Student loans",
+        )
+
+        await transactions.restart()
+
+        await expect(page.locator("text=Important data")).to_be_visible()
+        await page.fill("input", "Taco Bell Quesarito")
+        await transactions.press_continue("Cancel")
+        await transactions.expect_success(
+            choice="Cancel",
+            return_value="Taco Bell Quesarito",
+        )
