@@ -1143,7 +1143,6 @@ async def with_choices(io: IO, ctx: ActionContext):
 
     ret = (
         await io.input.file("Planet")
-        .multiple()
         .with_choices(
             [
                 {
@@ -1157,6 +1156,7 @@ async def with_choices(io: IO, ctx: ActionContext):
                 },
             ]
         )
+        .multiple()
     )
 
     await ctx.log(ret.choice, [f.name for f in ret.return_value])
