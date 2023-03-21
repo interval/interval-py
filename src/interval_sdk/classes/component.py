@@ -17,7 +17,6 @@ from pydantic import parse_obj_as, ValidationError, BaseModel as PydanticBaseMod
 from interval_sdk import superjson
 
 from ..io_schema import (
-    ButtonConfig,
     ChoiceButtonConfig,
     ComponentMultipleProps,
     MethodDef,
@@ -201,7 +200,6 @@ ComponentRenderer: TypeAlias = Callable[
     [
         list[Component],
         Optional[IOPromiseValidator],
-        Optional[ButtonConfig],
         Optional[list[ChoiceButtonConfig]],
     ],
     Awaitable[tuple[list[Any], Optional[str]]],

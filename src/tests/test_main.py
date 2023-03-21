@@ -48,7 +48,7 @@ async def interval(event_loop: asyncio.AbstractEventLoop, config: Config):
 
     yield interval
 
-    await interval.close()
+    await interval.immediately_close()
 
 
 async def test_context(

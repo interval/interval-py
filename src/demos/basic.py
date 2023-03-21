@@ -1130,7 +1130,7 @@ async def with_choices(io: IO, ctx: ActionContext):
     await ctx.log(ret.choice, ret.return_value)
 
     number = ret.return_value
-    if number != None and ret.choice == "negative":
+    if number is not None and ret.choice == "negative":
         number = -number
 
     await io.display.heading(f"The number is now {number}").with_choices(
@@ -1177,7 +1177,7 @@ async def with_choices(io: IO, ctx: ActionContext):
     )
     await ctx.log(ret.choice, ret.return_value)
 
-    return "Hello, world!"
+    return {"choice": ret.choice, **ret.return_value}
 
 
 @interval.action(unlisted=True)

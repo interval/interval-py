@@ -7,7 +7,6 @@ from typing_extensions import TypeAlias, TypeVar, Any, Awaitable
 
 from .. import superjson
 from ..io_schema import (
-    ButtonConfig,
     ChoiceButtonConfig,
     MethodName,
     IORender,
@@ -81,7 +80,6 @@ class IOClient:
         self,
         components: list[Component],
         group_validator: Optional[IOPromiseValidator] = None,
-        continue_button: Optional[ButtonConfig] = None,
         choice_buttons: Optional[list[ChoiceButtonConfig]] = None,
     ) -> tuple[list[Any], Optional[str]]:
         if self._is_canceled:
@@ -99,7 +97,6 @@ class IOClient:
                 to_render=[inst.render_info for inst in components],
                 kind="RENDER",
                 validation_error_message=validation_error_message,
-                continue_button=continue_button,
                 choice_buttons=choice_buttons,
             )
 

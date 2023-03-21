@@ -994,7 +994,6 @@ class IORender(BaseModel):
     to_render: list[ComponentRenderInfo]
     kind: Literal["RENDER"] = "RENDER"
     validation_error_message: Optional[str] = None
-    continue_button: Optional[ButtonConfig] = None
     choice_buttons: Optional[list[ChoiceButtonConfig]] = None
 
     class Config:

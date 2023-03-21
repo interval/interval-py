@@ -33,7 +33,6 @@ from ..io_schema import (
     ButtonTheme,
     ComponentMultipleProps,
     input_schema,
-    ButtonConfig,
     ChoiceReturn,
     ChoiceButton,
     ChoiceButtonConfig,
@@ -68,8 +67,10 @@ class IOPromise(Generic[MN_co, Output_co]):
         self._value_getter = get_value
 
     def __await__(self) -> Generator[Any, None, Output_co]:
-        return_values, choice = yield from self._renderer(
-            [self._component], None, None, None
+        return_values, _choice = yield from self._renderer(
+            [self._component],
+            None,
+            None,
         ).__await__()
         return self._get_value(return_values[0])
 
@@ -100,7 +101,7 @@ class GroupableIOPromise(IOPromise[MN_co, Output_co]):
 
 
 class WithChoicesIOPromise(IOPromise[MN_co, Output_co]):
-    _choices: list[ChoiceButtonConfig]
+    _choice_buttons: list[ChoiceButtonConfig]
 
     def __init__(
         self,
@@ -114,12 +115,12 @@ class WithChoicesIOPromise(IOPromise[MN_co, Output_co]):
             renderer=renderer,
             get_value=get_value,
         )
-        self._choices = parse_obj_as(list[ChoiceButtonConfig], choices)
+        self._choice_buttons = parse_obj_as(list[ChoiceButtonConfig], choices)
 
     @override
     def __await__(self) -> Generator[Any, None, ChoiceReturn[Output_co]]:
         return_values, choice = yield from self._renderer(
-            [self._component], None, None, self._choices
+            [self._component], None, self._choice_buttons
         ).__await__()
         return ChoiceReturn(
             choice=cast(str, choice),
@@ -209,8 +210,8 @@ class OptionalIOPromise(InputIOPromise[Input_MN_co, Output_co]):
 
     @override
     def __await__(self) -> Generator[Any, None, Optional[Output_co]]:
-        return_values, choice = yield from self._renderer(
-            [self._component], None, None, None
+        return_values, _choice = yield from self._renderer(
+            [self._component], None, None
         ).__await__()
         return self._get_value(return_values[0])
 
@@ -232,8 +233,8 @@ class OptionalIOPromise(InputIOPromise[Input_MN_co, Output_co]):
         )
 
 
-class OptionalWithChoicesIOPromise(IOPromise[MN_co, Output_co]):
-    _choices: list[ChoiceButtonConfig]
+class OptionalWithChoicesIOPromise(OptionalIOPromise[Input_MN_co, Output_co]):
+    _choice_buttons: list[ChoiceButtonConfig]
 
     def __init__(
         self,
@@ -249,12 +250,12 @@ class OptionalWithChoicesIOPromise(IOPromise[MN_co, Output_co]):
             renderer=renderer,
             get_value=get_value,
         )
-        self._choices = parse_obj_as(list[ChoiceButtonConfig], choices)
+        self._choice_buttons = parse_obj_as(list[ChoiceButtonConfig], choices)
 
     @override
     def __await__(self) -> Generator[Any, None, ChoiceReturn[Optional[Output_co]]]:
         return_values, choice = yield from self._renderer(
-            [self._component], None, None, self._choices
+            [self._component], None, self._choice_buttons
         ).__await__()
         return ChoiceReturn(
             choice=cast(str, choice),
@@ -270,13 +271,9 @@ class OptionalWithChoicesIOPromise(IOPromise[MN_co, Output_co]):
     def with_choices(
         self,
         choices: list[ChoiceButton],
-    ) -> "OptionalWithChoicesIOPromise[MN_co, Output_co]":
-        return OptionalWithChoicesIOPromise[MN_co, Output_co](
-            self._component,
-            self._renderer,
-            choices,
-            self._value_getter,
-        )
+    ) -> "OptionalWithChoicesIOPromise[Input_MN_co, Output_co]":
+        self._choice_buttons = parse_obj_as(list[ChoiceButtonConfig], choices)
+        return self
 
 
 DefaultValue = TypeVar("DefaultValue")
@@ -376,8 +373,8 @@ class MultipleIOPromise(
 
     @override
     def __await__(self) -> Generator[Any, None, list[Output_co]]:
-        return_values, choice = yield from self._renderer(
-            [self._component], None, None, None
+        return_values, _choice = yield from self._renderer(
+            [self._component], None, None
         ).__await__()
         return self._get_value(return_values[0])
 
@@ -488,7 +485,7 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
     _kw_io_promises: Optional[dict[str, GroupableIOPromise[MethodName, Any]]] = None
     _renderer: ComponentRenderer
     _validator: "Optional[IOGroupPromiseValidator[Unpack[GroupOutput]]]" = None
-    _continue_button: Optional[ButtonConfig] = None
+    _choice_buttons: Optional[list[ChoiceButtonConfig]] = None
 
     def __init__(
         self,
@@ -521,8 +518,7 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
             return_values, _choice = yield from self._renderer(
                 [p._component for p in self._kw_io_promises.values()],
                 self._handle_validation,
-                self._continue_button,
-                None,
+                self._choice_buttons,
             ).__await__()
             res_dict = {
                 key: return_values[i]
@@ -533,8 +529,7 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
             return_values, _choice = yield from self._renderer(
                 [p._component for p in self._io_promises],
                 self._handle_validation,
-                self._continue_button,
-                None,
+                self._choice_buttons,
             ).__await__()
             return cast(
                 tuple[Unpack[GroupOutput]],
@@ -590,7 +585,14 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
         label: Optional[str] = None,
         theme: Optional[ButtonTheme] = None,
     ) -> "IOGroupPromise[Unpack[GroupOutput]]":
-        self._continue_button = ButtonConfig(label=label, theme=theme)
+        """Deprecated. Please use .with_choices() instead."""
+        self._choice_buttons = [
+            ChoiceButtonConfig(
+                label=label if label is not None else "Continue",
+                theme=theme,
+                value=None,
+            )
+        ]
         return self
 
     def with_choices(
@@ -598,32 +600,22 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
         choices: list[ChoiceButton],
     ) -> "WithChoicesIOGroupPromise[Unpack[GroupOutput]]":
         return WithChoicesIOGroupPromise(
-            self._renderer,
-            self._io_promises,
-            choices,
-            self._kw_io_promises,
+            inner_promise=self,
+            choices=choices,
         )
 
 
 class WithChoicesIOGroupPromise(Generic[Unpack[GroupOutput]]):
-    _io_promises: tuple[GroupableIOPromise[MethodName, Any], ...]
-    _kw_io_promises: Optional[dict[str, GroupableIOPromise[MethodName, Any]]] = None
-    _renderer: ComponentRenderer
-    _validator: "Optional[IOGroupPromiseValidator[Unpack[GroupOutput]]]" = None
-    _continue_button: Optional[ButtonConfig] = None
-    _choices: Optional[list[ChoiceButtonConfig]] = None
+    _inner_promise: IOGroupPromise[Unpack[GroupOutput]]
+    _choice_buttons: Optional[list[ChoiceButtonConfig]] = None
 
     def __init__(
         self,
-        renderer: ComponentRenderer,
-        io_promises: tuple[GroupableIOPromise[MethodName, Any], ...],
+        inner_promise: IOGroupPromise[Unpack[GroupOutput]],
         choices: list[ChoiceButton],
-        kw_io_promises: Optional[dict[str, GroupableIOPromise[MethodName, Any]]] = None,
     ):
-        self._renderer = renderer
-        self._io_promises = io_promises
-        self._choices = [ChoiceButtonConfig.parse_obj(item) for item in choices]
-        self._kw_io_promises = kw_io_promises
+        self._inner_promise = inner_promise
+        self._choice_buttons = [ChoiceButtonConfig.parse_obj(item) for item in choices]
 
     @overload
     def __await__(
@@ -646,59 +638,39 @@ class WithChoicesIOGroupPromise(Generic[Unpack[GroupOutput]]):
         ...
 
     def __await__(self) -> Generator[Any, None, ChoiceReturn[Union[tuple[Unpack[GroupOutput]], KeyedIONamespace]]]:  # type: ignore
-        if self._kw_io_promises is not None and len(self._kw_io_promises) > 0:
-            return_values, choice = yield from self._renderer(
-                [p._component for p in self._kw_io_promises.values()],
-                self._handle_validation,
-                self._continue_button,
-                self._choices,
+        if (
+            self._inner_promise._kw_io_promises is not None
+            and len(self._inner_promise._kw_io_promises) > 0
+        ):
+            return_values, choice = yield from self._inner_promise._renderer(
+                [p._component for p in self._inner_promise._kw_io_promises.values()],
+                self._inner_promise._handle_validation,
+                self._choice_buttons,
             ).__await__()
             res_dict = {
                 key: return_values[i]
-                for i, key in enumerate(self._kw_io_promises.keys())
+                for i, key in enumerate(self._inner_promise._kw_io_promises.keys())
             }
             return ChoiceReturn(
                 choice=cast(str, choice),
                 return_value=KeyedIONamespace(**res_dict),
             )
         else:
-            return_values, choice = yield from self._renderer(
-                [p._component for p in self._io_promises],
-                self._handle_validation,
-                self._continue_button,
-                self._choices,
+            return_values, choice = yield from self._inner_promise._renderer(
+                [p._component for p in self._inner_promise._io_promises],
+                self._inner_promise._handle_validation,
+                self._choice_buttons,
             ).__await__()
             return ChoiceReturn(
                 choice=cast(str, choice),
                 return_value=cast(
                     tuple[Unpack[GroupOutput]],
                     [
-                        self._io_promises[i]._get_value(val)
+                        self._inner_promise._io_promises[i]._get_value(val)
                         for (i, val) in enumerate(return_values)
                     ],
                 ),
             )
-            return
-
-    async def _handle_validation(self, return_values: list[Any]) -> Optional[str]:
-        if self._validator is None:
-            return None
-
-        if self._kw_io_promises is not None and len(self._kw_io_promises) > 0:
-            io_promises = list(self._kw_io_promises.values())
-            values = {
-                key: io_promises[index]._get_value(return_values[index])
-                for index, key in enumerate(self._kw_io_promises.keys())
-            }
-            ret = self._validator(**values)  # type: ignore
-        else:
-            io_promises = self._io_promises
-            values = [
-                io_promises[index]._get_value(v)
-                for index, v in enumerate(return_values)
-            ]
-            ret = self._validator(*values)  # type: ignore
-        return cast(Optional[str], await ret if inspect.isawaitable(ret) else ret)
 
     @overload
     def validate(
@@ -718,20 +690,12 @@ class WithChoicesIOGroupPromise(Generic[Unpack[GroupOutput]]):
         self: "WithChoicesIOGroupPromise[Unpack[GroupOutput]]",
         validator: "Optional[IOGroupPromiseValidator[Unpack[GroupOutput]]]",
     ) -> "WithChoicesIOGroupPromise[Unpack[GroupOutput]]":
-        self._validator = validator
-        return self
-
-    def continue_button_options(
-        self: "WithChoicesIOGroupPromise[Unpack[GroupOutput]]",
-        label: Optional[str] = None,
-        theme: Optional[ButtonTheme] = None,
-    ) -> "WithChoicesIOGroupPromise[Unpack[GroupOutput]]":
-        self._continue_button = ButtonConfig(label=label, theme=theme)
+        self._inner_promise._validator = validator
         return self
 
     def with_choices(
         self: "WithChoicesIOGroupPromise[Unpack[GroupOutput]]",
         choices: list[ChoiceButton],
     ) -> "WithChoicesIOGroupPromise[Unpack[GroupOutput]]":
-        self._choices = [ChoiceButtonConfig.parse_obj(item) for item in choices]
+        self._choice_buttons = [ChoiceButtonConfig.parse_obj(item) for item in choices]
         return self
