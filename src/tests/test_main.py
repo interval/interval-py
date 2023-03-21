@@ -2551,3 +2551,47 @@ class TestValidation:
             choice="Cancel",
             return_value="Taco Bell Quesarito",
         )
+
+    async def test_with_choices_on_group_keyed(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def with_choices_on_group_keyed(io: IO):
+            ret = await io.group(data=io.input.text("Important data")).with_choices(
+                [
+                    {
+                        "label": "Delete the data",
+                        "theme": "danger",
+                    },
+                    {
+                        "label": "Cancel",
+                        "theme": "secondary",
+                    },
+                ]
+            )
+
+            return {"choice": ret.choice, "return_value": ret.return_value.data}
+
+        await transactions.console()
+        await transactions.run("with_choices_on_group_keyed")
+
+        await expect(page.locator("text=Important data")).to_be_visible()
+        await page.fill("input", "Student loans")
+        await transactions.press_continue("Delete the data")
+        await transactions.expect_success(
+            choice="Delete the data",
+            return_value="Student loans",
+        )
+
+        await transactions.restart()
+
+        await expect(page.locator("text=Important data")).to_be_visible()
+        await page.fill("input", "Taco Bell Quesarito")
+        await transactions.press_continue("Cancel")
+        await transactions.expect_success(
+            choice="Cancel",
+            return_value="Taco Bell Quesarito",
+        )
