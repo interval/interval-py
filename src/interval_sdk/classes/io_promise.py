@@ -82,12 +82,17 @@ class IOPromise(Generic[MN_co, Output_co]):
 
     def with_choices(
         self,
-        choices: list[ChoiceButton],
+        choices: Iterable[Union[ChoiceButton, str]],
     ) -> "WithChoicesIOPromise[MN_co, Output_co]":
         return WithChoicesIOPromise[MN_co, Output_co](
             self._component,
             self._renderer,
-            choices=[ChoiceButtonConfig.parse_obj(item) for item in choices],
+            choices=[
+                ChoiceButtonConfig.parse_obj(
+                    {"label": item, "value": item} if isinstance(item, str) else item
+                )
+                for item in choices
+            ],
             get_value=self._value_getter,
         )
 
@@ -166,7 +171,7 @@ class InputIOPromise(GroupableIOPromise[Input_MN_co, Output_co]):
 
     def with_choices(
         self,
-        choices: list[ChoiceButton],
+        choices: Iterable[Union[ChoiceButton, str]],
     ) -> "WithChoicesInputIOPromise[Input_MN_co, Output_co]":
         return WithChoicesInputIOPromise[Input_MN_co, Output_co](
             self._component,
@@ -487,7 +492,7 @@ class WithChoicesInputIOPromise(InputIOPromise[Input_MN_co, Output_co]):
         self,
         component: Component,
         renderer: ComponentRenderer,
-        choices: list[ChoiceButton],
+        choices: Iterable[Union[ChoiceButton, str]],
         get_value: Optional[Callable[[Any], Output_co]] = None,
     ):
         super().__init__(
@@ -495,7 +500,12 @@ class WithChoicesInputIOPromise(InputIOPromise[Input_MN_co, Output_co]):
             renderer=renderer,
             get_value=get_value,
         )
-        self._choice_buttons = parse_obj_as(list[ChoiceButtonConfig], choices)
+        self._choice_buttons = [
+            ChoiceButtonConfig.parse_obj(
+                {"label": item, "value": item} if isinstance(item, str) else item
+            )
+            for item in choices
+        ]
 
     @override
     def __await__(self) -> Generator[Any, None, ChoiceReturn[Output_co]]:
@@ -753,19 +763,24 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
         self._choice_buttons = [
             ChoiceButtonConfig(
                 label=label if label is not None else "Continue",
+                value=label if label is not None else "Continue",
                 theme=theme,
-                value=None,
             )
         ]
         return self
 
     def with_choices(
         self: "IOGroupPromise[Unpack[GroupOutput]]",
-        choices: list[ChoiceButton],
+        choices: Iterable[Union[ChoiceButton, str]],
     ) -> "WithChoicesIOGroupPromise[Unpack[GroupOutput]]":
         return WithChoicesIOGroupPromise(
             inner_promise=self,
-            choices=[ChoiceButtonConfig.parse_obj(item) for item in choices],
+            choices=[
+                ChoiceButtonConfig.parse_obj(
+                    {"label": item, "value": item} if isinstance(item, str) else item
+                )
+                for item in choices
+            ],
         )
 
 
@@ -859,7 +874,12 @@ class WithChoicesIOGroupPromise(Generic[Unpack[GroupOutput]]):
 
     def with_choices(
         self: "WithChoicesIOGroupPromise[Unpack[GroupOutput]]",
-        choices: list[ChoiceButton],
+        choices: Iterable[Union[ChoiceButton, str]],
     ) -> "WithChoicesIOGroupPromise[Unpack[GroupOutput]]":
-        self._choice_buttons = [ChoiceButtonConfig.parse_obj(item) for item in choices]
+        self._choice_buttons = [
+            ChoiceButtonConfig.parse_obj(
+                {"label": item, "value": item} if isinstance(item, str) else item
+            )
+            for item in choices
+        ]
         return self

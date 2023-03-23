@@ -134,13 +134,13 @@ class ButtonConfig(BaseModel):
 
 class ChoiceButton(TypedDict):
     label: str
-    value: NotRequired[str]
+    value: str
     theme: NotRequired[ButtonTheme]
 
 
 class ChoiceButtonConfig(BaseModel):
     label: str
-    value: Optional[str]
+    value: str
     theme: Optional[ButtonTheme] = None
 
 

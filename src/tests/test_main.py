@@ -2350,13 +2350,7 @@ class TestValidation:
     ):
         @interval.action
         async def with_choices_on_display(io: IO):
-            ret = await io.display.markdown("Press OK").with_choices(
-                [
-                    {
-                        "label": "OK",
-                    },
-                ]
-            )
+            ret = await io.display.markdown("Press OK").with_choices(["OK"])
 
             return {
                 "choice": ret.choice,
@@ -2388,7 +2382,7 @@ class TestValidation:
                             "theme": "danger",
                             "value": "negative",
                         },
-                        {"label": "Do nothing"},
+                        "Do nothing",
                     ]
                 )
                 .optional()
@@ -2463,7 +2457,7 @@ class TestValidation:
                             "theme": "danger",
                             "value": "delete",
                         },
-                        {"label": "Do nothing"},
+                        "Do nothing",
                     ]
                 )
             )
@@ -2520,10 +2514,12 @@ class TestValidation:
                 [
                     {
                         "label": "Delete the data",
+                        "value": "delete",
                         "theme": "danger",
                     },
                     {
                         "label": "Cancel",
+                        "value": "cancel",
                         "theme": "secondary",
                     },
                 ]
@@ -2538,7 +2534,7 @@ class TestValidation:
         await page.fill("input", "Student loans")
         await transactions.press_continue("Delete the data")
         await transactions.expect_success(
-            choice="Delete the data",
+            choice="delete",
             return_value="Student loans",
         )
 
@@ -2548,7 +2544,7 @@ class TestValidation:
         await page.fill("input", "Taco Bell Quesarito")
         await transactions.press_continue("Cancel")
         await transactions.expect_success(
-            choice="Cancel",
+            choice="cancel",
             return_value="Taco Bell Quesarito",
         )
 
@@ -2564,10 +2560,12 @@ class TestValidation:
                 [
                     {
                         "label": "Delete the data",
+                        "value": "delete",
                         "theme": "danger",
                     },
                     {
                         "label": "Cancel",
+                        "value": "cancel",
                         "theme": "secondary",
                     },
                 ]
@@ -2582,7 +2580,7 @@ class TestValidation:
         await page.fill("input", "Student loans")
         await transactions.press_continue("Delete the data")
         await transactions.expect_success(
-            choice="Delete the data",
+            choice="delete",
             return_value="Student loans",
         )
 
@@ -2592,6 +2590,6 @@ class TestValidation:
         await page.fill("input", "Taco Bell Quesarito")
         await transactions.press_continue("Cancel")
         await transactions.expect_success(
-            choice="Cancel",
+            choice="cancel",
             return_value="Taco Bell Quesarito",
         )
