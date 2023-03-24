@@ -971,7 +971,7 @@ def dump_io_render(io_render: dict[str, Any]) -> dict[str, Any]:
             if val is None:
                 continue
             obj[snake_to_camel(key)] = dict_keys_to_camel(dict_strip_none(val))
-        elif key == "choices":
+        elif key == "choice_buttons":
             if val is None:
                 continue
             obj[snake_to_camel(key)] = [

@@ -193,10 +193,19 @@ class IOClient:
 
         def resolve_immediates(t: asyncio.Task):
             try:
+                all_resolved = True
                 t.result()
                 for c in components:
                     if c.resolves_immediately:
                         c.set_return_value(None)
+                    else:
+                        all_resolved = False
+
+                if all_resolved and (
+                    choice_buttons is None or len(choice_buttons) == 0
+                ):
+                    choice_future.set_result(None)
+
             except Exception as err:
                 self._logger.warn("Failed resolving component immediately", err)
 

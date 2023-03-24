@@ -1120,9 +1120,7 @@ async def with_choices(io: IO, ctx: ActionContext):
                     "value": "negative",
                     "theme": "danger",
                 },
-                {
-                    "label": "Do nothing",
-                },
+                "Do nothing",
             ]
         )
     )
@@ -1133,13 +1131,7 @@ async def with_choices(io: IO, ctx: ActionContext):
     if number is not None and ret.choice == "negative":
         number = -number
 
-    await io.display.heading(f"The number is now {number}").with_choices(
-        [
-            {
-                "label": "OK!",
-            }
-        ]
-    )
+    await io.display.heading(f"The number is now {number}").with_choices(["OK!"])
 
     ret = (
         await io.input.file("Planet")
@@ -1166,13 +1158,8 @@ async def with_choices(io: IO, ctx: ActionContext):
         description=io.input.rich_text("Description").optional(),
     ).with_choices(
         [
-            {
-                "label": "Sign me up",
-            },
-            {
-                "label": "Skip",
-                "theme": "secondary",
-            },
+            "Sign me up",
+            "Skip",
         ]
     )
     await ctx.log(ret.choice, ret.return_value)
