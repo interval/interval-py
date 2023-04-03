@@ -23,7 +23,7 @@ from .util import SerializableRecord, isoformat_datetime, json_dumps_strip_none
 from .types import BaseModel, GenericModel
 
 
-ActionEnvironment: TypeAlias = Literal["live", "development"]
+ActionEnvironment: TypeAlias = Union[Literal["production", "development"], str]
 
 
 @base_dataclass
