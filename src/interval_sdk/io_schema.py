@@ -363,6 +363,7 @@ class TableRowValueObject(TypedDict):
     route: NotRequired[str]
     params: NotRequired[SerializableRecord]
     image: NotRequired[ImageDefinition]
+    backgroundColor: NotRequired[str]
 
 
 class TableRowValueObjectModel(BaseModel):
@@ -372,6 +373,7 @@ class TableRowValueObjectModel(BaseModel):
     route: Optional[str] = None
     params: Optional[SerializableRecordModel] = None
     image: Optional[ImageDefinitionModel] = None
+    backgroundColor: Optional[str] = None
 
 
 TableRowValue: TypeAlias = Union[TableRowValueObject, TableRowValuePrimitive]
