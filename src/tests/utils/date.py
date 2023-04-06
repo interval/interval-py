@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Union
 
-from playwright.async_api import Page, expect
+from playwright.async_api import Page, Locator, expect
 
 from .. import Transaction
 
@@ -15,19 +15,19 @@ def format_date(val: Union[date, datetime]) -> str:
     return val.strftime(DATE_FORMAT)
 
 
-async def input_date(page: Page):
-    input = page.locator('.iv-datepicker input[type="text"]')
+async def input_date(locator: Locator, page: Page):
+    input = locator.locator('.iv-datepicker input[type="text"]')
     await input.click()
     await page.wait_for_timeout(
         200
     )  # wait for 100ms delay we apply before showing the popover
     await input.fill("02/22/2022")
-    await page.locator('.flatpickr-day:has-text("25")').click()
+    await locator.locator('.flatpickr-day:has-text("25")').click()
     await expect(input).to_have_value("02/25/2022")
 
 
-async def input_invalid_date(page: Page, transactions: Transaction):
-    input = page.locator('.iv-datepicker input[type="text"]')
+async def input_invalid_date(locator: Locator, page: Page, transactions: Transaction):
+    input = locator.locator('.iv-datepicker input[type="text"]')
     await input.click()
     await page.wait_for_timeout(
         200
@@ -38,9 +38,9 @@ async def input_invalid_date(page: Page, transactions: Transaction):
     await transactions.expect_validation_error("Please enter a valid date.")
 
 
-async def input_time(page: Page):
-    await expect(page.locator(".iv-datepicker")).to_be_visible()
-    selects = page.locator(".iv-datepicker select")
+async def input_time(locator: Locator):
+    await expect(locator.locator(".iv-datepicker")).to_be_visible()
+    selects = locator.locator(".iv-datepicker select")
 
     [h, m, ampm] = [selects.nth(0), selects.nth(1), selects.nth(2)]
 
