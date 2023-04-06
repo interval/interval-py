@@ -55,8 +55,8 @@ class SendIOCallInputs(BaseModel):
 
 class SendPageInputs(BaseModel):
     page_key: str
-    # stringified page
-    page: str
+    # stringified page layout
+    page: Optional[str] = None
 
 
 class LeavePageInputs(BaseModel):
