@@ -16,7 +16,7 @@ from typing import (
 )
 from datetime import date, time, datetime
 from uuid import UUID
-import io, json, sys
+import io, sys
 from typing_extensions import NotRequired, TypedDict, TypeAlias, override
 from pydantic import (
     BaseModel as PydanticBaseModel,
@@ -37,13 +37,8 @@ from .types import (
 )
 from .util import (
     ObjectLiteral,
-    dict_strip_none,
-    json_dumps_snake_strip_none,
-    json_loads_snake_strip_none,
-    snake_to_camel,
-    dict_keys_to_camel,
-    json_dumps_some_snake,
-    json_loads_some_snake,
+    json_dumps_strip_none,
+    json_loads_strip_none,
     Serializable,
     SerializableRecord,
 )
@@ -110,8 +105,8 @@ class ComponentRenderInfo(GenericModel, Generic[MN]):
     multiple_props: Optional[ComponentMultipleProps] = None
 
     class Config:
-        json_loads = json_loads_snake_strip_none
-        json_dumps = json_dumps_snake_strip_none
+        json_loads = json_loads_strip_none
+        json_dumps = json_dumps_strip_none
 
 
 TypeValue = Literal[
@@ -334,9 +329,6 @@ class ActionResult(BaseModel):
     status: Literal["SUCCESS", "FAILURE"]
     data: IOFunctionReturnModel
     meta: Optional[Any] = None
-
-    class Config:
-        json_dumps = json.dumps
 
 
 TableRowValuePrimitive: TypeAlias = Union[
@@ -958,36 +950,6 @@ def resolves_immediately(
     return io_schema[method_name].immediate
 
 
-def dump_io_render(io_render: dict[str, Any]) -> dict[str, Any]:
-    obj = {}
-    for key, val in io_render.items():
-        if key == "to_render":
-            obj[snake_to_camel(key)] = [
-                dict_keys_to_camel(dict_strip_none(info)) for info in val
-            ]
-        elif key == "validation_error_message" and val is None:
-            pass
-        elif key == "continue_button":
-            if val is None:
-                continue
-            obj[snake_to_camel(key)] = dict_keys_to_camel(dict_strip_none(val))
-        elif key == "choice_buttons":
-            if val is None:
-                continue
-            obj[snake_to_camel(key)] = [
-                dict_keys_to_camel(dict_strip_none(info)) for info in val
-            ]
-        else:
-            obj[snake_to_camel(key)] = val
-
-    return obj
-
-
-def json_dumps_io_render(io_render: dict[str, Any], *args, **kwargs) -> str:
-    # we don't want to clobber any user-provided keys in props
-    return json.dumps(dump_io_render(io_render), *args, **kwargs)
-
-
 class IORender(BaseModel):
     id: UUID
     input_group_key: UUID
@@ -997,10 +959,12 @@ class IORender(BaseModel):
     choice_buttons: Optional[list[ChoiceButtonConfig]] = None
 
     class Config:
-        json_dumps = json_dumps_io_render
+        json_dumps = json_dumps_strip_none
+
+    #     json_dumps = json_dumps_io_render
 
 
-class IOResponse(PydanticBaseModel):
+class IOResponse(BaseModel):
     id: Union[UUID, Literal["UNKNOWN"]]
     input_group_key: Optional[Union[UUID, Literal["UNKNOWN"]]] = None
     transaction_id: str
@@ -1008,14 +972,6 @@ class IOResponse(PydanticBaseModel):
     values: list[Any]
     values_meta: Optional[Any] = None
     choice: Optional[str] = None
-
-    class Config:
-        json_loads = json_loads_some_snake(
-            "transaction_id", "input_group_key", "values_meta"
-        )
-        json_dumps = json_dumps_some_snake(
-            "transaction_id", "input_group_key", "values_meta"
-        )
 
 
 def dump_method(method_name: MethodName) -> str:

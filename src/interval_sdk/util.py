@@ -93,11 +93,14 @@ def json_loads_camel(*args, **kwargs) -> Any:
     )
 
 
-def dump_snake_obj(obj: Any) -> Any:
+def dump_snake_obj(obj: Any, recurse=False) -> Any:
     if isinstance(obj, dict):
-        obj = {snake_to_camel(key): dump_snake_obj(val) for (key, val) in obj.items()}
+        obj = {
+            snake_to_camel(key): dump_snake_obj(val) if recurse else val
+            for (key, val) in obj.items()
+        }
     elif isinstance(obj, list):
-        obj = [dump_snake_obj(item) for item in obj]
+        obj = [dump_snake_obj(item) if recurse else item for item in obj]
     elif isinstance(obj, str):
         try:
             return datetime.fromisoformat(obj)
@@ -145,14 +148,14 @@ def json_dumps_some_snake(
     *keys_to_include: str,
 ):
     def json_dumps(obj: Mapping[str, Any], *args, **kwargs) -> str:
-        obj = {}
+        ret = {}
         for key, val in obj.items():
             if key in keys_to_include:
-                obj[key] = val
+                ret[snake_to_camel(key)] = val
             else:
-                obj[snake_to_camel(key)] = dump_snake_obj(val)
+                ret[key] = val
 
-        return json.dumps(obj, *args, **kwargs)
+        return json.dumps(ret, *args, **kwargs)
 
     return json_dumps
 
@@ -164,6 +167,11 @@ def json_dumps_snake_strip_none(obj: Any, *args, **kwargs) -> str:
 def json_loads_snake_strip_none(*args, **kwargs) -> Any:
     obj = json.loads(*args, **kwargs)
     return dict_keys_to_snake(dict_strip_none(obj))
+
+
+def json_loads_strip_none(*args, **kwargs) -> Any:
+    obj = json.loads(*args, **kwargs)
+    return dict_strip_none(obj)
 
 
 Deserializable: TypeAlias = Union[int, float, bool, None, str]

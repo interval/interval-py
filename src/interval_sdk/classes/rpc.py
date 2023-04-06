@@ -7,7 +7,6 @@ from pydantic import ValidationError, parse_obj_as
 from .logger import LogLevel, Logger
 from ..internal_rpc_schema import AnyRPCSchemaMethodName, DuplexMessage, RPCMethod
 from .isocket import ISocket
-from ..util import dict_keys_to_camel
 
 CallerSchemaMethodName = TypeVar("CallerSchemaMethodName", bound=AnyRPCSchemaMethodName)
 ResponderSchemaMethodName = TypeVar(
@@ -130,7 +129,7 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
             data=return_value,
             kind="RESPONSE",
         )
-        prepared_response_text = message.json()
+        prepared_response_text = message.json(by_alias=True)
 
         try:
             await self._communicator.send(prepared_response_text)
@@ -144,7 +143,7 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
 
         message = DuplexMessage(
             id=id,
-            data=dict_keys_to_camel(inputs),
+            data=inputs,
             method_name=method_name,
             kind="CALL",
         )
@@ -159,7 +158,9 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
             except BaseException as err:
                 self._logger.error("Error sending message", err)
 
-        task = loop.create_task(self._communicator.send(message.json()), name="send")
+        task = loop.create_task(
+            self._communicator.send(message.json(by_alias=True)), name="send"
+        )
         task.add_done_callback(handle_exceptions)
 
         raw_response_text = await fut

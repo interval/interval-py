@@ -331,7 +331,7 @@ async def context():
     ctx = ctx_var.get()
     return {
         "user": f"{ctx.user.first_name} {ctx.user.last_name}",
-        "message": ctx.params.get("message", None),
+        "params": str(ctx.params),
         "environment": ctx.environment,
     }
 

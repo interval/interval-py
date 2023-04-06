@@ -8,7 +8,7 @@ from pydantic import Field
 
 from ..classes.io_promise import DisplayIOPromise
 from ..types import BaseModel
-from ..io_schema import ButtonItem, ButtonItemModel, IORender, dump_io_render
+from ..io_schema import ButtonItem, ButtonItemModel, IORender
 from ..util import dump_snake_obj, json_loads_camel, snake_to_camel
 
 PageLayoutKey = Literal["title", "description", "children", "menuItems"]
@@ -37,17 +37,6 @@ class BasicLayout:
 Layout: TypeAlias = BasicLayout
 
 
-def json_dumps_basic_layout_model(layout: dict[str, Any], *args, **kwargs) -> str:
-    obj = {}
-    for key, val in layout.items():
-        if key == "children":
-            obj[snake_to_camel(key)] = dump_io_render(val)
-        else:
-            obj[snake_to_camel(key)] = dump_snake_obj(val)
-
-    return json.dumps(obj, *args, **kwargs)
-
-
 class BasicLayoutModel(BaseModel):
     kind: Literal["BASIC"]
     title: Optional[str] = None
@@ -55,7 +44,3 @@ class BasicLayoutModel(BaseModel):
     children: Optional[IORender] = None
     menu_items: Optional[list[ButtonItemModel]] = None
     errors: list[PageError] = Field(default_factory=list)
-
-    class Config:
-        json_dumps = json_dumps_basic_layout_model
-        json_loads = json_loads_camel

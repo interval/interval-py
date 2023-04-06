@@ -167,7 +167,7 @@ class ISocket:
             try:
                 message = await self._out_queue.get()
                 try:
-                    await ws.send(message.json())
+                    await ws.send(message.json(by_alias=True))
                 except websockets.exceptions.ConnectionClosed as e:
                     await self._handle_close(e.code, e.reason)
                 except asyncio.exceptions.TimeoutError:
