@@ -2588,3 +2588,65 @@ class TestValidation:
             choice="cancel",
             return_value="Taco Bell Quesarito",
         )
+
+    async def test_with_choices_validation(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def with_choices_validation(io: IO):
+            ret = (
+                await io.input.text("Enter OK")
+                .with_choices(["Submit", "Continue"])
+                .validate(lambda val: "Should be OK." if val != "OK" else None)
+            )
+
+            return {"choice": ret.choice, "return_value": ret.return_value}
+
+        await transactions.console()
+        await transactions.run("with_choices_validation")
+
+        await expect(page.locator("text=Enter")).to_be_visible()
+        await page.fill("input", "No")
+        await transactions.press_continue("Continue")
+        await transactions.expect_validation_error("Should be OK.")
+        await page.fill("input", "OK")
+        await transactions.press_continue("Submit")
+
+        await transactions.expect_success(
+            choice="Submit",
+            return_value="OK",
+        )
+
+    async def test_with_choices_group_validation(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def with_choices_group_validation(io: IO):
+            ret = (
+                await io.group(io.input.text("Enter OK"))
+                .with_choices(["Submit", "Continue"])
+                .validate(lambda val: "Should be OK." if val != "OK" else None)
+            )
+
+            return {"choice": ret.choice, "return_value": ret.return_value[0]}
+
+        await transactions.console()
+        await transactions.run("with_choices_group_validation")
+
+        await expect(page.locator("text=Enter")).to_be_visible()
+        await page.fill("input", "No")
+        await transactions.press_continue("Continue")
+        await transactions.expect_validation_error("Should be OK.")
+        await page.fill("input", "OK")
+        await transactions.press_continue("Submit")
+
+        await transactions.expect_success(
+            choice="Submit",
+            return_value="OK",
+        )
