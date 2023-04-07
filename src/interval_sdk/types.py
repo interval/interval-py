@@ -1,4 +1,4 @@
-from typing import Any, Optional, TypeVar, Union, TYPE_CHECKING
+from typing import Any, Callable, Optional, TypeVar, Union, TYPE_CHECKING
 
 from typing_extensions import override
 from pydantic import BaseModel as PydanticBaseModel, validate_model
@@ -53,6 +53,31 @@ class BaseModel(PydanticBaseModel):
             exclude_none=exclude_none,
         )
 
+    @override
+    def json(
+        self,
+        include: Optional[Union["AbstractSetIntStr", "MappingIntStrAny"]] = None,
+        exclude: Optional[Union["AbstractSetIntStr", "MappingIntStrAny"]] = None,
+        by_alias: bool = True,
+        skip_defaults: Optional[bool] = None,
+        exclude_unset: bool = True,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
+        encoder: Optional[Callable[[Any], Any]] = None,
+        models_as_dict: bool = True,
+    ):
+        return super().json(
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            skip_defaults=skip_defaults,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+            encoder=encoder,
+            models_as_dict=models_as_dict,
+        )
+
     def revalidate(self: BaseModelSelf) -> BaseModelSelf:
         """
         Revalidates an existing model, for actually validating models which were
@@ -70,3 +95,49 @@ class GenericModel(PydanticGenericModel):
     class Config:
         alias_generator = alias_generator
         allow_population_by_field_name = True
+
+    @override
+    def dict(
+        self,
+        include: Optional[Union["AbstractSetIntStr", "MappingIntStrAny"]] = None,
+        exclude: Optional[Union["AbstractSetIntStr", "MappingIntStrAny"]] = None,
+        by_alias: bool = True,
+        skip_defaults: Optional[bool] = None,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
+    ):
+        return super().dict(
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            skip_defaults=skip_defaults,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+        )
+
+    @override
+    def json(
+        self,
+        include: Optional[Union["AbstractSetIntStr", "MappingIntStrAny"]] = None,
+        exclude: Optional[Union["AbstractSetIntStr", "MappingIntStrAny"]] = None,
+        by_alias: bool = True,
+        skip_defaults: Optional[bool] = None,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
+        encoder: Optional[Callable[[Any], Any]] = None,
+        models_as_dict: bool = True,
+    ):
+        return super().json(
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            skip_defaults=skip_defaults,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+            encoder=encoder,
+            models_as_dict=models_as_dict,
+        )

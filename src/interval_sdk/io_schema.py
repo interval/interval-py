@@ -961,8 +961,6 @@ class IORender(BaseModel):
     class Config:
         json_dumps = json_dumps_strip_none
 
-    #     json_dumps = json_dumps_io_render
-
 
 class IOResponse(BaseModel):
     id: Union[UUID, Literal["UNKNOWN"]]

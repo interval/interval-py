@@ -129,7 +129,8 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
             data=return_value,
             kind="RESPONSE",
         )
-        prepared_response_text = message.json(by_alias=True)
+        prepared_response_text = message.json()
+        print(prepared_response_text)
 
         try:
             await self._communicator.send(prepared_response_text)
@@ -158,9 +159,7 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
             except BaseException as err:
                 self._logger.error("Error sending message", err)
 
-        task = loop.create_task(
-            self._communicator.send(message.json(by_alias=True)), name="send"
-        )
+        task = loop.create_task(self._communicator.send(message.json()), name="send")
         task.add_done_callback(handle_exceptions)
 
         raw_response_text = await fut

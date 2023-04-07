@@ -402,13 +402,13 @@ class Interval:
                     index=index,
                     # expects time in milliseconds for JS Dates
                     timestamp=time_ms(),
-                ).dict(by_alias=True),
+                ).dict(),
             )
         except Exception as err:
             self._logger.error("Failed sending log to Interval", err)
 
     async def _send_redirect(self, inputs: SendRedirectInputs):
-        response = await self._send("SEND_REDIRECT", inputs.dict(by_alias=True))
+        response = await self._send("SEND_REDIRECT", inputs.dict())
         if not response:
             raise IntervalError("Failed sending redirect")
 
@@ -503,7 +503,7 @@ class Interval:
         async with aiohttp.ClientSession(headers=self._api_headers) as session:
             async with session.post(
                 self._get_api_address("notify"),
-                data=inputs.json(exclude_none=True, by_alias=True),
+                data=inputs.json(exclude_none=True),
             ) as resp:
                 try:
                     text = await resp.text()
@@ -539,7 +539,7 @@ class Interval:
                         SendIOCallInputs(
                             transaction_id=transaction_id,
                             io_call=io_call,
-                        ).dict(by_alias=True),
+                        ).dict(),
                     )
                     for transaction_id, io_call in items
                 ),
@@ -604,7 +604,7 @@ class Interval:
                         SendPageInputs(
                             page_key=page_key,
                             page=page,
-                        ).dict(by_alias=True),
+                        ).dict(),
                     )
                     for page_key, page in items
                 ),
@@ -668,8 +668,8 @@ class Interval:
                         "SEND_LOADING_CALL",
                         SendLoadingCallInputs(
                             transaction_id=transaction_id,
-                            **loading_state.dict(by_alias=True),
-                        ).dict(by_alias=True),
+                            **loading_state.dict(),
+                        ).dict(),
                     )
                     for transaction_id, loading_state in items
                 ),
@@ -836,14 +836,14 @@ class Interval:
                 return
 
             async def send(instruction: IORender):
-                io_call = instruction.json(exclude_unset=True, by_alias=True)
+                io_call = instruction.json()
                 self._pending_io_calls[inputs.transaction_id] = io_call
                 await self._send(
                     "SEND_IO_CALL",
                     SendIOCallInputs(
                         transaction_id=inputs.transaction_id,
                         io_call=io_call,
-                    ).dict(by_alias=True),
+                    ).dict(),
                 )
 
             async def send_loading_state(loading_state: LoadingState):
@@ -852,8 +852,8 @@ class Interval:
                     "SEND_LOADING_CALL",
                     SendLoadingCallInputs(
                         transaction_id=inputs.transaction_id,
-                        **loading_state.dict(by_alias=True),
-                    ).dict(by_alias=True),
+                        **loading_state.dict(),
+                    ).dict(),
                 )
 
             client = IOClient(
@@ -955,8 +955,8 @@ class Interval:
                         "MARK_TRANSACTION_COMPLETE",
                         MarkTransactionCompleteInputs(
                             transaction_id=inputs.transaction_id,
-                            result=result.json(by_alias=True),
-                        ).dict(by_alias=True),
+                            result=result.json(),
+                        ).dict(),
                     )
                 except IOError as ioerr:
                     if ioerr.kind == "CANCELED":
@@ -1064,7 +1064,7 @@ class Interval:
                     for _ in range(MAX_PAGE_RETRIES):
                         try:
                             serialized_page = page_layout.json(
-                                exclude_unset=True, by_alias=True
+                                exclude_unset=True,
                             )
                             self._pending_page_layouts[
                                 inputs.page_key
@@ -1074,7 +1074,7 @@ class Interval:
                                 SendPageInputs(
                                     page_key=inputs.page_key,
                                     page=serialized_page,
-                                ).dict(by_alias=True),
+                                ).dict(),
                             )
                             return
                         except Exception as err:
@@ -1249,8 +1249,8 @@ class Interval:
                         "SEND_PAGE",
                         SendPageInputs(
                             page_key=inputs.page_key,
-                            page=page_layout.json(by_alias=True),
-                        ).dict(by_alias=True),
+                            page=page_layout.json(),
+                        ).dict(),
                     )
                 finally:
                     io_var.reset(io_token)
@@ -1335,7 +1335,7 @@ class Interval:
                     sdk_name=SDK_NAME,
                     sdk_version=sdk_version,
                     timestamp=time_ms(),
-                ).dict(exclude_none=True, by_alias=True),
+                ).dict(exclude_none=True),
             )
         except Exception as err:
             self._log.debug(err)
@@ -1416,7 +1416,7 @@ class Interval:
                     assignee=assignee_email,
                     params=params,
                     params_meta=meta,
-                ).json(by_alias=True)
+                ).json()
             except ValueError as e:
                 raise IntervalError("Invalid input.") from e
 
@@ -1444,7 +1444,7 @@ class Interval:
     async def dequeue(self, id: str) -> QueuedAction:
         try:
             try:
-                data = DequeueActionInputs(id=id).json(by_alias=True)
+                data = DequeueActionInputs(id=id).json()
             except ValueError as err:
                 raise IntervalError("Invalid input.") from err
 
