@@ -18,6 +18,7 @@ from interval_sdk import superjson
 
 from ..io_schema import (
     ChoiceButtonConfig,
+    ChoiceReturn,
     ComponentMultipleProps,
     MethodDef,
     MN,
@@ -36,6 +37,10 @@ IOPromiseValidator: TypeAlias = Callable[
 ]
 IOGroupPromiseValidator: TypeAlias = Callable[
     [Unpack[GroupOutput]], Union[Awaitable[Optional[str]], str, None]
+]
+WithChoicesIOGroupPromiseValidator: TypeAlias = Callable[
+    [ChoiceReturn[Output_co]],
+    Union[Awaitable[Optional[str]], str, None],
 ]
 
 StateModel_co = TypeVar(
@@ -199,7 +204,7 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
 ComponentRenderer: TypeAlias = Callable[
     [
         list[Component],
-        Optional[IOPromiseValidator],
+        Optional[WithChoicesIOGroupPromiseValidator[list[Any]]],
         Optional[list[ChoiceButtonConfig]],
     ],
     Awaitable[tuple[list[Any], Optional[str]]],

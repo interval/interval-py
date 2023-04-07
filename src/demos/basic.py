@@ -1110,6 +1110,9 @@ async def redirect_url(io: IO, ctx: ActionContext):
 
 @interval.action
 async def with_choices(io: IO, ctx: ActionContext):
+    async def handle_validation(ret):
+        print("handle_validation??", ret)
+
     ret = (
         await io.input.number("A number, if you will")
         .optional()
@@ -1123,6 +1126,7 @@ async def with_choices(io: IO, ctx: ActionContext):
                 "Do nothing",
             ]
         )
+        .validate(handle_validation)
     )
 
     await ctx.log(ret.choice, ret.return_value)

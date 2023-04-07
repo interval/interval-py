@@ -2599,8 +2599,12 @@ class TestValidation:
         async def with_choices_validation(io: IO):
             ret = (
                 await io.input.text("Enter OK")
-                .with_choices(["Submit", "Continue"])
-                .validate(lambda val: "Should be OK." if val != "OK" else None)
+                .with_choices(["Submit", "Continue if OK"])
+                .validate(
+                    lambda val: "Should be OK."
+                    if val.choice == "Continue if OK" and val.return_value != "OK"
+                    else None
+                )
             )
 
             return {"choice": ret.choice, "return_value": ret.return_value}
@@ -2610,13 +2614,13 @@ class TestValidation:
 
         await expect(page.locator("text=Enter")).to_be_visible()
         await page.fill("input", "No")
-        await transactions.press_continue("Continue")
+        await transactions.press_continue("Continue if OK")
         await transactions.expect_validation_error("Should be OK.")
         await page.fill("input", "OK")
-        await transactions.press_continue("Submit")
+        await transactions.press_continue("Continue if OK")
 
         await transactions.expect_success(
-            choice="Submit",
+            choice="Continue if OK",
             return_value="OK",
         )
 
@@ -2630,8 +2634,12 @@ class TestValidation:
         async def with_choices_group_validation(io: IO):
             ret = (
                 await io.group(io.input.text("Enter OK"))
-                .with_choices(["Submit", "Continue"])
-                .validate(lambda val: "Should be OK." if val != "OK" else None)
+                .with_choices(["Submit", "Continue if OK"])
+                .validate(
+                    lambda ret: "Should be OK."
+                    if ret.choice == "Continue if OK" and ret.return_value[0] != "OK"
+                    else None
+                )
             )
 
             return {"choice": ret.choice, "return_value": ret.return_value[0]}
@@ -2641,12 +2649,12 @@ class TestValidation:
 
         await expect(page.locator("text=Enter")).to_be_visible()
         await page.fill("input", "No")
-        await transactions.press_continue("Continue")
+        await transactions.press_continue("Continue if OK")
         await transactions.expect_validation_error("Should be OK.")
         await page.fill("input", "OK")
-        await transactions.press_continue("Submit")
+        await transactions.press_continue("Continue if OK")
 
         await transactions.expect_success(
-            choice="Submit",
+            choice="Continue if OK",
             return_value="OK",
         )

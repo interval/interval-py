@@ -28,6 +28,7 @@ from .component import (
     IOGroupPromiseValidator,
     Output_co,
     IOPromiseValidator,
+    WithChoicesIOGroupPromiseValidator,
 )
 from ..io_schema import (
     ButtonTheme,
@@ -231,8 +232,14 @@ class OptionalIOPromise(InputIOPromise[Input_MN_co, Output_co]):
         )
 
 
+WithChoicesOptionalIOPromiseSelf = TypeVar(
+    "WithChoicesOptionalIOPromiseSelf", bound="WithChoicesOptionalIOPromise"
+)
+
+
 class WithChoicesOptionalIOPromise(OptionalIOPromise[Input_MN_co, Output_co]):
     _choice_buttons: list[ChoiceButtonConfig]
+    _validator: Optional[WithChoicesIOGroupPromiseValidator[Optional[Output_co]]]
 
     def __init__(
         self,
@@ -253,7 +260,7 @@ class WithChoicesOptionalIOPromise(OptionalIOPromise[Input_MN_co, Output_co]):
     @override
     def __await__(self) -> Generator[Any, None, ChoiceReturn[Optional[Output_co]]]:
         return_values, choice = yield from self._renderer(
-            [self._component], None, self._choice_buttons
+            [self._component], self._handle_validation, self._choice_buttons
         ).__await__()
         return ChoiceReturn(
             choice=cast(str, choice),
@@ -277,6 +284,34 @@ class WithChoicesOptionalIOPromise(OptionalIOPromise[Input_MN_co, Output_co]):
             for item in choices
         ]
         return self
+
+    @override
+    def validate(
+        self: WithChoicesOptionalIOPromiseSelf,
+        validator: Optional[WithChoicesIOGroupPromiseValidator[Optional[Output_co]]],
+    ) -> WithChoicesOptionalIOPromiseSelf:
+        self._component.validator = None
+        self._validator = validator
+        return self
+
+    async def _handle_validation(self, ret: ChoiceReturn[list[Any]]):
+        if self._validator is None:
+            return None
+
+        value = (
+            self._get_value(ret.return_value[0])
+            if self._value_getter is not None
+            else ret.return_value[0]
+        )
+
+        validate_ret = self._validator(
+            ChoiceReturn(choice=ret.choice, return_value=value)
+        )
+
+        return cast(
+            Optional[str],
+            await validate_ret if inspect.isawaitable(validate_ret) else validate_ret,
+        )
 
 
 DefaultValue = TypeVar("DefaultValue")
@@ -507,6 +542,7 @@ WithChoicesInputIOPromiseSelf = TypeVar(
 
 class WithChoicesInputIOPromise(InputIOPromise[Input_MN_co, Output_co]):
     _choice_buttons: list[ChoiceButtonConfig]
+    _validator: Optional[WithChoicesIOGroupPromiseValidator[Output_co]] = None
 
     def __init__(
         self,
@@ -525,7 +561,7 @@ class WithChoicesInputIOPromise(InputIOPromise[Input_MN_co, Output_co]):
     @override
     def __await__(self) -> Generator[Any, None, ChoiceReturn[Output_co]]:
         return_values, choice = yield from self._renderer(
-            [self._component], None, self._choice_buttons
+            [self._component], self._handle_validation, self._choice_buttons
         ).__await__()
         return ChoiceReturn(
             choice=cast(str, choice),
@@ -568,11 +604,45 @@ class WithChoicesInputIOPromise(InputIOPromise[Input_MN_co, Output_co]):
             else self
         )
 
+    @override
+    def validate(
+        self: WithChoicesInputIOPromiseSelf,
+        validator: Optional[WithChoicesIOGroupPromiseValidator[Output_co]],
+    ) -> WithChoicesInputIOPromiseSelf:
+        self._component.validator = None
+        self._validator = validator
+        return self
+
+    async def _handle_validation(self, ret: ChoiceReturn[list[Any]]):
+        if self._validator is None:
+            return None
+
+        value = (
+            self._get_value(ret.return_value[0])
+            if self._value_getter is not None
+            else ret.return_value[0]
+        )
+
+        validate_ret = self._validator(
+            ChoiceReturn(choice=ret.choice, return_value=value)
+        )
+
+        return cast(
+            Optional[str],
+            await validate_ret if inspect.isawaitable(validate_ret) else validate_ret,
+        )
+
+
+WithChoicesMultipleableIOPromiseSelf = TypeVar(
+    "WithChoicesMultipleableIOPromiseSelf", bound="WithChoicesMultipleableIOPromise"
+)
+
 
 class WithChoicesMultipleableIOPromise(
     MultipleableIOPromise[Multipleable_MN_co, Output_co, DefaultValue]
 ):
     _choice_buttons: list[ChoiceButtonConfig]
+    _validator: Optional[WithChoicesIOGroupPromiseValidator[Output_co]] = None
 
     def __init__(
         self,
@@ -591,7 +661,7 @@ class WithChoicesMultipleableIOPromise(
     @override
     def __await__(self) -> Generator[Any, None, ChoiceReturn[Output_co]]:
         return_values, choice = yield from self._renderer(
-            [self._component], None, self._choice_buttons
+            [self._component], self._handle_validation, self._choice_buttons
         ).__await__()
         return ChoiceReturn(
             choice=cast(str, choice),
@@ -609,11 +679,45 @@ class WithChoicesMultipleableIOPromise(
             choices=self._choice_buttons,
         )
 
+    @override
+    def validate(
+        self: WithChoicesMultipleableIOPromiseSelf,
+        validator: Optional[WithChoicesIOGroupPromiseValidator[Output_co]],
+    ) -> WithChoicesMultipleableIOPromiseSelf:
+        self._component.validator = None
+        self._validator = validator
+        return self
+
+    async def _handle_validation(self, ret: ChoiceReturn[list[Any]]):
+        if self._validator is None:
+            return None
+
+        value = (
+            self._get_value(ret.return_value[0])
+            if self._value_getter is not None
+            else ret.return_value[0]
+        )
+
+        validate_ret = self._validator(
+            ChoiceReturn(choice=ret.choice, return_value=value)
+        )
+
+        return cast(
+            Optional[str],
+            await validate_ret if inspect.isawaitable(validate_ret) else validate_ret,
+        )
+
+
+WithChoicesMultipleIOPromiseSelf = TypeVar(
+    "WithChoicesMultipleIOPromiseSelf", bound="WithChoicesMultipleIOPromise"
+)
+
 
 class WithChoicesMultipleIOPromise(
     MultipleIOPromise[Multipleable_MN_co, Output_co, DefaultValue]
 ):
     _choice_buttons: list[ChoiceButtonConfig]
+    _validator: Optional[WithChoicesIOGroupPromiseValidator[list[Output_co]]] = None
 
     def __init__(
         self,
@@ -632,11 +736,39 @@ class WithChoicesMultipleIOPromise(
     @override
     def __await__(self) -> Generator[Any, None, ChoiceReturn[list[Output_co]]]:
         return_values, choice = yield from self._renderer(
-            [self._component], None, self._choice_buttons
+            [self._component], self._handle_validation, self._choice_buttons
         ).__await__()
         return ChoiceReturn(
             choice=cast(str, choice),
             return_value=self._get_value(return_values[0]),
+        )
+
+    @override
+    def validate(
+        self: WithChoicesMultipleIOPromiseSelf,
+        validator: Optional[WithChoicesIOGroupPromiseValidator[list[Output_co]]],
+    ) -> WithChoicesMultipleIOPromiseSelf:
+        self._component.validator = None
+        self._validator = validator
+        return self
+
+    async def _handle_validation(self, ret: ChoiceReturn[list[Any]]):
+        if self._validator is None:
+            return None
+
+        value = (
+            self._get_value(ret.return_value[0])
+            if self._value_getter is not None
+            else ret.return_value[0]
+        )
+
+        validate_ret = self._validator(
+            ChoiceReturn(choice=ret.choice, return_value=value)
+        )
+
+        return cast(
+            Optional[str],
+            await validate_ret if inspect.isawaitable(validate_ret) else validate_ret,
         )
 
 
@@ -728,14 +860,14 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
                 ],
             )
 
-    async def _handle_validation(self, return_values: list[Any]) -> Optional[str]:
+    async def _handle_validation(self, ret: ChoiceReturn[list[Any]]) -> Optional[str]:
         if self._validator is None:
             return None
 
         if self._kw_io_promises is not None and len(self._kw_io_promises) > 0:
             io_promises = list(self._kw_io_promises.values())
             values = {
-                key: io_promises[index]._get_value(return_values[index])
+                key: io_promises[index]._get_value(ret.return_value[index])
                 for index, key in enumerate(self._kw_io_promises.keys())
             }
             ret = self._validator(**values)  # type: ignore
@@ -743,7 +875,7 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
             io_promises = self._io_promises
             values = [
                 io_promises[index]._get_value(v)
-                for index, v in enumerate(return_values)
+                for index, v in enumerate(ret.return_value)
             ]
             ret = self._validator(*values)  # type: ignore
         return cast(Optional[str], await ret if inspect.isawaitable(ret) else ret)
@@ -802,14 +934,25 @@ class IOGroupPromise(Generic[Unpack[GroupOutput]]):
 class WithChoicesIOGroupPromise(Generic[Unpack[GroupOutput]]):
     _inner_promise: IOGroupPromise[Unpack[GroupOutput]]
     _choice_buttons: Optional[list[ChoiceButtonConfig]] = None
+    _validator: Optional[
+        WithChoicesIOGroupPromiseValidator[tuple[Unpack[GroupOutput]]]
+    ] = None
 
     def __init__(
         self,
         inner_promise: IOGroupPromise[Unpack[GroupOutput]],
         choices: list[ChoiceButtonConfig],
+        validator: "Optional[IOGroupPromiseValidator[Unpack[GroupOutput]]]" = None,
     ):
         self._inner_promise = inner_promise
         self._choice_buttons = choices
+
+        if validator is not None:
+
+            def new_validator(ret: ChoiceReturn[tuple[Unpack[GroupOutput]]]):
+                return validator(*ret.return_value)
+
+            self._validator = new_validator
 
     @overload
     def __await__(
@@ -838,7 +981,7 @@ class WithChoicesIOGroupPromise(Generic[Unpack[GroupOutput]]):
         ):
             return_values, choice = yield from self._inner_promise._renderer(
                 [p._component for p in self._inner_promise._kw_io_promises.values()],
-                self._inner_promise._handle_validation,
+                self._handle_validation,
                 self._choice_buttons,
             ).__await__()
             res_dict = {
@@ -852,7 +995,7 @@ class WithChoicesIOGroupPromise(Generic[Unpack[GroupOutput]]):
         else:
             return_values, choice = yield from self._inner_promise._renderer(
                 [p._component for p in self._inner_promise._io_promises],
-                self._inner_promise._handle_validation,
+                self._handle_validation,
                 self._choice_buttons,
             ).__await__()
             return ChoiceReturn(
@@ -876,15 +1019,15 @@ class WithChoicesIOGroupPromise(Generic[Unpack[GroupOutput]]):
     @overload
     def validate(
         self: "WithChoicesIOGroupPromise[Unpack[GroupOutput]]",
-        validator: "Optional[IOGroupPromiseValidator[Unpack[GroupOutput]]]",
+        validator: "Optional[WithChoicesIOGroupPromiseValidator[tuple[Unpack[GroupOutput]]]]",
     ) -> "WithChoicesIOGroupPromise[Unpack[GroupOutput]]":
         ...
 
     def validate(  # type: ignore
         self: "WithChoicesIOGroupPromise[Unpack[GroupOutput]]",
-        validator: "Optional[IOGroupPromiseValidator[Unpack[GroupOutput]]]",
+        validator: "Optional[WithChoicesIOGroupPromiseValidator[tuple[Unpack[GroupOutput]]]]",
     ) -> "WithChoicesIOGroupPromise[Unpack[GroupOutput]]":
-        self._inner_promise._validator = validator
+        self._validator = validator
         return self
 
     def with_choices(
@@ -898,3 +1041,26 @@ class WithChoicesIOGroupPromise(Generic[Unpack[GroupOutput]]):
             for item in choices
         ]
         return self
+
+    async def _handle_validation(self, ret: ChoiceReturn[list[Any]]) -> Optional[str]:
+        if self._validator is None:
+            return None
+
+        if (
+            self._inner_promise._kw_io_promises is not None
+            and len(self._inner_promise._kw_io_promises) > 0
+        ):
+            io_promises = list(self._inner_promise._kw_io_promises.values())
+            values = {
+                key: io_promises[index]._get_value(ret.return_value[index])
+                for index, key in enumerate(self._inner_promise._kw_io_promises.keys())
+            }
+            ret = self._validator(ChoiceReturn(choice=ret.choice, return_value=values))  # type: ignore
+        else:
+            io_promises = self._inner_promise._io_promises
+            values = [
+                io_promises[index]._get_value(v)
+                for index, v in enumerate(ret.return_value)
+            ]
+            ret = self._validator(ChoiceReturn(choice=ret.choice, return_value=values))  # type: ignore
+        return cast(Optional[str], await ret if inspect.isawaitable(ret) else ret)
