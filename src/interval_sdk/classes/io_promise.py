@@ -1055,12 +1055,15 @@ class WithChoicesIOGroupPromise(Generic[Unpack[GroupOutput]]):
                 key: io_promises[index]._get_value(ret.return_value[index])
                 for index, key in enumerate(self._inner_promise._kw_io_promises.keys())
             }
-            ret = self._validator(ChoiceReturn(choice=ret.choice, return_value=values))  # type: ignore
+            validate_ret = self._validator(ChoiceReturn(choice=ret.choice, return_value=values))  # type: ignore
         else:
             io_promises = self._inner_promise._io_promises
             values = [
                 io_promises[index]._get_value(v)
                 for index, v in enumerate(ret.return_value)
             ]
-            ret = self._validator(ChoiceReturn(choice=ret.choice, return_value=values))  # type: ignore
-        return cast(Optional[str], await ret if inspect.isawaitable(ret) else ret)
+            validate_ret = self._validator(ChoiceReturn(choice=ret.choice, return_value=values))  # type: ignore
+        return cast(
+            Optional[str],
+            await validate_ret if inspect.isawaitable(validate_ret) else validate_ret,
+        )
