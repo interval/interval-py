@@ -868,16 +868,16 @@ class WithChoicesIOGroupPromise(Generic[Unpack[GroupOutput]]):
 
     @overload
     def validate(
-        self: "IOGroupPromise[KeyedIONamespace]",
+        self: "WithChoicesIOGroupPromise[KeyedIONamespace]",
         validator: "Callable[..., Optional[Union[str, Awaitable[Optional[str]]]]]",
-    ) -> "IOGroupPromise[Unpack[GroupOutput]]":
+    ) -> "WithChoicesIOGroupPromise[Unpack[GroupOutput]]":
         ...
 
     @overload
     def validate(
-        self: "IOGroupPromise[Unpack[GroupOutput]]",
+        self: "WithChoicesIOGroupPromise[Unpack[GroupOutput]]",
         validator: "Optional[IOGroupPromiseValidator[Unpack[GroupOutput]]]",
-    ) -> "IOGroupPromise[Unpack[GroupOutput]]":
+    ) -> "WithChoicesIOGroupPromise[Unpack[GroupOutput]]":
         ...
 
     def validate(  # type: ignore
