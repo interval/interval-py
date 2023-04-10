@@ -19,7 +19,10 @@ from pydantic.dataclasses import dataclass
 from .classes.logger import Logger, SdkAlert
 from .classes.transaction_loading_state import LoadingState, TransactionLoadingState
 
-from .util import SerializableRecord, isoformat_datetime, json_dumps_strip_none
+from .util import (
+    SerializableRecord,
+    isoformat_datetime,
+)
 from .types import BaseModel, GenericModel
 
 
@@ -79,9 +82,6 @@ class DeliveryInstruction(TypedDict):
 class DeliveryInstructionModel(BaseModel):
     to: str
     method: Optional[Literal["EMAIL", "SLACK"]] = None
-
-    class Config:
-        json_dumps = json_dumps_strip_none
 
 
 class NotifyInputs(BaseModel):
@@ -376,6 +376,12 @@ class ContextUser:
     last_name: Optional[str] = None
 
 
+class ContextUserModel(BaseModel):
+    email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
+
 @dataclass
 class ActionInfo:
     slug: str
@@ -496,7 +502,7 @@ class StartTransactionInputs(BaseModel):
     display_resolves_immediately: bool = False
     action: ActionInfo
     environment: ActionEnvironment
-    user: ContextUser
+    user: ContextUserModel
     params: SerializableRecord
     params_meta: Optional[Any] = None
 

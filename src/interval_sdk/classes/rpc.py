@@ -7,7 +7,6 @@ from pydantic import ValidationError, parse_obj_as
 from .logger import LogLevel, Logger
 from ..internal_rpc_schema import AnyRPCSchemaMethodName, DuplexMessage, RPCMethod
 from .isocket import ISocket
-from ..util import dict_keys_to_camel
 
 CallerSchemaMethodName = TypeVar("CallerSchemaMethodName", bound=AnyRPCSchemaMethodName)
 ResponderSchemaMethodName = TypeVar(
@@ -131,6 +130,7 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
             kind="RESPONSE",
         )
         prepared_response_text = message.json()
+        print(prepared_response_text)
 
         try:
             await self._communicator.send(prepared_response_text)
@@ -144,7 +144,7 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
 
         message = DuplexMessage(
             id=id,
-            data=dict_keys_to_camel(inputs),
+            data=inputs,
             method_name=method_name,
             kind="CALL",
         )

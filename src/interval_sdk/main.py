@@ -40,6 +40,7 @@ from .internal_rpc_schema import (
     ActionEnvironment,
     ClosePageInputs,
     CloseTransactionInputs,
+    ContextUser,
     DeliveryInstruction,
     DeliveryInstructionModel,
     EnqueueActionInputs,
@@ -835,7 +836,7 @@ class Interval:
                 return
 
             async def send(instruction: IORender):
-                io_call = instruction.json(exclude_unset=True)
+                io_call = instruction.json()
                 self._pending_io_calls[inputs.transaction_id] = io_call
                 await self._send(
                     "SEND_IO_CALL",
@@ -870,7 +871,7 @@ class Interval:
             action_ctx = ActionContext(
                 transaction_id=inputs.transaction_id,
                 logger=self._logger,
-                user=inputs.user,
+                user=ContextUser(**inputs.user.dict(by_alias=False)),
                 params=deserialize_dates(params),
                 environment=inputs.environment,
                 organization=self.organization,
@@ -1062,7 +1063,9 @@ class Interval:
 
                     for _ in range(MAX_PAGE_RETRIES):
                         try:
-                            serialized_page = page_layout.json(exclude_unset=True)
+                            serialized_page = page_layout.json(
+                                exclude_unset=True,
+                            )
                             self._pending_page_layouts[
                                 inputs.page_key
                             ] = serialized_page

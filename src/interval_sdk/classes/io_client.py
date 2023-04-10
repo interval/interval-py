@@ -8,11 +8,12 @@ from typing_extensions import TypeAlias, TypeVar, Any, Awaitable
 from .. import superjson
 from ..io_schema import (
     ChoiceButtonConfig,
+    ChoiceReturn,
     MethodName,
     IORender,
     IOResponse,
 )
-from .component import Component, IOPromiseValidator
+from .component import Component, WithChoicesIOGroupPromiseValidator
 from .io_error import IOError
 from .io import IO
 from .logger import Logger
@@ -79,7 +80,7 @@ class IOClient:
     async def render_components(
         self,
         components: list[Component],
-        group_validator: Optional[IOPromiseValidator] = None,
+        group_validator: Optional[WithChoicesIOGroupPromiseValidator] = None,
         choice_buttons: Optional[list[ChoiceButtonConfig]] = None,
     ) -> tuple[list[Any], Optional[str]]:
         if self._is_canceled:
@@ -159,7 +160,12 @@ class IOClient:
                         components[i].parse_return_value(val)
                         for i, val in enumerate(response.values)
                     ]
-                    resp = group_validator(parsed_values)
+                    resp = group_validator(
+                        ChoiceReturn(
+                            choice=cast(str, response.choice),
+                            return_value=cast(tuple[Any], parsed_values),
+                        )
+                    )
                     validation_error_message = cast(
                         Optional[str], await resp if inspect.isawaitable(resp) else resp
                     )

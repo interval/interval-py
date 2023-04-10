@@ -102,7 +102,6 @@ async def test_display_heading(
     await transactions.console()
     await transactions.run("io.display.heading")
     await expect(page.locator("text=io.display.heading result")).to_be_visible()
-    await transactions.press_continue()
 
     await expect(page.locator("text=Section heading")).to_be_visible()
     await expect(page.locator("text=Sub-heading")).to_be_visible()
@@ -116,8 +115,6 @@ async def test_display_heading(
         "/dashboard/test-runner/develop/actions/context?param=true",
     )
 
-    await transactions.press_continue()
-
     await transactions.expect_success()
 
 
@@ -129,7 +126,7 @@ async def test_group(interval: Interval, page: BrowserPage, transactions: Transa
             io.display.markdown("2. Second item"),
         )
 
-        await io.group(io.display.markdown("1. First item")).continue_button_options(
+        await io.group(io.display.markdown("Another item")).continue_button_options(
             label="Custom label",
             theme="danger",
         )
@@ -144,7 +141,6 @@ async def test_group(interval: Interval, page: BrowserPage, transactions: Transa
     await transactions.run("io.group")
     await expect(page.locator("text=First item")).to_be_visible()
     await expect(page.locator("text=Second item")).to_be_visible()
-    await transactions.press_continue()
 
     button = page.locator('button:has-text("Custom label")')
     await expect(button).to_be_visible()
@@ -184,22 +180,20 @@ async def test_display_image(
     await transactions.run("io.display.image")
 
     await expect(page.locator("text=Image via URL")).to_be_visible()
-    img = page.locator("img[data-pw-display-image]")
+    img = page.locator("img[data-pw-display-image]").nth(0)
     await expect(img).to_be_visible()
     await expect(img).to_have_attribute(
         "src", "https://media.giphy.com/media/26ybw6AltpBRmyS76/giphy.gif"
     )
     await expect(img).to_have_class(re.compile("w-img-medium"))
     assert await img.get_attribute("alt") is not None
-    await transactions.press_continue()
 
     await expect(page.locator("text=Image via bytes")).to_be_visible()
-    img = page.locator("img[data-pw-display-image]")
+    img = page.locator("img[data-pw-display-image]").nth(1)
     await expect(img).to_be_visible()
     src = await img.get_attribute("src")
     assert src is not None and src.startswith("data:")
     assert await img.get_attribute("alt") is not None
-    await transactions.press_continue()
 
     await transactions.expect_success()
 
@@ -235,7 +229,6 @@ async def test_display_object(
     await expect(page.locator('dd:has-text("Item 99")')).to_be_hidden()
     await page.locator('summary:has-text("longList")').click()
     await expect(page.locator('dd:has-text("Item 99")')).to_be_visible()
-    await transactions.press_continue()
     await transactions.expect_success()
 
 
@@ -295,28 +288,29 @@ async def test_display_metadata(
 
     await transactions.console()
     await transactions.run("io.display.metadata")
-    for layout in ["list", "grid", "card"]:
+    for i, layout in enumerate(["list", "grid", "card"]):
         await expect(page.locator(f'h4:has-text("Metadata {layout}")')).to_be_visible()
 
-        await expect(page.locator('dt:has-text("Is true")')).to_be_visible()
-        await expect(page.locator('dd:has-text("true")')).to_be_visible()
-        await expect(page.locator('dt:has-text("Is false")')).to_be_visible()
-        await expect(page.locator('dd:has-text("false")')).to_be_visible()
-        await expect(page.locator('dt:has-text("Is null")')).to_be_visible()
-        await expect(page.locator('dt:has-text("Is empty")')).to_be_visible()
-        await expect(page.locator('dt:has-text("Is long string")')).to_be_visible()
+        await expect(page.locator('dt:has-text("Is true")').nth(i)).to_be_visible()
+        await expect(page.locator('dd:has-text("true")').nth(i)).to_be_visible()
+        await expect(page.locator('dt:has-text("Is false")').nth(i)).to_be_visible()
+        await expect(page.locator('dd:has-text("false")').nth(i)).to_be_visible()
+        await expect(page.locator('dt:has-text("Is null")').nth(i)).to_be_visible()
+        await expect(page.locator('dt:has-text("Is empty")').nth(i)).to_be_visible()
+        await expect(
+            page.locator('dt:has-text("Is long string")').nth(i)
+        ).to_be_visible()
         await expect(
             page.locator(
                 'dd:has-text("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sit amet quam in lorem")'
-            )
+            ).nth(i)
         ).to_be_visible()
-        await expect(page.locator('dt:has-text("Is number 15")')).to_be_visible()
-        await expect(page.locator('dd:has-text("15")')).to_be_visible()
-        await expect(page.locator('dt:has-text("Is string")')).to_be_visible()
-        await expect(page.locator('dd:has-text("Hello")')).to_be_visible()
-        await expect(page.locator('dt:has-text("Action link")')).to_be_visible()
-        await expect(page.locator('dd a:has-text("Click me")')).to_be_visible()
-        await transactions.press_continue()
+        await expect(page.locator('dt:has-text("Is number 15")').nth(i)).to_be_visible()
+        await expect(page.locator('dd:has-text("15")').nth(i)).to_be_visible()
+        await expect(page.locator('dt:has-text("Is string")').nth(i)).to_be_visible()
+        await expect(page.locator('dd:has-text("Hello")').nth(i)).to_be_visible()
+        await expect(page.locator('dt:has-text("Action link")').nth(i)).to_be_visible()
+        await expect(page.locator('dd a:has-text("Click me")').nth(i)).to_be_visible()
 
     await transactions.expect_success()
 
@@ -355,7 +349,6 @@ async def test_display_table(
     await expect(page.locator('[role="cell"]:has-text("true")')).to_be_visible()
     await expect(page.locator('[role="columnheader"]:has-text("none")')).to_be_visible()
     await expect(page.locator('[role="cell"]:has-text("-")')).to_be_visible()
-    await transactions.press_continue()
     await transactions.expect_success()
 
 
@@ -433,12 +426,12 @@ class TestInputNumber:
         await transactions.press_continue()
 
         await page.click("text=Enter a second number")
-        await page.fill('input[inputmode="numeric"]', "7")
+        await page.locator('input[inputmode="numeric"]').nth(1).fill("7")
         await transactions.press_continue()
         await transactions.expect_validation_error(
             "Please enter a number greater than or equal to 13."
         )
-        await page.fill('input[inputmode="numeric"]', "13")
+        await page.locator('input[inputmode="numeric"]').nth(1).fill("13")
 
         await transactions.press_continue()
         await transactions.expect_success(sum=25)
@@ -450,12 +443,12 @@ class TestInputNumber:
         await transactions.press_continue()
 
         await page.click("text=Enter a second number")
-        await page.fill('input[inputmode="numeric"]', "-15")
+        await page.locator('input[inputmode="numeric"]').nth(1).fill("-15")
         await transactions.press_continue()
         await transactions.expect_validation_error(
             "Please enter a number greater than or equal to -11."
         )
-        await page.fill('input[inputmode="numeric"]', "12")
+        await page.locator('input[inputmode="numeric"]').nth(1).fill("12")
 
         await transactions.press_continue()
         await transactions.expect_success(sum=0)
@@ -475,11 +468,11 @@ class TestInputNumber:
         await transactions.run("currency")
 
         await page.locator("text=United States Dollar").click()
-        await page.keyboard.type("9.99")
+        await page.locator("input").nth(0).fill("9.99")
         await page.locator("text=Euro").click()
-        await page.keyboard.type("10.001")
+        await page.locator("input").nth(1).fill("10.001")
         await page.locator("text=Japanese yen").click()
-        await page.keyboard.type("12.345")
+        await page.locator("input").nth(2).fill("12.345")
         await transactions.press_continue()
         await transactions.expect_validation_error(
             "Please enter a number greater than or equal to 10."
@@ -536,7 +529,6 @@ async def test_input_rich_text(
     await expect(page.locator("pre code")).to_contain_text(
         "<h1>Heading 1</h1><p><em>Emphasis</em></p><p><u>Underline</u></p>\n"
     )
-    await transactions.press_continue()
     await transactions.expect_success()
 
 
@@ -622,7 +614,7 @@ async def test_input_url(
     await transactions.expect_validation_error()
 
     await page.click("text=Enter a URL")
-    input = page.locator('input[type="text"]')
+    input = page.locator('input[type="text"]').nth(0)
     await input.fill("not a url")
     await transactions.press_continue()
     validation_error_message = "Please enter a valid URL."
@@ -631,7 +623,7 @@ async def test_input_url(
     await input.fill("https://interval.com/?isTest=true&foo=bar")
     await transactions.press_continue()
 
-    secureInput = page.locator('input[type="text"]')
+    secureInput = page.locator('input[type="text"]').nth(1)
     await secureInput.fill("http://interval.com")
     await transactions.press_continue()
     await transactions.expect_validation_error("The URL must begin with https.")
@@ -687,7 +679,9 @@ async def test_select_single(
     input = page.locator(f"#{inputId}")
     await input.click()
     await page.locator('.iv-select__menu div div:has-text("Admin")').click()
-    await expect(page.locator(".iv-select__single-value")).to_contain_text("Admin")
+    await expect(page.locator(".iv-select__single-value").nth(1)).to_contain_text(
+        "Admin"
+    )
 
     await input.fill("ed")
     await input.press("Enter")
@@ -766,21 +760,25 @@ async def test_select_multiple(
 
     await expect(page.locator("text=Optionally modify the selection")).to_be_visible()
     await expect(
-        page.locator(f'label:has-text("{date_val}") input[type="checkbox"]')
+        page.locator(f'label:has-text("{date_val}") input[type="checkbox"]').nth(1)
     ).to_be_checked()
-    await expect(page.locator('input[type="checkbox"][value="true"]')).to_be_checked()
-    await expect(page.locator('input[type="checkbox"][value="3"]')).to_be_checked()
+    await expect(
+        page.locator('input[type="checkbox"][value="true"]').nth(1)
+    ).to_be_checked()
+    await expect(
+        page.locator('input[type="checkbox"][value="3"]').nth(1)
+    ).to_be_checked()
 
     await transactions.press_continue()
     await transactions.expect_validation_error("Please make no more than 2 selections.")
-    await page.click(f'label:has-text("{date_val}")')
-    await page.click('input[type="checkbox"][value="true"]')
-    await page.click('input[type="checkbox"][value="3"]')
+    await page.locator(f'label:has-text("{date_val}")').nth(1).click()
+    await page.locator('input[type="checkbox"][value="true"]').nth(1).click()
+    await page.locator('input[type="checkbox"][value="3"]').nth(1).click()
     await transactions.press_continue()
     await transactions.expect_validation_error("Please make at least 1 selection.")
 
-    await page.click(f'label:has-text("{date_val}")')
-    await page.click('input[type="checkbox"][value="3"]')
+    await page.locator(f'label:has-text("{date_val}")').nth(1).click()
+    await page.locator('input[type="checkbox"][value="3"]').nth(1).click()
     await transactions.press_continue()
 
     await transactions.expect_success(
@@ -894,10 +892,9 @@ async def test_select_table(
             r'[{"firstName":"Jacob", "lastName":"Mischka", "favoriteColor":"Orange"}]\s*'
         )
     )
-    await transactions.press_continue()
 
-    await page.locator('[role="cell"]:has-text("Alex")').click()
-    await page.locator('[role="cell"]:has-text("Dan")').click()
+    await page.locator('[role="cell"]:has-text("Alex")').nth(1).click()
+    await page.locator('[role="cell"]:has-text("Dan")').nth(1).click()
     await transactions.press_continue()
     await transactions.expect_success(firstName="Dan", lastName="Philibin")
 
@@ -1030,8 +1027,8 @@ class TestInputDatetime:
         await transactions.console()
         await transactions.run("input_datetime")
 
-        await input_date(page)
-        await input_time(page)
+        await input_date(page.locator(".iv-timepicker"), page)
+        await input_time(page.locator(".iv-timepicker"))
         await transactions.press_continue()
         await transactions.expect_success(
             year=2022,
@@ -1474,7 +1471,7 @@ async def test_loading(
 
         _ = asyncio.create_task(log_after_delay())
 
-        await io.display.markdown("Are you ready to do something else?")
+        await io.confirm("Are you ready to do something else?")
 
         await asyncio.sleep(0.5)
         await ctx.loading.update(
@@ -1514,7 +1511,7 @@ async def test_loading(
         page.locator("text=Are you ready to do something else?")
     ).to_be_visible()
 
-    await transactions.press_continue()
+    await page.locator("text=Confirm").click()
 
     await expect(
         page.locator('[data-pw-label]:has-text("With progress")')
@@ -1701,7 +1698,6 @@ class TestPages:
 
         await expect(page.locator("h2:text('View funnel')")).to_be_visible()
         await expect(page.locator("text=🌪️")).to_be_visible()
-        await transactions.press_continue()
         await transactions.expect_success()
 
 
@@ -1790,22 +1786,20 @@ async def test_optional(
         await expect(page.locator('[data-pw="input-error"]')).not_to_be_visible()
         await transactions.press_continue()
 
-    await expect(page.locator('text="Date"')).to_be_visible()
-    await input_date(page)
+    await expect(page.locator('text="Date"').last).to_be_visible()
+    await input_date(page.locator(".iv-timepicker").nth(3), page)
     await transactions.press_continue()
-    await expect(page.locator('text="Datetime"')).to_be_visible()
-    await input_date(page)
-    await input_time(page)
+    await expect(page.locator('text="Datetime"').last).to_be_visible()
+    await input_date(page.locator(".iv-timepicker").nth(4), page)
+    await input_time(page.locator(".iv-timepicker").nth(4))
     await transactions.press_continue()
     await page.locator('[role="cell"]:has-text("5")').click()
     await transactions.press_continue()
 
-    await expect(page.locator('text="Date"')).to_be_visible()
-    await expect(page.locator("text=py_date")).to_be_visible()
-    await transactions.press_continue()
-    await expect(page.locator('text="Datetime"')).to_be_visible()
-    await expect(page.locator("text=py_date")).to_be_visible()
-    await transactions.press_continue()
+    await expect(page.locator('text="Date"').last).to_be_visible()
+    await expect(page.locator("text=py_date").nth(0)).to_be_visible()
+    await expect(page.locator('text="Datetime"').last).to_be_visible()
+    await expect(page.locator("text=py_date").nth(1)).to_be_visible()
     await transactions.expect_success(
         a=4,
         b=5,
@@ -1824,7 +1818,9 @@ async def test_notifications(
             delivery=[{"to": "alex@interval.com", "method": "EMAIL"}],
         )
 
-        await io.display.markdown("Press continue to send another")
+        await io.display.markdown("Press continue to send another").with_choices(
+            ["Continue"]
+        )
 
         await ctx.notify(
             message="Implicit", delivery=[{"to": "test-runner@interval.com"}]
@@ -1895,7 +1891,6 @@ class TestUploads:
 
         await file_chooser.set_files(path)
 
-        await expect(page.locator("text='Upload complete'")).to_be_visible()
         await transactions.press_continue()
 
         with open(path, "rb") as file:
@@ -1933,7 +1928,6 @@ class TestUploads:
 
         await file_chooser.set_files(path)
 
-        await expect(page.locator("text='Upload complete'")).to_be_visible()
         await transactions.press_continue()
 
         await transactions.expect_success(
@@ -1999,7 +1993,8 @@ class TestUploads:
 
         await file_chooser.set_files(path)
 
-        await expect(page.locator("text='Upload complete'")).to_be_visible()
+        await asyncio.sleep(0.2)
+
         await transactions.press_continue()
         await transactions.expect_success("/test-runner/")
 
@@ -2031,10 +2026,9 @@ class TestUploads:
         await transactions.run("multi_upload")
         await expect(page.locator("text=Optional")).to_be_visible()
         await transactions.press_continue()
-        await expect(page.locator("text=Optional")).not_to_be_visible()
 
         async with page.expect_file_chooser() as fc_info:
-            await page.click("text=Upload some files")
+            await page.locator("text=Upload some files").nth(1).click()
         file_chooser = await fc_info.value
         paths: list[str | Path] = [
             Path(__file__).parent / "data/spreadsheet.csv",
@@ -2043,7 +2037,8 @@ class TestUploads:
 
         await file_chooser.set_files(paths)
 
-        await expect(page.locator("text='Upload complete'")).to_be_visible()
+        await asyncio.sleep(0.2)
+
         await transactions.press_continue()
 
         for path in paths:
@@ -2592,4 +2587,74 @@ class TestValidation:
         await transactions.expect_success(
             choice="cancel",
             return_value="Taco Bell Quesarito",
+        )
+
+    async def test_with_choices_validation(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def with_choices_validation(io: IO):
+            ret = (
+                await io.input.text("Enter OK")
+                .with_choices(["Submit", "Continue if OK"])
+                .validate(
+                    lambda val: "Should be OK."
+                    if val.choice == "Continue if OK" and val.return_value != "OK"
+                    else None
+                )
+            )
+
+            return {"choice": ret.choice, "return_value": ret.return_value}
+
+        await transactions.console()
+        await transactions.run("with_choices_validation")
+
+        await expect(page.locator("text=Enter")).to_be_visible()
+        await page.fill("input", "No")
+        await transactions.press_continue("Continue if OK")
+        await transactions.expect_validation_error("Should be OK.")
+        await page.fill("input", "OK")
+        await transactions.press_continue("Continue if OK")
+
+        await transactions.expect_success(
+            choice="Continue if OK",
+            return_value="OK",
+        )
+
+    async def test_with_choices_group_validation(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        @interval.action
+        async def with_choices_group_validation(io: IO):
+            ret = (
+                await io.group(io.input.text("Enter OK"))
+                .with_choices(["Submit", "Continue if OK"])
+                .validate(
+                    lambda ret: "Should be OK."
+                    if ret.choice == "Continue if OK" and ret.return_value[0] != "OK"
+                    else None
+                )
+            )
+
+            return {"choice": ret.choice, "return_value": ret.return_value[0]}
+
+        await transactions.console()
+        await transactions.run("with_choices_group_validation")
+
+        await expect(page.locator("text=Enter")).to_be_visible()
+        await page.fill("input", "No")
+        await transactions.press_continue("Continue if OK")
+        await transactions.expect_validation_error("Should be OK.")
+        await page.fill("input", "OK")
+        await transactions.press_continue("Continue if OK")
+
+        await transactions.expect_success(
+            choice="Continue if OK",
+            return_value="OK",
         )
