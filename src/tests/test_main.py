@@ -584,7 +584,7 @@ async def test_confirm_identity(
     await page.locator('button:has-text("Verify")').click()
     await expect(page.locator("text=Second")).to_be_hidden()
     await expect(page.locator("text=Third")).to_be_visible()
-    await page.locator('button:has-text("Cancel")').click()
+    await page.locator('[data-iv-dialog] button:has-text("Cancel")').click()
 
     await transactions.expect_success(
         first=True,
