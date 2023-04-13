@@ -101,7 +101,11 @@ redirect_page_test = Page(name="Redirector")
 async def handle_redirect_page():
     ctx = ctx_var.get()
 
-    await ctx.redirect(route="context", params={"from": "redirect_page_test"})
+    await ctx.redirect(
+        route="context",
+        params={"from": "redirect_page_test"},
+        replace=True,
+    )
 
     return Layout()
 

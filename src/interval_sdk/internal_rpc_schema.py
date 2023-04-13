@@ -112,6 +112,7 @@ class SendRedirectInputs(BaseModel):
     url: Optional[str] = None
     route: Optional[str] = None
     params: Optional[SerializableRecord] = None
+    replace: Optional[bool] = None
 
 
 class MarkTransactionCompleteInputs(BaseModel):
@@ -465,6 +466,7 @@ class ActionContext:
         url: Optional[str] = None,
         route: Optional[str] = None,
         params: Optional[SerializableRecord] = None,
+        replace: Optional[bool] = None,
     ):
         if (url is None and route is None) or (url is not None and route is not None):
             self._logger.error("Must specify exactly one of either `url` or `route`.")
@@ -479,6 +481,9 @@ class ActionContext:
             inputs.route = route
             if params is not None:
                 inputs.params = params
+
+        if replace is not None:
+            inputs.replace = replace
 
         await self._send_redirect(inputs)
 
@@ -525,6 +530,7 @@ class PageContext:
         url: Optional[str] = None,
         route: Optional[str] = None,
         params: Optional[SerializableRecord] = None,
+        replace: Optional[bool] = None,
     ):
         if (url is None and route is None) or (url is not None and route is not None):
             self._logger.error("Must specify exactly one of either `url` or `route`.")
@@ -539,6 +545,9 @@ class PageContext:
             inputs.route = route
             if params is not None:
                 inputs.params = params
+
+        if replace is not None:
+            inputs.replace = replace
 
         await self._send_redirect(inputs)
 
