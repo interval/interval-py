@@ -1040,6 +1040,7 @@ class Interval:
                     self._logger.error(e)
 
             async def send_page():
+                page_layout = None
                 if page is not None:
                     page_layout = BasicLayoutModel(
                         kind="BASIC",
@@ -1064,31 +1065,32 @@ class Interval:
                     if menu_items is not None:
                         page_layout.menu_items = menu_items
 
-                    for _ in range(MAX_PAGE_RETRIES):
-                        try:
-                            serialized_page = page_layout.json(
-                                exclude_unset=True,
-                            )
+                for _ in range(MAX_PAGE_RETRIES):
+                    try:
+                        serialized_page = (
+                            page_layout.json(exclude_unset=True, by_alias=True)
+                            if page_layout is not None
+                            else None
+                        )
+                        if serialized_page is not None:
                             self._pending_page_layouts[
                                 inputs.page_key
                             ] = serialized_page
-                            await self._send(
-                                "SEND_PAGE",
-                                SendPageInputs(
-                                    page_key=inputs.page_key,
-                                    page=serialized_page,
-                                ).dict(),
-                            )
-                            return
-                        except Exception as err:
-                            self._logger.debug("Failed sending page", err)
-                            self._logger.debug(
-                                "Retrying in", self._retry_interval_seconds, "seconds"
-                            )
-                            await asyncio.sleep(self._retry_interval_seconds)
-                    raise IntervalError(
-                        "Unsuccessful sending page, max retries exceeded."
-                    )
+                        await self._send(
+                            "SEND_PAGE",
+                            SendPageInputs(
+                                page_key=inputs.page_key,
+                                page=serialized_page,
+                            ).dict(),
+                        )
+                        return
+                    except Exception as err:
+                        self._logger.debug("Failed sending page", err)
+                        self._logger.debug(
+                            "Retrying in", self._retry_interval_seconds, "seconds"
+                        )
+                        await asyncio.sleep(self._retry_interval_seconds)
+                raise IntervalError("Unsuccessful sending page, max retries exceeded.")
 
             async def handle_send(instruction: IORender):
                 nonlocal render_instruction
@@ -1131,6 +1133,12 @@ class Interval:
                         )
 
                     page = resp
+
+                    if page is None:
+                        if send_page_task is None:
+                            send_page_task = loop.create_task(send_page())
+                            send_page_task.add_done_callback(on_page_sent)
+                        return
 
                     if page.title is not None:
                         if isfunction(page.title):

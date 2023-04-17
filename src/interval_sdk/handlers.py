@@ -14,9 +14,9 @@ IntervalActionHandler: TypeAlias = Union[
 ]
 
 IntervalPageHandler: TypeAlias = Union[
-    Callable[[], Awaitable[Layout]],
-    Callable[[IO.Display], Awaitable[Layout]],
-    Callable[[IO.Display, PageContext], Awaitable[Layout]],
+    Callable[[], Awaitable[Union[Layout, None]]],
+    Callable[[IO.Display], Awaitable[Union[Layout, None]]],
+    Callable[[IO.Display, PageContext], Awaitable[Union[Layout, None]]],
 ]
 
 IOResponseHandler: TypeAlias = Callable[[IOResponse], Awaitable[None]]

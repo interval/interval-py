@@ -196,6 +196,32 @@ async def sub_action():
 
 interval.routes.add("new_page", page)
 
+empty_page = Page(name="Empty page")
+
+
+@empty_page.handle
+async def empty_page_handler(display: IO.Display):
+    ctx = ctx_var.get()
+    if "show_layout" in ctx.params:
+        return Layout(
+            title="Contents!",
+            children=[display.markdown("Children!")],
+            menu_items=[{"route": "empty_page", "label": "Hide layout"}],
+        )
+
+
+@empty_page.action
+async def child_action(io: IO):
+    return "Hello!"
+
+
+@empty_page.action
+async def show_layout(io: IO, ctx: ActionContext):
+    await ctx.redirect(route="empty_page", params={"show_layout": 1})
+
+
+interval.routes.add("empty_page", empty_page)
+
 
 @interval.action
 async def input_right_after_display(io: IO):
