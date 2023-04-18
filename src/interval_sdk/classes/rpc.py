@@ -130,7 +130,6 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
             kind="RESPONSE",
         )
         prepared_response_text = message.json()
-        print(prepared_response_text)
 
         try:
             await self._communicator.send(prepared_response_text)
@@ -139,7 +138,13 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
             self._logger.print_exception(err)
             raise err
 
-    async def send(self, method_name: CallerSchemaMethodName, inputs: dict[str, Any]):
+    async def send(
+        self,
+        method_name: CallerSchemaMethodName,
+        inputs: dict[str, Any],
+        *,
+        timeout_factor: Optional[int] = None
+    ):
         id = generate_id()
 
         message = DuplexMessage(
@@ -159,7 +164,10 @@ class DuplexRPCClient(Generic[CallerSchemaMethodName, ResponderSchemaMethodName]
             except BaseException as err:
                 self._logger.error("Error sending message", err)
 
-        task = loop.create_task(self._communicator.send(message.json()), name="send")
+        task = loop.create_task(
+            self._communicator.send(message.json(), timeout_factor=timeout_factor),
+            name="send",
+        )
         task.add_done_callback(handle_exceptions)
 
         raw_response_text = await fut

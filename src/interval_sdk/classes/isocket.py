@@ -182,9 +182,12 @@ class ISocket:
                 self._logger.error("Error getting message from queue?", e)
                 self._logger.print_exception(e)
 
-    async def send(self, data: str) -> None:
+    async def send(self, data: str, *, timeout_factor: Optional[int] = None) -> None:
         if self._ws is None:
             raise NotConnectedError
+
+        if timeout_factor is None:
+            timeout_factor = 1
 
         loop = asyncio.get_running_loop()
 
@@ -196,7 +199,7 @@ class ISocket:
         )
         await self._out_queue.put(message)
 
-        await asyncio.wait_for(fut, self._send_timeout)
+        await asyncio.wait_for(fut, self._send_timeout * timeout_factor)
 
     async def _handle_close(self, code: int, reason: str):
         self.is_closed = True

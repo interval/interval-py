@@ -138,6 +138,8 @@ class Interval:
     _api_key: str
 
     _retry_interval_seconds: float = 3
+    _max_resend_attempts: int = 10
+    _send_timeout_seconds: float = 5
     _ping_timeout_seconds: float = 5
     _ping_interval_seconds: float = 30
     _close_unresponsive_connection_timeout_seconds: float = 180
@@ -178,6 +180,8 @@ class Interval:
         endpoint: Optional[str] = None,
         log_level: LogLevel = "info",
         retry_interval: float = 3,
+        max_resend_attempts: int = 10,
+        send_timeout: float = 5,
         ping_timeout: float = 5,
         ping_interval: float = 30,
         close_unresponsive_connection_timeout: float = 180,
@@ -194,6 +198,8 @@ class Interval:
         )
 
         self._retry_interval_seconds = retry_interval
+        self._max_resend_attempts = max_resend_attempts
+        self._send_timeout_seconds = send_timeout
         self._ping_timeout_seconds = ping_timeout
         self._ping_interval_seconds = ping_interval
         self._close_unresponsive_connection_timeout_seconds = (
@@ -370,16 +376,27 @@ class Interval:
         if self._server_rpc is None:
             raise NotInitializedError("server_rpc not initialized")
 
-        while True:
+        for attempt_index in range(self._max_resend_attempts):
+            attempt_number = attempt_index + 1
+            sleep_time_before_retrying = self._retry_interval_seconds * attempt_number
             if self._is_connected:
                 try:
-                    return await self._server_rpc.send(method_name, inputs)
+                    return await self._server_rpc.send(
+                        method_name, inputs, timeout_factor=attempt_number
+                    )
                 except Exception as err:
-                    self._log.debug("RPC call timed out, retrying in 3s...", err)
+                    self._log.debug(
+                        f"RPC call timed out, retrying in {sleep_time_before_retrying}s...",
+                        err,
+                    )
             else:
-                self._log.debug("Not connected, retrying again in 3s...")
+                self._log.debug(
+                    f"Not connected, retrying again in {sleep_time_before_retrying}s..."
+                )
 
-            await asyncio.sleep(self._retry_interval_seconds)
+            await asyncio.sleep(sleep_time_before_retrying)
+
+        raise IntervalError("Maximum failed resend attempts reached, aborting.")
 
     async def _send_log(self, transaction_id: str, index: int, *args):
         if len(args) == 0:
@@ -530,7 +547,8 @@ class Interval:
                 except KeyError:
                     pass
 
-        while len(to_resend) > 0:
+        attempt_number = 0
+        while len(to_resend) > 0 and attempt_number <= self._max_resend_attempts:
             items = list(to_resend.items())
             responses = await asyncio.gather(
                 *(
@@ -573,11 +591,12 @@ class Interval:
                         except KeyError:
                             pass
 
-            if len(to_resend) > 0:
-                self._logger.debug(
-                    f"Trying again in {self._retry_interval_seconds}s..."
-                )
-                await asyncio.sleep(self._retry_interval_seconds)
+            attempt_number += 1
+
+            if len(to_resend) > 0 and attempt_number <= self._max_resend_attempts:
+                retry_sleep_seconds = self._retry_interval_seconds * attempt_number
+                self._logger.debug(f"Trying again in {retry_sleep_seconds}s...")
+                await asyncio.sleep(retry_sleep_seconds)
 
     async def _resend_pending_page_layouts(
         self, page_keys_to_resend: Optional[list[str]] = None
@@ -595,7 +614,8 @@ class Interval:
                 except KeyError:
                     pass
 
-        while len(to_resend) > 0:
+        attempt_number = 1
+        while len(to_resend) > 0 and attempt_number <= self._max_resend_attempts:
             items = list(to_resend.items())
             responses = await asyncio.gather(
                 *(
@@ -638,11 +658,12 @@ class Interval:
                         except KeyError:
                             pass
 
-            if len(to_resend) > 0:
-                self._logger.debug(
-                    f"Trying again in {self._retry_interval_seconds}s..."
-                )
-                await asyncio.sleep(self._retry_interval_seconds)
+            attempt_number += 1
+
+            if len(to_resend) > 0 and attempt_number <= self._max_resend_attempts:
+                retry_sleep_seconds = self._retry_interval_seconds * attempt_number
+                self._logger.debug(f"Trying again in {retry_sleep_seconds}s...")
+                await asyncio.sleep(retry_sleep_seconds)
 
     async def _resend_transaction_loading_states(
         self, ids_to_resend: Optional[list[str]] = None
@@ -660,7 +681,8 @@ class Interval:
                 except KeyError:
                     pass
 
-        while len(to_resend) > 0:
+        attempt_number = 1
+        while len(to_resend) > 0 and attempt_number <= self._retry_interval_seconds:
             items = list(to_resend.items())
             responses = await asyncio.gather(
                 (
@@ -709,11 +731,12 @@ class Interval:
                         except KeyError:
                             pass
 
-            if len(to_resend) > 0:
-                self._logger.debug(
-                    f"Trying again in {self._retry_interval_seconds}s..."
-                )
-                await asyncio.sleep(self._retry_interval_seconds)
+            attempt_number += 1
+
+            if len(to_resend) > 0 and attempt_number <= self._max_resend_attempts:
+                retry_sleep_seconds = self._retry_interval_seconds * attempt_number
+                self._logger.debug(f"Trying again in {retry_sleep_seconds}s...")
+                await asyncio.sleep(retry_sleep_seconds)
 
     def _close_transaction(self, transaction_id: str):
         self._logger.debug("Closing transaction", transaction_id)
@@ -799,6 +822,7 @@ class Interval:
             on_close=on_close,
             log_level=self._logger.log_level,
             num_producers=self._num_isocket_producers,
+            send_timeout=self._send_timeout_seconds,
         )
 
         await self._isocket.connect()
