@@ -1,4 +1,4 @@
-import asyncio, json, signal, math
+import asyncio, json, signal, math, sys
 from datetime import date, datetime
 from typing import Iterable, Optional, cast
 from typing_extensions import Literal, NotRequired
@@ -21,6 +21,7 @@ from interval_sdk.io_schema import (
     RichSelectOption,
     RenderableSearchResult,
 )
+from interval_sdk.main import IntervalErrorProps
 
 prod = Interval(
     "live_N47qd1BrOMApNPmVd0BiDZQRLkocfdJKzvt8W6JT5ICemrAN",
@@ -28,11 +29,17 @@ prod = Interval(
     log_level="debug",
 )
 
+
+def handle_error(props: IntervalErrorProps):
+    print("on_error", props, file=sys.stderr)
+
+
 interval = Interval(
     "alex_dev_kcLjzxNFxmGLf0aKtLVhuckt6sziQJtxFOdtM19tBrMUp5mj",
     endpoint="ws://localhost:3000/websocket",
     log_level="debug",
     num_message_producers=5,
+    on_error=handle_error,
 )
 
 
