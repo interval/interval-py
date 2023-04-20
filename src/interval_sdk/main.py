@@ -112,6 +112,10 @@ class IntervalErrorProps:
     error: BaseException
     route: str
     route_definition: Union[Action, Page, None]
+    environment: ActionEnvironment
+    user: ContextUser
+    params: SerializableRecord
+    organization: OrganizationDef
 
 
 class Interval:
@@ -956,6 +960,10 @@ class Interval:
                                     route_definition=self._routes.get(
                                         inputs.action.slug, None
                                     ),
+                                    environment=action_ctx.environment,
+                                    user=action_ctx.user,
+                                    params=action_ctx.params,
+                                    organization=action_ctx.organization,
                                 )
                             )
 
@@ -1173,6 +1181,10 @@ class Interval:
                                             route_definition=self._routes.get(
                                                 inputs.page.slug, None
                                             ),
+                                            environment=page_ctx.environment,
+                                            user=page_ctx.user,
+                                            params=page_ctx.params,
+                                            organization=page_ctx.organization,
                                         )
                                     )
                                 errors.append(page_error(err, "title"))
@@ -1202,6 +1214,10 @@ class Interval:
                                                 route_definition=self._routes.get(
                                                     inputs.page.slug, None
                                                 ),
+                                                environment=page_ctx.environment,
+                                                user=page_ctx.user,
+                                                params=page_ctx.params,
+                                                organization=page_ctx.organization,
                                             )
                                         )
                                     errors.append(page_error(err, "description"))
@@ -1227,6 +1243,10 @@ class Interval:
                                             route_definition=self._routes.get(
                                                 inputs.page.slug, None
                                             ),
+                                            environment=page_ctx.environment,
+                                            user=page_ctx.user,
+                                            params=page_ctx.params,
+                                            organization=page_ctx.organization,
                                         )
                                     )
                                 errors.append(page_error(err, "description"))
@@ -1256,6 +1276,10 @@ class Interval:
                                                 route_definition=self._routes.get(
                                                     inputs.page.slug, None
                                                 ),
+                                                environment=page_ctx.environment,
+                                                user=page_ctx.user,
+                                                params=page_ctx.params,
+                                                organization=page_ctx.organization,
                                             )
                                         )
                                     errors.append(page_error(err, "description"))
@@ -1301,6 +1325,10 @@ class Interval:
                                             route_definition=self._routes.get(
                                                 inputs.page.slug, None
                                             ),
+                                            environment=page_ctx.environment,
+                                            user=page_ctx.user,
+                                            params=page_ctx.params,
+                                            organization=page_ctx.organization,
                                         )
                                     )
                                 if err.__cause__ is not None:
@@ -1323,6 +1351,10 @@ class Interval:
                                             route_definition=self._routes.get(
                                                 inputs.page.slug, None
                                             ),
+                                            environment=page_ctx.environment,
+                                            user=page_ctx.user,
+                                            params=page_ctx.params,
+                                            organization=page_ctx.organization,
                                         )
                                     )
                                 errors.append(page_error(err, layout_key="children"))
@@ -1342,6 +1374,10 @@ class Interval:
                                 route_definition=self._routes.get(
                                     inputs.page.slug, None
                                 ),
+                                environment=page_ctx.environment,
+                                user=page_ctx.user,
+                                params=page_ctx.params,
+                                organization=page_ctx.organization,
                             )
                         )
                     errors.append(page_error(err, layout_key="children"))
@@ -1375,6 +1411,10 @@ class Interval:
                                 route_definition=self._routes.get(
                                     inputs.page.slug, None
                                 ),
+                                environment=page_ctx.environment,
+                                user=page_ctx.user,
+                                params=page_ctx.params,
+                                organization=page_ctx.organization,
                             )
                         )
                     errors.append(page_error(err, layout_key="children"))
