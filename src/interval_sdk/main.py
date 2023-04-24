@@ -107,6 +107,17 @@ except:
     pass
 
 
+@dataclass
+class IntervalErrorProps:
+    error: BaseException
+    route: str
+    route_definition: Union[Action, Page, None]
+    environment: ActionEnvironment
+    user: ContextUser
+    params: SerializableRecord
+    organization: OrganizationDef
+
+
 class Interval:
     class Routes:
         _interval: "Interval"
@@ -172,6 +183,7 @@ class Interval:
     _page_definitions: list[PageDefinition]
     _action_handlers: dict[str, IntervalActionHandler]
     _page_handlers: dict[str, IntervalPageHandler]
+    _on_error: Optional[Callable[[IntervalErrorProps], None]]
 
     def __init__(
         self,
@@ -187,6 +199,7 @@ class Interval:
         close_unresponsive_connection_timeout: float = 180,
         reinitialize_batch_timeout: float = 0.2,
         num_message_producers: int = 1,
+        on_error: Optional[Callable[[IntervalErrorProps], None]] = None,
     ):
         self._api_key = api_key
         if endpoint is not None:
@@ -219,6 +232,8 @@ class Interval:
         self._page_definitions = []
         self._action_handlers = {}
         self._page_handlers = {}
+        self._on_error = on_error
+
         self._logger = Logger(log_level=log_level, prefix=self.__class__.__name__)
         self.routes = Interval.Routes(self)
 
@@ -932,7 +947,7 @@ class Interval:
                             resp = await handler(client.io, action_ctx)  # type: ignore
                         else:
                             raise IntervalError(
-                                "handler accepts invalid number of arguments"
+                                "Handler accepts invalid number of arguments"
                             )
 
                         if resp is not None and not isinstance(
@@ -961,6 +976,21 @@ class Interval:
                     except Exception as err:
                         self._log.error("Error in action handler", err)
                         self._log.print_exception(err)
+                        if self._on_error is not None:
+                            self._on_error(
+                                IntervalErrorProps(
+                                    error=err,
+                                    route=inputs.action.slug,
+                                    route_definition=self._routes.get(
+                                        inputs.action.slug, None
+                                    ),
+                                    environment=action_ctx.environment,
+                                    user=action_ctx.user,
+                                    params=action_ctx.params,
+                                    organization=action_ctx.organization,
+                                )
+                            )
+
                         result = ActionResult(
                             status="FAILURE",
                             data=IOFunctionReturnModel.parse_obj(
@@ -1170,6 +1200,20 @@ class Interval:
                                 page.title = page.title()
                             except Exception as err:
                                 self._logger.error(err)
+                                if self._on_error is not None:
+                                    self._on_error(
+                                        IntervalErrorProps(
+                                            error=err,
+                                            route=inputs.page.slug,
+                                            route_definition=self._routes.get(
+                                                inputs.page.slug, None
+                                            ),
+                                            environment=page_ctx.environment,
+                                            user=page_ctx.user,
+                                            params=page_ctx.params,
+                                            organization=page_ctx.organization,
+                                        )
+                                    )
                                 errors.append(page_error(err, "title"))
 
                         if iscoroutine(page.title):
@@ -1188,6 +1232,21 @@ class Interval:
                                 try:
                                     page.title = task.result()
                                 except Exception as err:
+                                    self._logger.error(err)
+                                    if self._on_error is not None:
+                                        self._on_error(
+                                            IntervalErrorProps(
+                                                error=err,
+                                                route=inputs.page.slug,
+                                                route_definition=self._routes.get(
+                                                    inputs.page.slug, None
+                                                ),
+                                                environment=page_ctx.environment,
+                                                user=page_ctx.user,
+                                                params=page_ctx.params,
+                                                organization=page_ctx.organization,
+                                            )
+                                        )
                                     errors.append(page_error(err, "description"))
 
                                 if send_page_task is None:
@@ -1203,6 +1262,20 @@ class Interval:
                                 page.description = page.description()
                             except Exception as err:
                                 self._logger.error(err)
+                                if self._on_error is not None:
+                                    self._on_error(
+                                        IntervalErrorProps(
+                                            error=err,
+                                            route=inputs.page.slug,
+                                            route_definition=self._routes.get(
+                                                inputs.page.slug, None
+                                            ),
+                                            environment=page_ctx.environment,
+                                            user=page_ctx.user,
+                                            params=page_ctx.params,
+                                            organization=page_ctx.organization,
+                                        )
+                                    )
                                 errors.append(page_error(err, "description"))
 
                         if iscoroutine(page.description):
@@ -1221,6 +1294,21 @@ class Interval:
                                 try:
                                     page.description = task.result()
                                 except Exception as err:
+                                    self._logger.error(err)
+                                    if self._on_error is not None:
+                                        self._on_error(
+                                            IntervalErrorProps(
+                                                error=err,
+                                                route=inputs.page.slug,
+                                                route_definition=self._routes.get(
+                                                    inputs.page.slug, None
+                                                ),
+                                                environment=page_ctx.environment,
+                                                user=page_ctx.user,
+                                                params=page_ctx.params,
+                                                organization=page_ctx.organization,
+                                            )
+                                        )
                                     errors.append(page_error(err, "description"))
                                 if send_page_task is None:
                                     send_page_task = loop.create_task(send_page())
@@ -1256,6 +1344,20 @@ class Interval:
                                 )
                             except IOError as err:
                                 self._logger.error(err)
+                                if self._on_error is not None:
+                                    self._on_error(
+                                        IntervalErrorProps(
+                                            error=err,
+                                            route=inputs.page.slug,
+                                            route_definition=self._routes.get(
+                                                inputs.page.slug, None
+                                            ),
+                                            environment=page_ctx.environment,
+                                            user=page_ctx.user,
+                                            params=page_ctx.params,
+                                            organization=page_ctx.organization,
+                                        )
+                                    )
                                 if err.__cause__ is not None:
                                     errors.append(
                                         page_error(err.__cause__, layout_key="children")
@@ -1268,6 +1370,20 @@ class Interval:
                                     send_page_task.add_done_callback(on_page_sent)
                             except Exception as err:
                                 self._logger.error(err)
+                                if self._on_error is not None:
+                                    self._on_error(
+                                        IntervalErrorProps(
+                                            error=err,
+                                            route=inputs.page.slug,
+                                            route_definition=self._routes.get(
+                                                inputs.page.slug, None
+                                            ),
+                                            environment=page_ctx.environment,
+                                            user=page_ctx.user,
+                                            params=page_ctx.params,
+                                            organization=page_ctx.organization,
+                                        )
+                                    )
                                 errors.append(page_error(err, layout_key="children"))
                                 if send_page_task is None:
                                     send_page_task = loop.create_task(send_page())
@@ -1277,6 +1393,20 @@ class Interval:
                         self._page_futures[render_task.get_name()] = render_task
                 except Exception as err:
                     self._logger.error("Error in page:", err)
+                    if self._on_error is not None:
+                        self._on_error(
+                            IntervalErrorProps(
+                                error=err,
+                                route=inputs.page.slug,
+                                route_definition=self._routes.get(
+                                    inputs.page.slug, None
+                                ),
+                                environment=page_ctx.environment,
+                                user=page_ctx.user,
+                                params=page_ctx.params,
+                                organization=page_ctx.organization,
+                            )
+                        )
                     errors.append(page_error(err, layout_key="children"))
                     page_layout = BasicLayoutModel(kind="BASIC", errors=errors)
 
@@ -1299,6 +1429,21 @@ class Interval:
                 except asyncio.CancelledError:
                     pass
                 except BaseException as err:
+                    self._logger.error(err)
+                    if self._on_error is not None:
+                        self._on_error(
+                            IntervalErrorProps(
+                                error=err,
+                                route=inputs.page.slug,
+                                route_definition=self._routes.get(
+                                    inputs.page.slug, None
+                                ),
+                                environment=page_ctx.environment,
+                                user=page_ctx.user,
+                                params=page_ctx.params,
+                                organization=page_ctx.organization,
+                            )
+                        )
                     errors.append(page_error(err, layout_key="children"))
 
             task = loop.create_task(handle_page(), name="handle_page")
