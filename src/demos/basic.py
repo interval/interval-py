@@ -754,6 +754,7 @@ async def table_test(io: IO):
                         "url": f"https://avatars.dicebear.com/api/pixel-art/{row['b']}.svg?scale=96&translateY=10",
                         "size": "small",
                     },
+                    "highlightColor": "red",
                 },
             },
             "c",

@@ -347,6 +347,10 @@ PassthroughSearchResultValue = TypeVar(
     "PassthroughSearchResultValue", bound=SearchResultValue
 )
 
+HighlightColor: TypeAlias = Literal[
+    "red", "orange", "yellow", "green", "blue", "purple", "pink", "gray"
+]
+
 
 class TableRowValueObject(TypedDict):
     label: NotRequired[TableRowValuePrimitive]
@@ -355,6 +359,7 @@ class TableRowValueObject(TypedDict):
     route: NotRequired[str]
     params: NotRequired[SerializableRecord]
     image: NotRequired[ImageDefinition]
+    highlightColor: NotRequired[HighlightColor]
 
 
 class TableRowValueObjectModel(BaseModel):
@@ -364,6 +369,7 @@ class TableRowValueObjectModel(BaseModel):
     route: Optional[str] = None
     params: Optional[SerializableRecordModel] = None
     image: Optional[ImageDefinitionModel] = None
+    highlightColor: Optional[HighlightColor] = None
 
 
 TableRowValue: TypeAlias = Union[TableRowValueObject, TableRowValuePrimitive]
