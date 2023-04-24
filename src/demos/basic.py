@@ -661,6 +661,45 @@ async def asynchronous():
     )
 
 
+table_async_table = Page("Async Table Page")
+
+
+@table_async_table.handle
+async def handle_async_table_handle():
+    io = io_var.get()
+
+    async def get_data(state: TableDataFetcherState):
+        return [
+            {"a": i + state.offset, "b": i * 10} for i in range(state.page_size)
+        ], 100
+
+    return Layout(
+        children=[
+            io.display.table(
+                "Async",
+                get_data=get_data,
+                row_menu_items=lambda row: [
+                    {
+                        "label": "Link",
+                        "url": "https://interval.com",
+                    },
+                    {
+                        "label": "Danger action",
+                        "theme": "danger",
+                        "route": "context",
+                        "params": {"message": f"Hi from {row['a']}!"},
+                    },
+                ],
+                is_sortable=False,
+                is_filterable=False,
+            )
+        ]
+    )
+
+
+tables.add("table_async_table", table_async_table)
+
+
 @tables.action
 async def table_test(io: IO):
     data = [

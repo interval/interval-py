@@ -1077,7 +1077,9 @@ class IO:
                 props: DisplayTableProps,
             ) -> DisplayTableProps:
                 if get_data is not None:
-                    fetched = await get_data(TableDataFetcherState(**state.dict()))
+                    fetched = await get_data(
+                        TableDataFetcherState(**state.dict(by_alias=False))
+                    )
                     if isinstance(fetched, list):
                         fetched = FetchedTableData(fetched)
                     elif isinstance(fetched, tuple):
@@ -1196,7 +1198,9 @@ class IO:
                 props: DisplayGridProps,
             ) -> DisplayGridProps:
                 if get_data is not None:
-                    fetched = await get_data(GridDataFetcherState(**state.dict()))
+                    fetched = await get_data(
+                        GridDataFetcherState(**state.dict(by_alias=False))
+                    )
                     if isinstance(fetched, list):
                         fetched = FetchedGridData(fetched)
                     elif isinstance(fetched, tuple):
