@@ -112,6 +112,7 @@ class SendRedirectInputs(BaseModel):
     url: Optional[str] = None
     route: Optional[str] = None
     params: Optional[SerializableRecord] = None
+    replace: Optional[bool] = None
 
 
 class MarkTransactionCompleteInputs(BaseModel):
@@ -465,6 +466,7 @@ class ActionContext:
         url: Optional[str] = None,
         route: Optional[str] = None,
         params: Optional[SerializableRecord] = None,
+        replace: Optional[bool] = None,
     ):
         if (url is None and route is None) or (url is not None and route is not None):
             self._logger.error("Must specify exactly one of either `url` or `route`.")
@@ -480,6 +482,9 @@ class ActionContext:
             if params is not None:
                 inputs.params = params
 
+        if replace is not None:
+            inputs.replace = replace
+
         await self._send_redirect(inputs)
 
 
@@ -488,13 +493,63 @@ class PageInfo:
     slug: str
 
 
-@dataclass
 class PageContext:
     environment: ActionEnvironment
     user: ContextUser
     params: SerializableRecord
     organization: OrganizationDef
     page: PageInfo
+
+    _page_key: str
+    _logger: Logger
+    _send_redirect: Callable[[SendRedirectInputs], Awaitable[None]]
+
+    def __init__(
+        self,
+        page_key: str,
+        logger: Logger,
+        environment: ActionEnvironment,
+        user: ContextUser,
+        params: SerializableRecord,
+        organization: OrganizationDef,
+        page: PageInfo,
+        send_redirect: Callable[[SendRedirectInputs], Awaitable[None]],
+    ):
+        self._page_key = page_key
+        self._logger = logger
+        self._send_redirect = send_redirect
+
+        self.environment = environment
+        self.user = user
+        self.params = params
+        self.organization = organization
+        self.page = page
+
+    async def redirect(
+        self,
+        url: Optional[str] = None,
+        route: Optional[str] = None,
+        params: Optional[SerializableRecord] = None,
+        replace: Optional[bool] = None,
+    ):
+        if (url is None and route is None) or (url is not None and route is not None):
+            self._logger.error("Must specify exactly one of either `url` or `route`.")
+
+        inputs = SendRedirectInputs(
+            transaction_id=self._page_key,
+        )
+
+        if url is not None:
+            inputs.url = url
+        if route is not None:
+            inputs.route = route
+            if params is not None:
+                inputs.params = params
+
+        if replace is not None:
+            inputs.replace = replace
+
+        await self._send_redirect(inputs)
 
 
 class StartTransactionInputs(BaseModel):

@@ -94,6 +94,26 @@ def get_state_image(state: str) -> str:
     return f"https://geology.com/state-map/maps/{str(state).lower().replace(' ', '-')}-county-map.gif"
 
 
+redirect_page_test = Page(name="Redirector")
+
+
+@redirect_page_test.handle
+async def handle_redirect_page():
+    ctx = ctx_var.get()
+
+    await ctx.redirect(
+        route="context",
+        params={"from": "redirect_page_test"},
+        replace=True,
+    )
+
+    return Layout()
+
+
+interval.routes.add("redirect_page_test", redirect_page_test)
+prod.routes.add("redirect_page_test", redirect_page_test)
+
+
 @interval.action
 async def group_types(io: IO):
     resp = await io.group(

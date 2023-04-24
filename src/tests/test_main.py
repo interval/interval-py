@@ -1594,6 +1594,68 @@ class TestRedirects:
         await page.wait_for_url(re.compile("redirect_dest"))
         await transactions.expect_success(message=message)
 
+    async def test_redirect_page(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        redirect_page = Page(name="Redirect from a page")
+
+        @redirect_page.handle
+        async def redirect_page_handler():
+            ctx = ctx_var.get()
+            await ctx.redirect(
+                route="redirect_page_dest",
+                params={"message": "From a page!"},
+                replace=True,
+            )
+            return Layout()
+
+        interval.routes.add("redirect_page", redirect_page)
+
+        @interval.action
+        async def redirect_page_dest():
+            ctx = ctx_var.get()
+            return ctx.params
+
+        await transactions.console()
+        await transactions.navigate("redirect_page")
+
+        await page.wait_for_url(re.compile("redirect_page_dest"))
+        await transactions.expect_success(message="From a page!")
+        await page.go_back()
+        await page.wait_for_url(re.compile("actions$"))
+
+    async def test_replace(
+        self,
+        interval: Interval,
+        page: BrowserPage,
+        transactions: Transaction,
+    ):
+        message = "Press back, I dare you"
+
+        @interval.action
+        async def redirect_replace(io: IO, ctx: ActionContext):
+            await ctx.redirect(
+                route="redirect_replace_dest",
+                params={"message": message},
+                replace=True,
+            )
+
+        @interval.action
+        async def redirect_replace_dest():
+            ctx = ctx_var.get()
+            return ctx.params
+
+        await transactions.console()
+        await transactions.run("redirect_replace")
+
+        await page.wait_for_url(re.compile("redirect_replace_dest"))
+        await transactions.expect_success(message=message)
+        await page.click('.btn a:has-text("Go back")')
+        await page.wait_for_url(re.compile("actions$"))
+
 
 class TestUnlisted:
     async def test_action(

@@ -1036,11 +1036,14 @@ class Interval:
                 params = superjson.deserialize(params, inputs.params_meta)
 
             page_ctx = PageContext(
+                page_key=inputs.page_key,
+                logger=self._logger,
                 user=inputs.user,
                 params=deserialize_dates(inputs.params),
                 environment=inputs.environment,
                 organization=self.organization,
                 page=inputs.page,
+                send_redirect=self._send_redirect,
             )
 
             page: Optional[Layout] = None
