@@ -121,9 +121,14 @@ def columns_builder(
     log_missing_column: Optional[Callable[[str], None]] = None,
 ) -> list[TableColumnDef]:
     # using a dict instead of a set because dicts are ordered and sets aren't
-    data_columns: dict[str, None] = (
-        {col: None for row in data for col in row.keys()} if data is not None else {}
-    )
+    try:
+        data_columns: dict[str, None] = (
+            {col: None for row in data for col in row.keys()}
+            if data is not None
+            else {}
+        )
+    except:
+        data_columns = {}
 
     if columns:
 
