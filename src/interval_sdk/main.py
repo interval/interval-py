@@ -1061,6 +1061,16 @@ class Interval:
                 self._logger.error("No page handler found for slug", inputs.page.slug)
                 return OpenPageReturnsError(message="No page handler found.")
 
+            async def send_loading_state(loading_state: LoadingState):
+                self._transaction_loading_states[inputs.page_key] = loading_state
+                await self._send(
+                    "SEND_LOADING_CALL",
+                    SendLoadingCallInputs(
+                        transaction_id=inputs.page_key,
+                        **loading_state.dict(),
+                    ).dict(),
+                )
+
             params = inputs.params
             if params is not None and inputs.params_meta is not None:
                 params = superjson.deserialize(params, inputs.params_meta)
@@ -1074,6 +1084,10 @@ class Interval:
                 organization=self.organization,
                 page=inputs.page,
                 send_redirect=self._send_redirect,
+                loading=TransactionLoadingState(
+                    logger=self._logger,
+                    sender=send_loading_state,
+                ),
             )
 
             page: Optional[Layout] = None

@@ -183,6 +183,13 @@ async def handler(display: IO.Display):
         raise Exception("Bad description!")
         return "Description??"
 
+    await asyncio.sleep(2)
+
+    ctx = ctx_var.get()
+    await ctx.loading.start("Loading page...")
+
+    await asyncio.sleep(2)
+
     return Layout(
         title=title,
         menu_items=[

@@ -499,6 +499,7 @@ class PageContext:
     params: SerializableRecord
     organization: OrganizationDef
     page: PageInfo
+    loading: TransactionLoadingState
 
     _page_key: str
     _logger: Logger
@@ -514,6 +515,7 @@ class PageContext:
         organization: OrganizationDef,
         page: PageInfo,
         send_redirect: Callable[[SendRedirectInputs], Awaitable[None]],
+        loading: TransactionLoadingState,
     ):
         self._page_key = page_key
         self._logger = logger
@@ -524,6 +526,7 @@ class PageContext:
         self.params = params
         self.organization = organization
         self.page = page
+        self.loading = loading
 
     async def redirect(
         self,
