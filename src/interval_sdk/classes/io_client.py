@@ -44,6 +44,7 @@ class IOClient:
 
         self.io = IO(
             self.render_components,
+            logger=logger,
             display_resolves_immediately=display_resolves_immediately,
         )
 

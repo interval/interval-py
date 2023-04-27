@@ -592,6 +592,17 @@ async def io_display_metadata(io: IO):
         default_value="list",
     )
 
+    def sync_fn():
+        return "Called it"
+
+    async def async_fn():
+        await asyncio.sleep(1.5)
+        return "Done!"
+
+    async def another():
+        await asyncio.sleep(2)
+        return "Slept!"
+
     await io.display.metadata(
         "User info",
         layout=layout,
@@ -599,6 +610,9 @@ async def io_display_metadata(io: IO):
             {"label": "Name", "value": "Alex"},
             {"label": "Email", "value": "alex@interval.com"},
             {"label": "Friends", "value": 24},
+            {"label": "Function", "value": sync_fn},
+            {"label": "Async function", "value": async_fn},
+            {"label": "Task", "value": another()},
         ],
     )
 

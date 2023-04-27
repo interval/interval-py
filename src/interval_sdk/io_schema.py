@@ -36,6 +36,7 @@ from .types import (
     GenericModel,
 )
 from .util import (
+    Eventual,
     ObjectLiteral,
     json_dumps_strip_none,
     json_loads_strip_none,
@@ -676,11 +677,11 @@ MetadataLayout: TypeAlias = Literal["card", "list", "grid"]
 
 class MetaItemDefinition(TypedDict):
     label: str
-    value: NotRequired[Optional[ObjectLiteral]]
-    url: NotRequired[str]
-    image: NotRequired[ImageDefinition]
-    route: NotRequired[str]
-    params: NotRequired[SerializableRecord]
+    value: NotRequired[Optional[Eventual[ObjectLiteral]]]
+    url: NotRequired[Eventual[str]]
+    image: NotRequired[Eventual[ImageDefinition]]
+    route: NotRequired[Eventual[str]]
+    params: NotRequired[Eventual[SerializableRecord]]
 
 
 class MetaItemDefinitionModel(BaseModel):

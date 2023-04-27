@@ -1,5 +1,6 @@
 import asyncio
 import base64
+from inspect import isawaitable
 import sys
 from dataclasses import dataclass
 from datetime import date, datetime, time
@@ -17,6 +18,8 @@ from typing import (
 )
 from typing_extensions import Never
 from urllib.parse import ParseResult, urlparse
+
+from interval_sdk.classes.logger import Logger
 
 from ..io_schema import (
     ButtonItem,
@@ -144,6 +147,7 @@ class IO:
     @dataclass
     class Input:
         _renderer: ComponentRenderer
+        _logger: Logger
         _display_resolves_immediately: Optional[bool]
 
         def text(
@@ -536,6 +540,7 @@ class IO:
     @dataclass
     class Select:
         _renderer: ComponentRenderer
+        _logger: Logger
         _display_resolves_immediately: Optional[bool]
 
         def table(
@@ -863,6 +868,7 @@ class IO:
     @dataclass
     class Display:
         _renderer: ComponentRenderer
+        _logger: Logger
         _display_resolves_immediately: Optional[bool]
 
         def code(
@@ -946,15 +952,69 @@ class IO:
             data: Iterable[MetaItemDefinition],
             layout: MetadataLayout = "grid",
         ) -> DisplayIOPromise[Literal["DISPLAY_METADATA"], None]:
+            eventual_props = ["value", "url", "image", "route", "params"]
+
+            new_data: list[MetaItemDefinition] = []
+            model_data: list[MetaItemDefinitionModel] = []
+
+            for item in data:
+                new_item: MetaItemDefinition = {"label": item["label"]}
+                model_item = MetaItemDefinitionModel(label=item["label"])
+
+                for prop in eventual_props:
+                    if prop in item:
+                        prop_val = item[prop]
+                        if callable(prop_val):
+                            prop_val = prop_val()
+
+                        new_item[prop] = prop_val
+
+                        if isawaitable(prop_val):
+                            model_item.__setattr__(prop, None)
+                        else:
+                            model_item.__setattr__(prop, prop_val)
+
+                new_data.append(new_item)
+                model_data.append(model_item)
+
             c = Component(
                 method_name="DISPLAY_METADATA",
                 label=label,
                 initial_props=DisplayMetadataProps(
                     layout=layout,
-                    data=[MetaItemDefinitionModel.parse_obj(item) for item in data],
+                    data=model_data,
                 ),
                 display_resolves_immediately=self._display_resolves_immediately,
             )
+
+            loop = asyncio.get_running_loop()
+            for i, item in enumerate(new_data):
+                for prop in eventual_props:
+                    if prop in item:
+                        if isawaitable(item[prop]):
+
+                            async def handle_wait(
+                                item: MetaItemDefinition,
+                                prop: str,
+                                i: int,
+                            ):
+                                try:
+                                    value = await item[prop]
+                                    item[prop] = value
+                                    model_data[i].__setattr__(prop, value)
+                                    await c.set_props(
+                                        DisplayMetadataProps(
+                                            layout=layout, data=model_data
+                                        )
+                                    )
+                                except Exception as err:
+                                    self._logger.error(
+                                        "Error updating metadata with result from async task:",
+                                        err,
+                                    )
+
+                            _task = loop.create_task(handle_wait(item, prop, i))
+
             return DisplayIOPromise(c, renderer=self._renderer)
 
         def object(
@@ -1289,6 +1349,7 @@ class IO:
     @dataclass
     class Experimental:
         _renderer: ComponentRenderer
+        _logger: Logger
         _display_resolves_immediately: Optional[bool]
 
         def spreadsheet(
@@ -1314,6 +1375,7 @@ class IO:
             )
             return InputIOPromise(c, renderer=self._renderer)
 
+    _logger: Logger
     _renderer: ComponentRenderer
     _display_resolves_immediately: Optional[bool]
     input: Input
@@ -1325,21 +1387,31 @@ class IO:
         self,
         renderer: ComponentRenderer,
         *,
+        logger: Logger,
         display_resolves_immediately: Optional[bool] = None,
     ):
+        self._logger = logger
         self._renderer = renderer
         self._display_resolves_immediately = display_resolves_immediately
         self.input = self.Input(
-            renderer, _display_resolves_immediately=display_resolves_immediately
+            renderer,
+            _logger=logger,
+            _display_resolves_immediately=display_resolves_immediately,
         )
         self.select = self.Select(
-            renderer, _display_resolves_immediately=display_resolves_immediately
+            renderer,
+            _logger=logger,
+            _display_resolves_immediately=display_resolves_immediately,
         )
         self.display = self.Display(
-            renderer, _display_resolves_immediately=display_resolves_immediately
+            renderer,
+            _logger=logger,
+            _display_resolves_immediately=display_resolves_immediately,
         )
         self.experimental = self.Experimental(
-            renderer, _display_resolves_immediately=display_resolves_immediately
+            renderer,
+            _logger=logger,
+            _display_resolves_immediately=display_resolves_immediately,
         )
 
     def confirm(
