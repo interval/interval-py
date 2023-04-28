@@ -1012,7 +1012,7 @@ class IO:
                                     )
                                 except Exception as err:
                                     self._logger.error(
-                                        "Error updating metadata with result from async task:",
+                                        f'Error updating metadata field "{prop}" with result from async task:',
                                         err,
                                     )
 

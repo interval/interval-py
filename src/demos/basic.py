@@ -603,6 +603,9 @@ async def io_display_metadata(io: IO):
         await asyncio.sleep(2)
         return "Slept!"
 
+    async def raises_error():
+        raise Exception("Oops!")
+
     await io.display.metadata(
         "User info",
         layout=layout,
@@ -614,6 +617,7 @@ async def io_display_metadata(io: IO):
             {"label": "None", "value": None},
             {"label": "Function", "value": sync_fn},
             {"label": "Async function", "value": async_fn},
+            {"label": "Raises an error", "value": raises_error},
             {"label": "Task", "value": another()},
         ],
     )
