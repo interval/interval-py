@@ -19,7 +19,10 @@ from typing import (
 from typing_extensions import Never
 from urllib.parse import ParseResult, urlparse
 
+from pydantic.fields import Undefined
+
 from interval_sdk.classes.logger import Logger
+from interval_sdk.superjson.transformer import UNDEFINED
 
 from ..io_schema import (
     ButtonItem,
@@ -970,8 +973,8 @@ class IO:
                         new_item[prop] = prop_val
 
                         if isawaitable(prop_val):
-                            model_item.__setattr__(prop, None)
-                        else:
+                            model_item.__setattr__(prop, UNDEFINED)
+                        elif prop_val is not None:
                             model_item.__setattr__(prop, prop_val)
 
                 new_data.append(new_item)

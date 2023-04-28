@@ -609,7 +609,9 @@ async def io_display_metadata(io: IO):
         data=[
             {"label": "Name", "value": "Alex"},
             {"label": "Email", "value": "alex@interval.com"},
+            {"label": "Not defined"},
             {"label": "Friends", "value": 24},
+            {"label": "None", "value": None},
             {"label": "Function", "value": sync_fn},
             {"label": "Async function", "value": async_fn},
             {"label": "Task", "value": another()},
