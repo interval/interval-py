@@ -137,7 +137,7 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
         try:
             parsed = parse_obj_as(self.schema.state, dict_keys_to_snake(value))
             if self._handle_state_change:
-                self.set_props(
+                await self.set_props(
                     await self._handle_state_change(
                         parsed,
                         parse_obj_as(
