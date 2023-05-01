@@ -993,30 +993,27 @@ class IO:
             loop = asyncio.get_running_loop()
             for i, item in enumerate(new_data):
                 for prop in eventual_props:
-                    if prop in item:
-                        if isawaitable(item[prop]):
+                    if prop in item and isawaitable(item[prop]):
 
-                            async def handle_wait(
-                                item: MetaItemDefinition,
-                                prop: str,
-                                i: int,
-                            ):
-                                try:
-                                    value = await item[prop]
-                                    item[prop] = value
-                                    model_data[i].__setattr__(prop, value)
-                                    await c.set_props(
-                                        DisplayMetadataProps(
-                                            layout=layout, data=model_data
-                                        )
-                                    )
-                                except Exception as err:
-                                    self._logger.error(
-                                        f'Error updating metadata field "{prop}" with result from async task:',
-                                        err,
-                                    )
+                        async def handle_wait(
+                            item: MetaItemDefinition,
+                            prop: str,
+                            i: int,
+                        ):
+                            try:
+                                value = await item[prop]
+                                item[prop] = value
+                                model_data[i].__setattr__(prop, value)
+                                await c.set_props(
+                                    DisplayMetadataProps(layout=layout, data=model_data)
+                                )
+                            except Exception as err:
+                                self._logger.error(
+                                    f'Error updating metadata field "{prop}" with result from async task:',
+                                    err,
+                                )
 
-                            _task = loop.create_task(handle_wait(item, prop, i))
+                        _task = loop.create_task(handle_wait(item, prop, i))
 
             return DisplayIOPromise(c, renderer=self._renderer)
 
