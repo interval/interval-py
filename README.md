@@ -1,36 +1,37 @@
-# interval-sdk
+<a href="https://interval.com">
+  <img alt="Interval" width="100" height="100" style="border-radius: 6px;" src="https://interval.com/img/readme-assets/interval-avatar.png">
+</a>
 
-## Installation
+# Interval Python SDK
 
-Install using pip, (or your python package manager of choice):
+[![pypi version](https://img.shields.io/pypi/v/interval-sdk?style=flat)](https://pypi.org/project/interval-sdk) [![Documentation](https://img.shields.io/badge/documentation-informational)](https://interval.com/docs) [![Twitter](https://img.shields.io/twitter/follow/useinterval.svg?color=%2338A1F3&label=twitter&style=flat)](https://twitter.com/useinterval) [![Discord](https://img.shields.io/badge/discord-join-blueviolet)](https://interval.com/discord)
 
-```
-pip install interval-sdk
-```
+[Interval](https://interval.com) lets you quickly build internal web apps (think: customer support tools, admin panels, etc.) just by writing backend Python code.
 
-## API
+This is our Python SDK which connects to the interval.com web app. If you don't have an Interval account, you can [create one here](https://interval.com/signup). All core features are free to use.
 
-*Note:* Proper documentation is in progress!
+## Why choose Interval?
 
-See `src/demos/basic.py` and `src/tests` for a better overview, but in short:
+_"Python code > no-code"_
+
+Interval is an alternative to no-code/low-code UI builders. Modern frontend development is inherently complicated, and teams rightfully want to spend minimal engineering resources on internal dashboards. No-code tools attempt to solve this problem by allowing you to build UIs in a web browser without writing any frontend code.
+
+We don't think this is the right solution. **Building UIs for mission-critical tools in your web browser** — often by non-technical teammates, outside of your codebase, without versioning or code review — **is an anti-pattern.** Apps built in this manner are brittle and break in unexpected ways.
+
+With Interval, **all of the code for generating your web UIs lives within your app's codebase.** Tools built with Interval (we call these [actions](https://interval.com/docs/concepts/actions)) are just asynchronous functions that run in your backend. Because these are plain old functions, you can access the complete power of your Python app. You can loop, conditionally branch, access shared functions, and so on. When you need to request input or display output, `await` any of our [I/O methods](https://interval.com/docs/io-methods/) to present a form to the user and your script will pause execution until input is received.
+
+Here's a simple app with a single "Hello, world" action:
 
 ```python
 from interval_sdk import Interval, IO
 
 # Initialize Interval
-interval = Interval("API_KEY")
+interval = Interval(api_key="<YOUR API KEY>")
 
-# Add an action using the function name as the slug
 @interval.action
-async def hello_interval():
-    return {"hello": "from python!"}
-
-# Add an action using a custom slug (can contain hyphens) and additional configuration
-@interval.action(slug='echo-message', unlisted=True)
-async def echo_message(io: IO):
-    [message] = await io.group(io.input.text("Hello!", help_text="From python!"))
-
-    return {"message": message}
+async def hello_world(io: IO):
+    name = await io.input.text("Your name")
+    return f"Hello, {name}"
 
 
 # Synchronously listen, blocking forever
@@ -42,25 +43,6 @@ To not block, interval can also be run asynchronously using
 
 The task will complete as soon as connection to Interval completes, so you
 likely want to run forever or run alongside another permanent task.
-
-```python
-import asyncio
-
-# This is what synchronous `listen()` does under the hood
-loop = asyncio.get_event_loop()
-task = loop.create_task(interval.listen_async())
-def handle_done(task: asyncio.Task[None]):
-    try:
-        task.result()
-    except:
-        loop.stop()
-
-task.add_done_callback(handle_done)
-loop.run_forever()
-```
-
-If you are using `run_forever()`, you'll probably want to add signal handlers
-to close the loop gracefully on process termination:
 
 ```python
 import asyncio, signal
@@ -79,6 +61,24 @@ for sig in {signal.SIGINT, signal.SIGTERM}:
 loop.run_forever()
 ```
 
+Interval:
+
+- Makes creating full-stack apps as easy as writing CLI scripts.
+- Can scale from a handful of scripts to robust multi-user dashboards.
+- Lets you build faster than no-code, without leaving your codebase & IDE.
+
+With Interval, you do not need to:
+
+- Write REST or GraphQL API endpoints to connect internal functionality to no-code tools.
+- Give Interval write access to your database (or give us _any_ of your credentials, for that matter).
+- Build web UIs with a drag-and-drop interface.
+
+## More about Interval
+
+- 📖 [Documentation](https://interval.com/docs)
+- 🌐 [Interval website](https://interval.com)
+- 💬 [Discord community](https://interval.com/discord)
+- 📰 [Product updates](https://interval.com/blog)
 
 ## Contributing
 
