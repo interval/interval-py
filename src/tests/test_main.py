@@ -237,6 +237,14 @@ async def test_display_metadata(
 ):
     @interval.action("io.display.metadata")
     async def display_metadata(io: IO):
+        async def task_value():
+            await asyncio.sleep(1)
+            return "Done!"
+
+        async def async_fn_value():
+            await asyncio.sleep(1.5)
+            return "Did it"
+
         data: list[MetaItemDefinition] = [
             {
                 "label": "Is true",
@@ -280,11 +288,48 @@ async def test_display_metadata(
                     "size": "small",
                 },
             },
+            {
+                "label": "Is a function",
+                "value": lambda: "Called it",
+            },
+            {
+                "label": "Is an async function",
+                "value": async_fn_value,
+            },
         ]
 
-        await io.display.metadata("Metadata list", data=data)
-        await io.display.metadata("Metadata grid", layout="grid", data=data)
-        await io.display.metadata("Metadata card", layout="card", data=data)
+        await io.display.metadata(
+            "Metadata list",
+            data=[
+                *data,
+                {
+                    "label": "Is a task",
+                    "value": task_value(),
+                },
+            ],
+        )
+        await io.display.metadata(
+            "Metadata grid",
+            layout="grid",
+            data=[
+                *data,
+                {
+                    "label": "Is a task",
+                    "value": task_value(),
+                },
+            ],
+        )
+        await io.display.metadata(
+            "Metadata card",
+            layout="card",
+            data=[
+                *data,
+                {
+                    "label": "Is a task",
+                    "value": task_value(),
+                },
+            ],
+        )
 
     await transactions.console()
     await transactions.run("io.display.metadata")
@@ -311,6 +356,17 @@ async def test_display_metadata(
         await expect(page.locator('dd:has-text("Hello")').nth(i)).to_be_visible()
         await expect(page.locator('dt:has-text("Action link")').nth(i)).to_be_visible()
         await expect(page.locator('dd a:has-text("Click me")').nth(i)).to_be_visible()
+
+        await expect(
+            page.locator('dt:has-text("Is a function")').nth(i)
+        ).to_be_visible()
+        await expect(page.locator('dd:has-text("Called it")').nth(i)).to_be_visible()
+        await expect(page.locator('dt:has-text("Is a task")').nth(i)).to_be_visible()
+        await expect(page.locator('dd:has-text("Done!")').nth(i)).to_be_visible()
+        await expect(
+            page.locator('dt:has-text("Is an async function")').nth(i)
+        ).to_be_visible()
+        await expect(page.locator('dd:has-text("Did it")').nth(i)).to_be_visible()
 
     await transactions.expect_success()
 

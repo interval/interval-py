@@ -1,5 +1,15 @@
 import json, re
-from typing import Any, Iterable, Mapping, Optional, Tuple, Callable, Union, cast
+from typing import (
+    Any,
+    Awaitable,
+    Iterable,
+    Mapping,
+    Optional,
+    Tuple,
+    Callable,
+    Union,
+    cast,
+)
 from datetime import date, time, datetime
 from typing_extensions import TypeAlias, TypeVar
 from time import time_ns
@@ -173,6 +183,10 @@ def json_loads_strip_none(*args, **kwargs) -> Any:
     obj = json.loads(*args, **kwargs)
     return dict_strip_none(obj)
 
+
+Eventual: TypeAlias = Union[
+    T, Awaitable[T], Callable[[], T], Callable[[], Awaitable[T]]
+]
 
 Deserializable: TypeAlias = Union[int, float, bool, None, str]
 DeserializableRecord: TypeAlias = Mapping[str, Deserializable]

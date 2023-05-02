@@ -3,7 +3,9 @@ from datetime import date, time, datetime, timezone
 from typing import Any, Callable, Union
 from typing_extensions import TypeAlias, Literal
 
-LeafTypeAnnotation: TypeAlias = Literal["number", "Date", "regexp", "set", "map"]
+LeafTypeAnnotation: TypeAlias = Literal[
+    "number", "Date", "regexp", "set", "map", "undefined"
+]
 
 CustomTypeAnnotation: TypeAlias = tuple[Literal["custom"], str]
 
@@ -19,7 +21,16 @@ REGEXP_FLAGS = {
 }
 
 
+class Undefined:
+    pass
+
+
+UNDEFINED = Undefined()
+
+
 def transform_value(value: Any) -> Union[tuple[Any, TypeAnnotation], None]:
+    if isinstance(value, Undefined):
+        return (None, "undefined")
     if isinstance(value, float):
         if math.isinf(value):
             return ("Infinity", "number")

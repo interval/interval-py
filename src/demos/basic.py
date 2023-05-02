@@ -599,13 +599,33 @@ async def io_display_metadata(io: IO):
         default_value="list",
     )
 
+    def sync_fn():
+        return "Called it"
+
+    async def async_fn():
+        await asyncio.sleep(1.5)
+        return "Done!"
+
+    async def another():
+        await asyncio.sleep(2)
+        return "Slept!"
+
+    async def raises_error():
+        raise Exception("Oops!")
+
     await io.display.metadata(
         "User info",
         layout=layout,
         data=[
             {"label": "Name", "value": "Alex"},
             {"label": "Email", "value": "alex@interval.com"},
+            {"label": "Not defined"},
             {"label": "Friends", "value": 24},
+            {"label": "None", "value": None},
+            {"label": "Function", "value": sync_fn},
+            {"label": "Async function", "value": async_fn},
+            {"label": "Raises an error", "value": raises_error},
+            {"label": "Task", "value": another()},
         ],
     )
 

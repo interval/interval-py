@@ -1,15 +1,14 @@
-import json
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Union
+from typing import Optional
 
-from typing_extensions import Literal, TypeAlias, Awaitable
+from typing_extensions import Literal, TypeAlias
 
 from pydantic import Field
 
 from ..classes.io_promise import DisplayIOPromise
 from ..types import BaseModel
 from ..io_schema import ButtonItem, ButtonItemModel, IORender
-from ..util import dump_snake_obj, json_loads_camel, snake_to_camel
+from ..util import Eventual
 
 PageLayoutKey = Literal["title", "description", "children", "menuItems"]
 
@@ -22,7 +21,7 @@ class PageError(BaseModel):
     stack: Optional[str] = None
 
 
-EventualStr: TypeAlias = Union[str, Awaitable[str], Callable[[], Awaitable[str]]]
+EventualStr: TypeAlias = Eventual[str]
 
 
 @dataclass

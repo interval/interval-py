@@ -137,12 +137,14 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
         try:
             parsed = parse_obj_as(self.schema.state, dict_keys_to_snake(value))
             if self._handle_state_change:
-                self.instance.props = await self._handle_state_change(
-                    parsed,
-                    parse_obj_as(
-                        self.schema.props,
-                        dict_keys_to_snake(self.instance.props),
-                    ),
+                await self.set_props(
+                    await self._handle_state_change(
+                        parsed,
+                        parse_obj_as(
+                            self.schema.props,
+                            dict_keys_to_snake(self.instance.props),
+                        ),
+                    )
                 )
             elif parsed is not None:
                 print(
@@ -150,12 +152,16 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
                     file=sys.stderr,
                 )
 
-            if self.on_state_change is not None:
-                # This is definitely callable?
-                # pylint: disable-next=not-callable
-                await self.on_state_change()
         except ValidationError as err:
             print("[Interval] Received invalid state:", value, err, file=sys.stderr)
+
+    async def set_props(self, value: Any):
+        self.instance.props = value
+
+        if self.on_state_change is not None:
+            # This is definitely callable?
+            # pylint: disable-next=not-callable
+            await self.on_state_change()
 
     def parse_return_value(self, value: Any):
         return_schema = self.schema.returns
