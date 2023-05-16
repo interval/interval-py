@@ -43,6 +43,18 @@ interval = Interval(
 )
 
 
+@interval.action(name="Ping")
+async def ping():
+    await interval.ping()
+    return "Pong!"
+
+
+@prod.action(name="Ping", slug="ping")
+async def prod_ping():
+    await prod.ping()
+    return "Pong!"
+
+
 states = [
     "Alabama",
     "Alaska",

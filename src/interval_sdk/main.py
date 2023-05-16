@@ -22,7 +22,7 @@ from .io_schema import (
 from .classes.io import IO
 from .classes.action import Action
 from .classes.page import Page
-from .classes.isocket import ISocket
+from .classes.isocket import ISocket, NotConnectedError
 from .classes.logger import Logger, LogLevel
 from .classes.io_client import IOClient, IOError, IORender, IOResponse
 from .classes.rpc import DuplexRPCClient
@@ -465,6 +465,12 @@ class Interval:
         self._create_rpc_client()
         await self._initialize_host()
 
+    async def ping(self):
+        if self._isocket is None:
+            raise NotConnectedError()
+
+        await self._isocket.ping()
+
     async def immediately_close(self):
         self._shutdown_fut = None
         self._intentionally_closed = True
@@ -838,6 +844,7 @@ class Interval:
             log_level=self._logger.log_level,
             num_producers=self._num_isocket_producers,
             send_timeout=self._send_timeout_seconds,
+            ping_timeout=self._ping_timeout_seconds,
         )
 
         await self._isocket.connect()

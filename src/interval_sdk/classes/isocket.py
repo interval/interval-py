@@ -33,6 +33,7 @@ class ISocket:
     _logger: Logger
     _ws: websockets.client.WebSocketClientProtocol
     _send_timeout: float
+    _ping_timeout: float
     _connect_timeout: float
     _is_authenticated: bool
 
@@ -55,6 +56,7 @@ class ISocket:
         ws: websockets.client.WebSocketClientProtocol,
         id: Optional[UUID] = None,
         send_timeout: float = 5,
+        ping_timeout: float = 5,
         connect_timeout: float = 10,
         on_message: Optional[Callable[[str], Awaitable[None]]] = None,
         on_open: Optional[Callable[[], Awaitable[None]]] = None,
@@ -68,6 +70,7 @@ class ISocket:
         self.id = id if id is not None else uuid4()
         self._send_timeout = send_timeout
         self._connect_timeout = connect_timeout
+        self._ping_timeout = ping_timeout
         self.is_closed = False
 
         self.on_message = on_message
@@ -228,5 +231,8 @@ class ISocket:
 
         # start the ping
         waiter = await self._ws.ping()
+
         # wait for the response
-        return await waiter
+        response = await asyncio.wait_for(waiter, self._ping_timeout)
+
+        return response
