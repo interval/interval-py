@@ -361,6 +361,7 @@ class TableRowValueObject(TypedDict):
     params: NotRequired[SerializableRecord]
     image: NotRequired[ImageDefinition]
     highlightColor: NotRequired[HighlightColor]
+    truncate: NotRequired[bool]
 
 
 class TableRowValueObjectModel(BaseModel):
@@ -371,6 +372,7 @@ class TableRowValueObjectModel(BaseModel):
     params: Optional[SerializableRecordModel] = None
     image: Optional[ImageDefinitionModel] = None
     highlightColor: Optional[HighlightColor] = None
+    truncate: Optional[bool] = False
 
 
 TableRowValue: TypeAlias = Union[TableRowValueObject, TableRowValuePrimitive]
