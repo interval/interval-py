@@ -786,13 +786,6 @@ async def table_test(io: IO):
             },
             "c",
             {"label": "D", "accessorKey": "d"},
-            {
-                "label": "E",
-                "renderCell": lambda row: {
-                    "label": "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Est inventore aliquam voluptatibus minus vel labore hic voluptates cum fugit ipsa tenetur, doloribus cupiditate error quos cumque eum fuga ut dolor. Lorem, ipsum dolor sit amet consectetur adipisicing elit. Est inventore aliquam voluptatibus minus vel labore hic voluptates cum fugit ipsa tenetur, doloribus cupiditate error quos cumque eum fuga ut dolor. Lorem, ipsum dolor sit amet consectetur adipisicing elit. Est inventore aliquam voluptatibus minus vel labore hic voluptates cum fugit ipsa tenetur, doloribus cupiditate error quos cumque eum fuga ut dolor. Lorem, ipsum dolor sit amet consectetur adipisicing elit. Est inventore aliquam voluptatibus minus vel labore hic voluptates cum fugit ipsa tenetur, doloribus cupiditate error quos cumque eum fuga ut dolor. Lorem, ipsum dolor sit amet consectetur adipisicing elit. Est inventore aliquam voluptatibus minus vel labore hic voluptates cum fugit ipsa tenetur, doloribus cupiditate error quos cumque eum fuga ut dolor.",
-                    "truncate": True
-                }
-            },
         ],
         row_menu_items=lambda row: [
             {
