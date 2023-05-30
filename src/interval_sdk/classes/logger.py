@@ -101,4 +101,4 @@ class Logger:
         try:
             task.result()
         except BaseException as err:
-            self.error(err)
+            self.print_exception(err)

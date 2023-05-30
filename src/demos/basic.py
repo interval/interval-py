@@ -1308,6 +1308,13 @@ async def unlisted_action():
     return "Hello, world!"
 
 
+@interval.action
+async def credentials(io: IO):
+    creds = await io.experimental.credentials("github")
+
+    print(creds)
+
+
 unlisted_page = Page("Unlisted page", unlisted=True)
 
 

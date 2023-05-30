@@ -76,7 +76,7 @@ class Transaction:
         await self.page.click(
             selector,
             # avoids issues with the button being partially obstructed by popovers
-            position={"x": 1, "y": 1},
+            position={"x": 3, "y": 3},
         )
 
     async def restart(self):

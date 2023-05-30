@@ -65,6 +65,7 @@ InputMethodName = Literal[
     "SELECT_MULTIPLE",
     "SEARCH",
     "UPLOAD_FILE",
+    "CREDENTIALS",
 ]
 
 MultipleableMethodName = Literal["SEARCH", "UPLOAD_FILE"]
@@ -253,6 +254,15 @@ class UploadFileProps(BaseModel):
     help_text: Optional[str]
     disabled: Optional[bool]
     file_urls: Optional[list[FileUrlSet]]
+
+
+class CredentialsProps(BaseModel):
+    params: Optional[SerializableRecord]
+
+
+class CredentialsReturns(BaseModel):
+    token: str
+    secret: Optional[str]
 
 
 @dataclass
@@ -871,6 +881,11 @@ input_schema: dict[InputMethodName, MethodDef] = {
         props=UploadFileProps,
         state=UploadFileState,
         returns=InnerFileModel,
+    ),
+    "CREDENTIALS": MethodDef(
+        props=CredentialsProps,
+        state=None,
+        returns=CredentialsReturns,
     ),
 }
 

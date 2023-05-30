@@ -27,6 +27,8 @@ from interval_sdk.superjson.transformer import UNDEFINED
 from ..io_schema import (
     ButtonItem,
     ButtonItemModel,
+    CredentialsProps,
+    CredentialsReturns,
     CurrencyCode,
     DeserializableRecordModel,
     DisplayGridProps,
@@ -1371,6 +1373,19 @@ class IO:
                     if default_value is not None
                     else None,
                 ),
+                display_resolves_immediately=self._display_resolves_immediately,
+            )
+            return InputIOPromise(c, renderer=self._renderer)
+
+        def credentials(
+            self,
+            service_name: str,
+            params: Optional[SerializableRecord] = None,
+        ) -> InputIOPromise[Literal["CREDENTIALS"], CredentialsReturns]:
+            c = Component(
+                method_name="CREDENTIALS",
+                label=service_name,
+                initial_props=CredentialsProps(params=params),
                 display_resolves_immediately=self._display_resolves_immediately,
             )
             return InputIOPromise(c, renderer=self._renderer)

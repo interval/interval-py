@@ -1197,7 +1197,7 @@ class TestSearch:
             ]
 
             async def handle_search(query: str):
-                return [o for o in options if query in str(o["label"]).lower()]
+                return [o for o in options if query.lower() in str(o["label"]).lower()]
 
             selected = await io.search(
                 "Find something",
@@ -1219,19 +1219,26 @@ class TestSearch:
 
         inputId = await label.get_attribute("for")
         input = page.locator(f"#{inputId}")
-        await input.click()
-        await input.fill("view")
-        await expect(
-            page.locator('[data-pw-search-result]:has-text("true")')
-        ).to_be_hidden()
-        await expect(
-            page.locator('[data-pw-search-result]:has-text("Viewer")')
-        ).to_be_visible()
-        await page.keyboard.press("ArrowDown")
-        await input.press("Enter")
-        await expect(
-            page.locator('[data-pw-selected-search-result]:has-text("Viewer")')
-        ).to_be_visible()
+
+        async def search_and_select(query: str):
+            await input.click()
+            await input.fill(query)
+            await expect(page.locator('text="Loading..."')).to_be_visible()
+            await expect(page.locator('text="Loading..."')).to_be_hidden()
+            await page.click(
+                f'[data-pw-search-result]:has-text("{query}"):nth-child(1)'
+            )
+            await expect(
+                page.locator(f'.iv-select__single-value:has-text("{query}")')
+            ).to_be_visible()
+            await expect(
+                page.locator(
+                    f'[data-pw-search-result]:has-text("{query}"):nth-child(1)'
+                )
+            ).to_be_hidden()
+
+        await search_and_select("Viewer")
+
         await transactions.press_continue()
         await transactions.expect_success(
             label="Viewer",

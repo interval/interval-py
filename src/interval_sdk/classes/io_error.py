@@ -2,7 +2,13 @@ from typing import Optional
 
 from typing_extensions import Literal
 
-IOErrorKind = Literal["CANCELED", "TRANSACTION_CLOSED"]
+IOErrorKind = Literal[
+    "CANCELED",
+    "TRANSACTION_CLOSED",
+    "BAD_RESPONSE",
+    "RESPONSE_HANDLER_ERROR",
+    "RENDER_ERROR",
+]
 
 
 class IOError(Exception):
@@ -13,3 +19,9 @@ class IOError(Exception):
         super()
         self.kind = kind
         self.message = message
+
+    def __str__(self):
+        if self.message is not None:
+            return self.message
+
+        return self.kind

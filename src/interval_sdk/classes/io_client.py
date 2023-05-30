@@ -92,6 +92,9 @@ class IOClient:
         input_group_key = uuid4()
         is_returned = False
 
+        loop = asyncio.get_running_loop()
+        choice_future = loop.create_future()
+
         async def render():
             packed = IORender(
                 id=uuid4(),
@@ -104,9 +107,14 @@ class IOClient:
 
             await self._send(packed)
 
-        loop = asyncio.get_running_loop()
-        choice_future = loop.create_future()
-        fut = loop.create_future()
+        def handle_render_error(task: asyncio.Task):
+            try:
+                task.result()
+            except BaseException as err:
+                choice_future.set_exception(err)
+                for component in components:
+                    component.set_exception(err)
+                return
 
         async def on_response_handler(response: IOResponse):
             nonlocal validation_error_message, is_returned
@@ -122,7 +130,10 @@ class IOClient:
 
             if response.kind == "CANCELED":
                 self._is_canceled = True
-                fut.set_exception(IOError("CANCELED"))
+                err = IOError("CANCELED")
+                choice_future.set_exception(err)
+                for component in components:
+                    component.set_exception(err)
                 return
 
             if len(response.values) != len(components):
@@ -152,7 +163,7 @@ class IOClient:
 
                 if any(invalidities):
                     task = loop.create_task(render())
-                    task.add_done_callback(self._logger.handle_task_exceptions)
+                    task.add_done_callback(handle_render_error)
                     return
 
                 if group_validator is not None:
@@ -173,7 +184,7 @@ class IOClient:
 
                     if validation_error_message is not None:
                         task = loop.create_task(render())
-                        task.add_done_callback(self._logger.handle_task_exceptions)
+                        task.add_done_callback(handle_render_error)
                         return
 
                 is_returned = True
@@ -188,9 +199,15 @@ class IOClient:
                     prev_state = components[index].instance.state
 
                     if new_state != prev_state:
-                        await components[index].set_state(new_state)
+                        try:
+                            await components[index].set_state(new_state)
+                        except BaseException as err:
+                            choice_future.set_exception(err)
+                            for component in components:
+                                component.set_exception(err)
+
                 task = loop.create_task(render())
-                task.add_done_callback(self._logger.handle_task_exceptions)
+                task.add_done_callback(handle_render_error)
 
         self._on_response_handlers[input_group_key] = on_response_handler
         self._previous_input_group_key = input_group_key
@@ -200,25 +217,28 @@ class IOClient:
 
         def resolve_immediates(t: asyncio.Task):
             try:
-                all_resolved = True
                 t.result()
+                all_resolved = True
                 for c in components:
                     if c.resolves_immediately:
                         c.set_return_value(None)
                     else:
                         all_resolved = False
 
-                if all_resolved and (
-                    choice_buttons is None or len(choice_buttons) == 0
+                if (
+                    all_resolved
+                    and not choice_future.done()
+                    and (choice_buttons is None or len(choice_buttons) == 0)
                 ):
                     choice_future.set_result(None)
 
             except Exception as err:
-                self._logger.warn("Failed resolving component immediately", err)
+                for c in components:
+                    c.set_exception(err)
+                choice_future.set_exception(err)
 
         # initial render
         task = loop.create_task(render())
-        task.add_done_callback(self._logger.handle_task_exceptions)
         task.add_done_callback(resolve_immediates)
 
         return_futures = [component.return_value for component in components]

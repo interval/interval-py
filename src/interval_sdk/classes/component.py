@@ -1,4 +1,4 @@
-import asyncio, sys
+import asyncio, sys, traceback
 import inspect
 from asyncio.futures import Future
 from typing import (
@@ -119,7 +119,12 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
             else:
                 return None
         except BaseException as err:
-            print("[Interval] Received invalid return value:", err, file=sys.stderr)
+            print(
+                f"[Interval] Received invalid return value ({return_value}):",
+                err,
+                file=sys.stderr,
+            )
+            traceback.print_exc(file=sys.stderr)
             return "Received invalid response."
 
     def set_return_value(self, value: Any):
@@ -130,8 +135,19 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
             parsed = self.parse_return_value(value)
             self._fut.set_result(parsed)
         except BaseException as err:
-            print("[Interval] Received invalid return value:", err, file=sys.stderr)
+            print(
+                f"[Interval] Received invalid return value ({value}):",
+                err,
+                file=sys.stderr,
+            )
+            traceback.print_exc(file=sys.stderr)
             self._fut.set_exception(err)
+
+    def set_exception(self, err: BaseException):
+        if self._fut.done():
+            return
+
+        self._fut.set_exception(err)
 
     async def set_state(self, value: Any):
         try:
@@ -175,6 +191,7 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
                 raise ValueError("Received invalid None return value")
             return None
 
+        print("return_schema", return_schema)
         return parse_obj_as(return_schema, dict_keys_to_snake(value))
 
     def set_optional(self, optional: bool):

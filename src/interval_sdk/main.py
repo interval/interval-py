@@ -58,6 +58,7 @@ from .internal_rpc_schema import (
     OrganizationDef,
     PageContext,
     PageDefinition,
+    SendIOCallReturnsError,
     SendLoadingCallInputs,
     SendLogInputs,
     SendRedirectInputs,
@@ -401,7 +402,7 @@ class Interval:
                     )
                 except Exception as err:
                     self._log.debug(
-                        f"RPC call timed out, retrying in {sleep_time_before_retrying}s...",
+                        f"RPC call failed, retrying in {sleep_time_before_retrying}s...",
                         err,
                     )
             else:
@@ -884,13 +885,26 @@ class Interval:
             async def send(instruction: IORender):
                 io_call = instruction.json()
                 self._pending_io_calls[inputs.transaction_id] = io_call
-                await self._send(
+                response = await self._send(
                     "SEND_IO_CALL",
                     SendIOCallInputs(
                         transaction_id=inputs.transaction_id,
                         io_call=io_call,
                     ).dict(),
                 )
+
+                if not response or (
+                    isinstance(response, SendIOCallReturnsError)
+                    and response.type == "ERROR"
+                ):
+                    message = "Error sending IO call."
+                    if (
+                        isinstance(response, SendIOCallReturnsError)
+                        and response.type == "ERROR"
+                        and response.message is not None
+                    ):
+                        message = response.message
+                    raise IOError("RENDER_ERROR", message)
 
             async def send_loading_state(loading_state: LoadingState):
                 self._transaction_loading_states[inputs.transaction_id] = loading_state
@@ -978,9 +992,10 @@ class Interval:
                             data=IOFunctionReturnModel.parse_obj(data),
                             meta=meta,
                         )
-                    except IOError as ioerr:
-                        raise ioerr
                     except Exception as err:
+                        if isinstance(err, IOError) and err.kind == "CANCELED":
+                            raise err
+
                         self._log.error("Error in action handler", err)
                         self._log.print_exception(err)
                         if self._on_error is not None:

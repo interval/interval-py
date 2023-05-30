@@ -53,6 +53,11 @@ class SendIOCallInputs(BaseModel):
     io_call: str
 
 
+class SendIOCallReturnsError(BaseModel):
+    type: Literal["ERROR"]
+    message: Optional[str] = None
+
+
 class SendPageInputs(BaseModel):
     page_key: str
     # stringified page layout
@@ -278,7 +283,7 @@ ws_server_schema: WSServerSchema = {
     ),
     "SEND_IO_CALL": RPCMethod(
         inputs=SendIOCallInputs,
-        returns=bool,
+        returns=Union[bool, SendIOCallReturnsError],
     ),
     "SEND_PAGE": RPCMethod(
         inputs=SendPageInputs,
