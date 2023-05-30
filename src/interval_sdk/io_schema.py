@@ -864,7 +864,7 @@ input_schema: dict[InputMethodName, MethodDef] = {
     "SEARCH": MethodDef(
         props=SearchProps,
         state=SearchState,
-        returns=SearchResultValue,
+        returns=str,
         supports_multiple=True,
     ),
     "UPLOAD_FILE": MethodDef(
