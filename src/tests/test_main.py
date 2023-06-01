@@ -926,6 +926,7 @@ async def test_select_table(
             ],
             min_selections=1,
             max_selections=1,
+            initially_selected=lambda row: row in selected,
         )
 
         return {**selected[0]}
@@ -949,8 +950,9 @@ async def test_select_table(
         )
     )
 
-    await page.locator('[role="cell"]:has-text("Alex")').nth(1).click()
-    await page.locator('[role="cell"]:has-text("Dan")').nth(1).click()
+    await page.locator('[role="cell"]:has-text("Jacob")').last().click()
+    await page.locator('[role="cell"]:has-text("Alex")').last().click()
+    await page.locator('[role="cell"]:has-text("Dan")').last().click()
     await transactions.press_continue()
     await transactions.expect_success(firstName="Dan", lastName="Philibin")
 

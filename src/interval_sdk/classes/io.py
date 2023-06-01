@@ -19,8 +19,6 @@ from typing import (
 from typing_extensions import Never
 from urllib.parse import ParseResult, urlparse
 
-from pydantic.fields import Undefined
-
 from interval_sdk.classes.logger import Logger
 from interval_sdk.superjson.transformer import UNDEFINED
 
@@ -552,6 +550,7 @@ class IO:
             *,
             data: Iterable[TR],
             row_menu_items: Optional[Callable[[TR], Iterable[TableMenuItem]]] = None,
+            initially_selected: Optional[Callable[[TR], bool]] = None,
             help_text: Optional[str] = None,
             columns: Optional[Iterable[Union[TableColumnDef, str]]] = None,
             min_selections: Optional[int] = None,
@@ -562,15 +561,21 @@ class IO:
             is_filterable: bool = True,
         ) -> InputIOPromise[Literal["SELECT_TABLE"], list[TR]]:
             normalized_columns = columns_builder(data=data, columns=columns)
-            serialized_rows = [
-                serialize_table_row(
+            serialized_rows: list[InternalTableRow] = []
+            selected_keys: list[str] = []
+
+            for (i, row) in enumerate(data):
+                row_data = serialize_table_row(
                     key=str(i),
                     row=row,
                     columns=normalized_columns,
                     menu_builder=row_menu_items,
                 )
-                for (i, row) in enumerate(data)
-            ]
+
+                if initially_selected is not None and initially_selected(row):
+                    selected_keys.append(row_data.key)
+
+                serialized_rows.append(row_data)
 
             async def handle_state_change(
                 state: SelectTableState,
@@ -618,6 +623,7 @@ class IO:
                     default_page_size=default_page_size,
                     is_sortable=is_sortable,
                     is_filterable=is_filterable,
+                    selected_keys=selected_keys,
                 ),
                 handle_state_change=handle_state_change,
                 display_resolves_immediately=self._display_resolves_immediately,
