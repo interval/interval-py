@@ -823,6 +823,7 @@ class Interval:
                         self._resend_pending_page_layouts(),
                     )
                 except Exception as err:
+                    self._is_connected = False
                     self._log.prod("Unable to reconnect. Retrying in 3s...")
                     self._log.debug(err)
                     await asyncio.sleep(3)

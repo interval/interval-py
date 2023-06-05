@@ -27,7 +27,7 @@ class IOClient:
     _logger: Logger
     _send: Sender
     _on_response_handlers: dict[UUID, Callable[[IOResponse], Awaitable[None]]]
-    _previous_input_group_key: UUID | None = None
+    _previous_input_group_key: Optional[UUID] = None
 
     _is_canceled = False
 
