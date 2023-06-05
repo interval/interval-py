@@ -799,6 +799,7 @@ async def table_test(io: IO):
             "c",
             {"label": "D", "accessorKey": "d"},
         ],
+        initially_selected=lambda row: row["a"] % 2 == 0,
         row_menu_items=lambda row: [
             {
                 "label": "Link",
