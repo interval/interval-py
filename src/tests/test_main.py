@@ -51,6 +51,39 @@ async def interval(event_loop: asyncio.AbstractEventLoop, config: Config):
     await interval.immediately_close()
 
 
+async def test_client_reconnect_on_interval_restart(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
+    @interval.action
+    async def client_reconnect_add_two_numbers(io: IO):
+        num = await io.input.number("Enter a number")
+        num2 = await io.input.number(
+            f"Enter a second number that's greater than {num}", min=num + 1
+        )
+
+        return {"sum": num + num2}
+
+    await transactions.console()
+    await transactions.run("client_reconnect_add_two_numbers")
+
+    await page.locator('input[inputmode="numeric"]').last.fill("12")
+    await transactions.press_continue()
+
+    await expect(page.locator("text=Enter a second number")).to_be_visible()
+    await page.locator('input[inputmode="numeric"]').last.fill("20")
+
+    await page.click("[data-pw-command-bar-toggle]")
+    await page.click(
+        '[data-pw-command-bar-results] [role="option"]:has-text("Simulate Interval restart")'
+    )
+
+    await transactions.press_continue()
+
+    await transactions.expect_success(
+        sum=32,
+    )
+
+
 async def test_context(
     interval: Interval, page: BrowserPage, transactions: Transaction
 ):
