@@ -93,7 +93,9 @@ async def test_context(
         assert ctx_arg == ctx
 
         return {
-            "user": f"{ctx.user.first_name} {ctx.user.last_name}",
+            "user": f"{ctx.user.first_name} {ctx.user.last_name} ({ctx.user.email})",
+            "role": ctx.user.role,
+            "teams": json.dumps(ctx.user.teams),
             "message": ctx.params.get("message", None),
             "environment": ctx.environment,
         }
@@ -102,7 +104,11 @@ async def test_context(
     await transactions.run("context")
     await page.goto(page.url + "?message=Hello")
     await transactions.expect_success(
-        user="Test Runner", message="Hello", environment="development"
+        user="Test Runner (test-runner@interval.com)",
+        message="Hello",
+        environment="development",
+        role="admin",
+        teams="[]",
     )
 
 

@@ -1107,7 +1107,7 @@ class Interval:
             page_ctx = PageContext(
                 page_key=inputs.page_key,
                 logger=self._logger,
-                user=inputs.user,
+                user=ContextUser(**inputs.user.dict(by_alias=False)),
                 params=deserialize_dates(inputs.params),
                 environment=inputs.environment,
                 organization=self.organization,
