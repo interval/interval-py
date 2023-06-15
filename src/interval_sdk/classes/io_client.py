@@ -36,7 +36,7 @@ class IOClient:
         logger: Logger,
         send: Sender,
         *,
-        display_resolves_immediately: Optional[bool] = None
+        display_resolves_immediately: Optional[bool] = None,
     ):
         self._logger = logger
         self._send = send
@@ -198,13 +198,14 @@ class IOClient:
                 for index, new_state in enumerate(response.values):
                     prev_state = components[index].instance.state
 
-                    if new_state != prev_state:
+                    if new_state is not None and new_state != prev_state:
                         try:
                             await components[index].set_state(new_state)
                         except BaseException as err:
-                            choice_future.set_exception(err)
-                            for component in components:
-                                component.set_exception(err)
+                            self._logger.error(
+                                f"Error updating {components[index].instance.method_name} component state, ignoring state update:"
+                            )
+                            self._logger.print_exception(err)
 
                 task = loop.create_task(render())
                 task.add_done_callback(handle_render_error)
