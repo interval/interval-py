@@ -158,6 +158,7 @@ class Interval:
     _reinitialize_batch_timeout_seconds: float = 0.2
     _num_isocket_producers: int
 
+    _open_pages: set[str]
     _io_clients: dict[str, IOClient]
     _page_futures: dict[str, asyncio.Task]
     _io_response_handlers: dict[str, IOResponseHandler]
@@ -222,6 +223,7 @@ class Interval:
         self._reinitialize_batch_timeout_seconds = reinitialize_batch_timeout
         self._num_isocket_producers = num_message_producers
 
+        self._open_pages = set()
         self._io_clients = {}
         self._page_futures = {}
         self._io_response_handlers = {}
@@ -1084,7 +1086,12 @@ class Interval:
                 self._logger.error("No page handler found for slug", inputs.page.slug)
                 return OpenPageReturnsError(message="No page handler found.")
 
+            self._open_pages.add(inputs.page_key)
+
             async def send_loading_state(loading_state: LoadingState):
+                if inputs.page_key not in self._open_pages:
+                    return
+
                 self._transaction_loading_states[inputs.page_key] = loading_state
                 await self._send(
                     "SEND_LOADING_CALL",
@@ -1131,6 +1138,9 @@ class Interval:
                     self._logger.error(e)
 
             async def send_page():
+                if inputs.page_key not in self._open_pages:
+                    return
+
                 page_layout = None
                 if page is not None:
                     page_layout = BasicLayoutModel(
@@ -1157,6 +1167,9 @@ class Interval:
                         page_layout.menu_items = menu_items
 
                 for _ in range(MAX_PAGE_RETRIES):
+                    if inputs.page_key not in self._open_pages:
+                        return
+
                     try:
                         serialized_page = (
                             page_layout.json(exclude_unset=True, by_alias=True)
@@ -1184,6 +1197,9 @@ class Interval:
                 raise IntervalError("Unsuccessful sending page, max retries exceeded.")
 
             async def handle_send(instruction: IORender):
+                if inputs.page_key not in self._open_pages:
+                    return
+
                 nonlocal render_instruction
                 render_instruction = instruction
                 if send_page_task is None:
@@ -1191,8 +1207,9 @@ class Interval:
 
             client = IOClient(logger=self._logger, send=handle_send)
 
-            self._io_clients[inputs.page_key] = client
-            self._io_response_handlers[inputs.page_key] = client.on_response
+            if inputs.page_key in self._open_pages:
+                self._io_clients[inputs.page_key] = client
+                self._io_response_handlers[inputs.page_key] = client.on_response
 
             def page_error(
                 error: BaseException, layout_key: PageLayoutKey
@@ -1444,6 +1461,10 @@ class Interval:
                                 organization=page_ctx.organization,
                             )
                         )
+
+                    if inputs.page_key not in self._open_pages:
+                        return
+
                     errors.append(page_error(err, layout_key="children"))
                     page_layout = BasicLayoutModel(kind="BASIC", errors=errors)
 
@@ -1483,14 +1504,16 @@ class Interval:
                         )
                     errors.append(page_error(err, layout_key="children"))
 
-            task = loop.create_task(handle_page(), name="handle_page")
-            task.add_done_callback(handle_page_error)
-            self._page_futures[inputs.page_key] = task
+            if inputs.page_key in self._open_pages:
+                task = loop.create_task(handle_page(), name="handle_page")
+                task.add_done_callback(handle_page_error)
+                self._page_futures[inputs.page_key] = task
 
             return OpenPageReturnsSuccess(page_key=inputs.page_key)
 
         async def close_page(inputs: ClosePageInputs) -> None:
             self._logger.debug("CLOSE_PAGE", inputs)
+            self._open_pages.remove(inputs.page_key)
             try:
                 del self._io_clients[inputs.page_key]
             except KeyError:
