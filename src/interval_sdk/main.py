@@ -172,7 +172,6 @@ class Interval:
     ] = None
     _intentionally_closed = False
     _shutdown_fut: Optional[asyncio.Future[None]] = None
-    _is_connected = False
     _is_initialized = False
 
     routes: Routes
@@ -384,7 +383,7 @@ class Interval:
 
     @property
     def is_connected(self):
-        return self._is_connected
+        return self._isocket is not None and self._isocket.is_open
 
     async def _send(
         self,

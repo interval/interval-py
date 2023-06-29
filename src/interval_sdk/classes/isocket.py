@@ -35,7 +35,7 @@ class ISocket:
     _send_timeout: float
     _ping_timeout: float
     _connect_timeout: float
-    _is_authenticated: bool
+    _is_authenticated: bool = False
 
     id: UUID
     on_message: Optional[Callable[[str], Awaitable[None]]]
@@ -43,7 +43,6 @@ class ISocket:
     on_error: Optional[Callable[[Exception], Awaitable[None]]]
     on_close: Optional[Callable[[int, str], Awaitable[None]]]
     on_authenticated: Future[None]
-    is_closed: bool
 
     _out_queue: asyncio.Queue[Message]
     _pending_messages: dict[UUID, PendingMessage]
@@ -71,7 +70,6 @@ class ISocket:
         self._send_timeout = send_timeout
         self._connect_timeout = connect_timeout
         self._ping_timeout = ping_timeout
-        self.is_closed = False
 
         self.on_message = on_message
         self.on_open = on_open
@@ -83,7 +81,14 @@ class ISocket:
         self._message_tasks = set()
         self._num_producers = num_producers
 
+    @property
+    def is_open(self) -> bool:
+        return self._ws.open
+
     async def connect(self) -> None:
+        if self.is_open and self._is_authenticated:
+            return
+
         if self.on_open:
             await self.on_open()
 
@@ -159,6 +164,9 @@ class ISocket:
             self._logger.print_exception(e)
 
     async def _handle_message(self, message: str):
+        if not self.is_open:
+            return
+
         if self.on_message is not None:
             await self.on_message(message)
 
@@ -186,7 +194,7 @@ class ISocket:
                 self._logger.print_exception(e)
 
     async def send(self, data: str, *, timeout_factor: Optional[int] = None) -> None:
-        if self._ws is None:
+        if not self.is_open:
             raise NotConnectedError
 
         if timeout_factor is None:
@@ -205,8 +213,6 @@ class ISocket:
         await asyncio.wait_for(fut, self._send_timeout * timeout_factor)
 
     async def _handle_close(self, code: int, reason: str):
-        self.is_closed = True
-
         if not self.on_authenticated.done():
             self.on_authenticated.cancel()
 
@@ -219,11 +225,11 @@ class ISocket:
         if self.on_close:
             await self.on_close(code, reason)
 
-    async def close(self) -> None:
-        await self._handle_close(1000, "Closed by client")
+    async def close(self, code: int = 1000, reason: str = "Closed by client") -> None:
+        await self._handle_close(code, reason)
 
     async def ping(self) -> None:
-        if self.is_closed:
+        if not self.is_open:
             raise NotConnectedError
 
         if self._ws is None:
