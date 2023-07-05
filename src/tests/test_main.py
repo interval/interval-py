@@ -621,6 +621,56 @@ async def test_input_rich_text(
     await transactions.expect_success()
 
 
+async def test_display_html(
+    interval: Interval, page: BrowserPage, transactions: Transaction
+):
+    @interval.action()
+    async def html(io: IO):
+        html = await io.input.text("Email body (HTML)", multiline=True)
+        await io.display.html("You entered", html=html)
+
+    await transactions.console()
+
+    await transactions.run("html")
+    await expect(page.locator("text=Email body")).to_be_visible()
+
+    await page.fill(
+        "textarea",
+        """
+      <h1>Heading 1</h1>
+      <p><em>Emphasis</em></p><p><u>Underline</u></p>
+      <script>alert('hello, world!');</script>
+      <noscript>No script.</noscript>
+      <style>html { color: red; }</style>
+
+      <form method="POST">
+        <button onclick="window.alert">Form submit button</button>
+      </form>
+
+      <iframe src="https://interval.com"></iframe>
+
+      <p class="text-xl" style="color: red;">Hello, in red!</p>
+      <p class="text-lg">
+      """,
+    )
+
+    await transactions.press_continue()
+
+    await expect(page.locator('text="You entered"')).to_be_visible()
+    await expect(page.locator('.prose h1:has-text("Heading 1")')).to_be_visible()
+    await expect(page.locator('.prose em:has-text("Emphasis")')).to_be_visible()
+    await expect(page.locator('.prose u:has-text("Underline")')).to_be_visible()
+    await expect(page.locator('text="No script."')).to_be_hidden()
+    await expect(page.locator('text="Form submit button"')).to_be_hidden()
+    await expect(page.locator('iframe[src="https://interval.com"]')).to_be_hidden()
+
+    p = page.locator('p:has-text("Hello, in red!")')
+    assert await p.get_attribute("style") is None
+    assert await p.get_attribute("class") is None
+
+    await transactions.expect_success()
+
+
 async def test_confirm(
     interval: Interval, page: BrowserPage, transactions: Transaction
 ):
