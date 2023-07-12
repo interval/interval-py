@@ -44,6 +44,7 @@ from ..io_schema import (
     SelectTableState,
     InputEmailProps,
     InputNumberProps,
+    InputSliderProps,
     InputBooleanProps,
     InputRichTextProps,
     InputUrlProps,
@@ -272,6 +273,67 @@ class IO:
 
             def get_value(val: float):
                 if decimals is None:
+                    return int(val)
+
+                return val
+
+            return InputIOPromise(c, renderer=self._renderer, get_value=get_value)
+
+        @overload
+        def slider(
+            self,
+            label: str,
+            *,
+            min: Optional[Union[float, int]] = None,
+            max: Optional[Union[float, int]] = None,
+            step: Optional[int] = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[Union[float, int]] = None,
+            disabled: Optional[bool] = None,
+        ) -> InputIOPromise[Literal["INPUT_SLIDER"], int]:
+            ...
+
+        @overload
+        def slider(
+            self,
+            label: str,
+            *,
+            min: Optional[Union[float, int]] = None,
+            max: Optional[Union[float, int]] = None,
+            step: Optional[float] = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[Union[float, int]] = None,
+            disabled: Optional[bool] = None,
+        ) -> InputIOPromise[Literal["INPUT_SLIDER"], int]:
+            ...
+
+        def slider(
+            self,
+            label: str,
+            *,
+            min: Optional[Union[float, int]] = None,
+            max: Optional[Union[float, int]] = None,
+            step: Optional[Union[float, int]] = None,
+            help_text: Optional[str] = None,
+            default_value: Optional[Union[float, int]] = None,
+            disabled: Optional[bool] = None,
+        ):
+            c = Component(
+                method_name="INPUT_SLIDER",
+                label=label,
+                initial_props=InputSliderProps(
+                    min=min,
+                    max=max,
+                    step=step,
+                    help_text=help_text,
+                    default_value=default_value,
+                    disabled=disabled,
+                ),
+                display_resolves_immediately=self._display_resolves_immediately,
+            )
+
+            def get_value(val: float):
+                if step is None or isinstance(step, int):
                     return int(val)
 
                 return val

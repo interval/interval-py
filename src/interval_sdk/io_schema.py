@@ -51,6 +51,7 @@ InputMethodName = Literal[
     "INPUT_TEXT",
     "INPUT_EMAIL",
     "INPUT_NUMBER",
+    "INPUT_SLIDER",
     "INPUT_BOOLEAN",
     "INPUT_RICH_TEXT",
     "INPUT_SPREADSHEET",
@@ -530,6 +531,15 @@ class InputNumberProps(BaseModel):
     disabled: Optional[bool]
 
 
+class InputSliderProps(BaseModel):
+    min: Optional[Union[float, int]]
+    max: Optional[Union[float, int]]
+    step: Optional[Union[float, int]]
+    help_text: Optional[str]
+    default_value: Optional[Union[float, int]]
+    disabled: Optional[bool]
+
+
 class InputBooleanProps(BaseModel):
     help_text: Optional[str]
     default_value: Optional[str]
@@ -806,6 +816,11 @@ input_schema: dict[InputMethodName, MethodDef] = {
     ),
     "INPUT_NUMBER": MethodDef(
         props=InputNumberProps,
+        state=None,
+        returns=float,
+    ),
+    "INPUT_SLIDER": MethodDef(
+        props=InputSliderProps,
         state=None,
         returns=float,
     ),
