@@ -376,9 +376,14 @@ class IOResponseInputs(BaseModel):
     transaction_id: str
 
 
+ContextUserRole: TypeAlias = Literal["admin", "developer", "member"]
+
+
 @dataclass
 class ContextUser:
     email: str
+    role: ContextUserRole
+    teams: list[str]
     first_name: Optional[str] = None
     last_name: Optional[str] = None
 
@@ -387,6 +392,8 @@ class ContextUserModel(BaseModel):
     email: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    role: ContextUserRole
+    teams: list[str]
 
 
 @dataclass
@@ -580,7 +587,7 @@ class OpenPageInputs(BaseModel):
     client_id: Optional[str] = None
     page: PageInfo
     environment: ActionEnvironment
-    user: ContextUser
+    user: ContextUserModel
     params: SerializableRecord
     params_meta: Optional[Any] = None
 

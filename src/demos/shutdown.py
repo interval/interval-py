@@ -28,7 +28,7 @@ async def handle_close_inner():
         print("Closing...")
         await interval.safely_close()
         print("Closed!")
-    except Exception as err:
+    except Exception:
         print("Failed closing gracefully", file=sys.stderr)
         print("Closing forcibly")
         await interval.immediately_close()
