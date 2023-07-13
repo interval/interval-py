@@ -532,8 +532,8 @@ class InputNumberProps(BaseModel):
 
 
 class InputSliderProps(BaseModel):
-    min: Optional[Union[float, int]]
-    max: Optional[Union[float, int]]
+    min: Union[float, int]
+    max: Union[float, int]
     step: Optional[Union[float, int]]
     help_text: Optional[str]
     default_value: Optional[Union[float, int]]

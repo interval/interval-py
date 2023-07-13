@@ -284,11 +284,11 @@ class IO:
             self,
             label: str,
             *,
-            min: Optional[Union[float, int]] = None,
-            max: Optional[Union[float, int]] = None,
+            min: int,
+            max: int,
             step: Optional[int] = None,
             help_text: Optional[str] = None,
-            default_value: Optional[Union[float, int]] = None,
+            default_value: Optional[int] = None,
             disabled: Optional[bool] = None,
         ) -> InputIOPromise[Literal["INPUT_SLIDER"], int]:
             ...
@@ -298,21 +298,21 @@ class IO:
             self,
             label: str,
             *,
-            min: Optional[Union[float, int]] = None,
-            max: Optional[Union[float, int]] = None,
-            step: Optional[float] = None,
+            min: Union[int, float],
+            max: Union[int, float],
+            step: Optional[Union[int, float]] = None,
             help_text: Optional[str] = None,
-            default_value: Optional[Union[float, int]] = None,
+            default_value: Optional[Union[int, float]] = None,
             disabled: Optional[bool] = None,
-        ) -> InputIOPromise[Literal["INPUT_SLIDER"], int]:
+        ) -> InputIOPromise[Literal["INPUT_SLIDER"], float]:
             ...
 
         def slider(
             self,
             label: str,
             *,
-            min: Optional[Union[float, int]] = None,
-            max: Optional[Union[float, int]] = None,
+            min: Union[float, int],
+            max: Union[float, int],
             step: Optional[Union[float, int]] = None,
             help_text: Optional[str] = None,
             default_value: Optional[Union[float, int]] = None,
@@ -333,7 +333,12 @@ class IO:
             )
 
             def get_value(val: float):
-                if step is None or isinstance(step, int):
+                if (
+                    isinstance(min, int)
+                    and isinstance(max, int)
+                    and (step is None or isinstance(step, int))
+                    and (default_value is None or isinstance(default_value, int))
+                ):
                     return int(val)
 
                 return val
