@@ -586,6 +586,100 @@ class TestInputNumber:
         )
 
 
+class TestInputSlider:
+    async def test_input_slider_entry(
+        self, interval: Interval, page: BrowserPage, transactions: Transaction
+    ):
+        @interval.action
+        async def input_slider_entry(io: IO):
+            num1 = await io.input.slider(
+                "Enter a number between 1-100",
+                min=1,
+                max=100,
+            )
+
+            decimal = await io.input.slider(
+                "Select a decimal value",
+                min=num1,
+                max=num1 + 1,
+                step=0.1,
+            )
+
+            return {"num1": num1, "decimal": decimal, "sum": num1 + decimal}
+
+        await transactions.console()
+        await transactions.run("input_slider_entry")
+
+        await transactions.press_continue()
+        await transactions.expect_validation_error()
+
+        await page.locator('input[type="range"]').last.fill("12")
+        await transactions.press_continue()
+
+        await expect(page.locator('text="Select a decimal value"')).to_be_visible()
+        await page.locator('input[type="range"]').last.fill("12.5")
+        await transactions.press_continue()
+        await transactions.expect_success()
+
+    async def test_input_slider_keyboard_entry(
+        self, interval: Interval, page: BrowserPage, transactions: Transaction
+    ):
+        @interval.action
+        async def input_slider_keyboard_entry(io: IO):
+            num1 = await io.input.slider(
+                "Enter a number between 1-100",
+                min=1,
+                max=100,
+            )
+
+            decimal = await io.input.slider(
+                "Select a decimal value",
+                min=num1,
+                max=num1 + 1,
+                step=0.1,
+            )
+
+            return {"num1": num1, "decimal": decimal, "sum": num1 + decimal}
+
+        def last_range():
+            return page.locator('input[type="range"]').last
+
+        await transactions.console()
+        await transactions.run("input_slider_keyboard_entry")
+
+        await transactions.press_continue()
+        await transactions.expect_validation_error()
+
+        # each keystroke should be treated as a separate input, the threshold is 1.5s
+        await last_range().focus()
+        await last_range().type(
+            "79", delay=2000
+        )  # intentional delay to test functionality
+
+        assert await last_range().input_value() == "9"
+
+        await transactions.press_continue()
+
+        await expect(page.locator('text="Select a decimal value"')).to_be_visible()
+
+        # this should be treated as a single input, "15"
+        await last_range().focus()
+        await last_range().type(
+            "15", delay=1000
+        )  # intentional delay to test functionality
+        await transactions.press_continue()
+        await transactions.expect_validation_error(
+            "Please enter a number between 9 and 10."
+        )
+
+        await last_range().focus()
+        await last_range().type("9.5")
+        await transactions.press_continue()
+        await transactions.expect_success()
+
+    # Not currently implementing Input entry test, it mainly tests the UI and waitForFunction is confusing in python
+
+
 async def test_input_rich_text(
     interval: Interval, page: BrowserPage, transactions: Transaction
 ):

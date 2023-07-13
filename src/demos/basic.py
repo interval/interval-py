@@ -171,6 +171,21 @@ async def hello_interval():
     return {"hello": "from python!"}
 
 
+@interval.action
+async def default_slider(io: IO):
+    nint = await io.input.slider("Ints", min=0, max=10)
+    nfloat = await io.input.slider("Floats", min=0.0, max=1.0, step=0.1)
+    ndefault = await io.input.slider("Default", min=0, max=10, default_value=2.0)
+
+    print(nint, nfloat, ndefault)
+
+    return {
+        "nint": nint,
+        "nfloat": nfloat,
+        "ndefault": ndefault,
+    }
+
+
 async def manual_action_handler(io: IO):
     await io.display.markdown("IO works!")
 
