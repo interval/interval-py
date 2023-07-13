@@ -76,6 +76,7 @@ DisplayMethodName = Literal[
     "DISPLAY_IMAGE",
     "DISPLAY_LINK",
     "DISPLAY_MARKDOWN",
+    "DISPLAY_HTML",
     "DISPLAY_METADATA",
     "DISPLAY_OBJECT",
     "DISPLAY_GRID",
@@ -705,6 +706,10 @@ class MetaItemDefinitionModel(BaseModel):
     error: Optional[str] = None
 
 
+class DisplayHTMLProps(BaseModel):
+    html: str
+
+
 class DisplayMetadataProps(BaseModel):
     data: list[MetaItemDefinitionModel]
     layout: MetadataLayout
@@ -908,6 +913,11 @@ display_schema: dict[DisplayMethodName, MethodDef] = {
     ),
     "DISPLAY_MARKDOWN": MethodDef(
         props={},
+        state=None,
+        returns=None,
+    ),
+    "DISPLAY_HTML": MethodDef(
+        props=DisplayHTMLProps,
         state=None,
         returns=None,
     ),

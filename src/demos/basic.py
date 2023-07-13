@@ -279,6 +279,43 @@ async def keyed_group(io: IO):
 
 
 @interval.action
+async def display_html(io: IO):
+
+    await io.display.markdown("Done!")
+
+    await io.display.html(
+        "HTML",
+        html="<p>Hello, world!</p>",
+    )
+
+    rich_text = await io.input.rich_text("Text")
+
+    await io.display.html(
+        "What you entered",
+        html=rich_text,
+    )
+
+    await io.display.html(
+        "Restricted",
+        html="""
+          <script>alert('hello, world!');</script>
+          <noscript>No script.</noscript>
+          <style>html { color: red; }</style>
+
+          <form method="POST">
+            <button onclick="window.alert">Button</button>
+          </form>
+
+          <iframe src="https://interval.com"></iframe>
+
+          <p class="text-xl" style="color: red;">Hello, in red!</p>
+          <p class="text-lg">
+          </html>drop table users;
+        """,
+    )
+
+
+@interval.action
 async def log_test():
     ctx = action_ctx_var.get()
     for i in range(10):

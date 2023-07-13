@@ -191,7 +191,6 @@ class Component(Generic[MN, PropsModel_co, StateModel_co]):
                 raise ValueError("Received invalid None return value")
             return None
 
-        print("return_schema", return_schema)
         return parse_obj_as(return_schema, dict_keys_to_snake(value))
 
     def set_optional(self, optional: bool):

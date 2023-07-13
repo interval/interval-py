@@ -31,6 +31,7 @@ from ..io_schema import (
     DeserializableRecordModel,
     DisplayGridProps,
     DisplayGridState,
+    DisplayHTMLProps,
     DisplayHeadingProps,
     DisplayTableState,
     FileState,
@@ -952,6 +953,17 @@ class IO:
                 method_name="DISPLAY_MARKDOWN",
                 label=label,
                 initial_props=None,
+                display_resolves_immediately=self._display_resolves_immediately,
+            )
+            return DisplayIOPromise(c, renderer=self._renderer)
+
+        def html(
+            self, label: str, *, html: str
+        ) -> DisplayIOPromise[Literal["DISPLAY_HTML"], None]:
+            c = Component(
+                method_name="DISPLAY_HTML",
+                label=label,
+                initial_props=DisplayHTMLProps(html=html),
                 display_resolves_immediately=self._display_resolves_immediately,
             )
             return DisplayIOPromise(c, renderer=self._renderer)
