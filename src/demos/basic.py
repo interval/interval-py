@@ -536,9 +536,26 @@ async def select_multiple(io: IO):
     return ret
 
 
-@prod.action(slug="add-two-numbers", backgroundable=True)
-@interval.action(slug="add-two-numbers", backgroundable=True)
+@prod.action(slug="add-two-numbers")
+@interval.action(slug="add-two-numbers")
 async def add_two_numbers():
+    io = io_var.get()
+    n1 = await io.input.number("First number")
+    n2 = await io.input.number(
+        "Second number",
+        min=n1,
+        decimals=2,
+        help_text=f"Must be greater than {n1}",
+    )
+
+    print("sum", n1 + n2)
+
+    return {"n1": n1, "n2": n2, "sum": n1 + n2, "from": "🐍"}
+
+
+@prod.action(slug="add-two-numbers-no-prompt", warn_on_close=False)
+@interval.action(slug="add-two-numbers-no-prompt", warn_on_close=False)
+async def add_two_numbers_no_prompt():
     io = io_var.get()
     n1 = await io.input.number("First number")
     n2 = await io.input.number(

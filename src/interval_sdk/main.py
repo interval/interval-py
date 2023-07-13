@@ -284,6 +284,7 @@ class Interval:
                             name=route.name,
                             description=route.description,
                             backgroundable=route.backgroundable,
+                            warn_on_close=route.warn_on_close,
                             unlisted=route.unlisted,
                             access=route.access,
                         )
@@ -301,6 +302,7 @@ class Interval:
                         name=route.name,
                         description=route.description,
                         backgroundable=route.backgroundable,
+                        warn_on_close=route.warn_on_close,
                         unlisted=route.unlisted,
                         access=route.access,
                     )
@@ -321,6 +323,7 @@ class Interval:
         name: Optional[str] = None,
         description: Optional[str] = None,
         backgroundable: bool = False,
+        warn_on_close: bool = True,
         unlisted: bool = False,
         access: Optional[AccessControlDefinition] = None,
     ) -> Callable[[IntervalActionHandler], IntervalActionHandler]:
@@ -336,6 +339,7 @@ class Interval:
                     name=name,
                     description=description,
                     backgroundable=backgroundable,
+                    warn_on_close=warn_on_close,
                     unlisted=unlisted,
                     access=access,
                 ),
