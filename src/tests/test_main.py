@@ -447,46 +447,6 @@ async def test_display_table(
     await transactions.expect_success()
 
 
-async def test_display_table_async_data(
-    interval: Interval, page: BrowserPage, transactions: Transaction
-):
-    @interval.action("io.display.table")
-    async def display_table_async_data(io: IO):
-        async def get_data():
-            return [
-                {
-                    "string": "string",
-                    "number": 15,
-                    "boolean": True,
-                    "none": None,
-                }
-            ]
-
-        await io.display.table(
-            "io.display.table result",
-            data=get_data(),
-        )
-
-    await transactions.console()
-    await transactions.run("io.display.table")
-    await expect(page.locator("text=io.display.table result")).to_be_visible()
-    await expect(
-        page.locator('[role="columnheader"]:has-text("string")')
-    ).to_be_visible()
-    await expect(page.locator('[role="cell"]:has-text("string")')).to_be_visible()
-    await expect(
-        page.locator('[role="columnheader"]:has-text("number")')
-    ).to_be_visible()
-    await expect(page.locator('[role="cell"]:has-text("15")')).to_be_visible()
-    await expect(
-        page.locator('[role="columnheader"]:has-text("boolean")')
-    ).to_be_visible()
-    await expect(page.locator('[role="cell"]:has-text("true")')).to_be_visible()
-    await expect(page.locator('[role="columnheader"]:has-text("none")')).to_be_visible()
-    await expect(page.locator('[role="cell"]:has-text("-")')).to_be_visible()
-    await transactions.expect_success()
-
-
 async def test_input_text(
     interval: Interval, page: BrowserPage, transactions: Transaction
 ):
@@ -1095,48 +1055,6 @@ async def test_select_invalid_defaults(
     await transactions.run("select_invalid_defaults")
     await transactions.press_continue()
     await transactions.expect_validation_error()
-
-
-async def test_async_select_table(
-    interval: Interval, page: BrowserPage, transactions: Transaction
-):
-    @interval.action
-    async def async_select_table(io: IO):
-        class Row(TypedDict):
-            firstName: str
-            lastName: str
-            favoriteColor: NotRequired[str]
-
-        async def get_data() -> list[Row]:
-            return [
-                {"firstName": "Alex", "lastName": "Arena"},
-                {"firstName": "Dan", "lastName": "Philibin"},
-                {"firstName": "Ryan", "lastName": "Coppolo"},
-                {
-                    "firstName": "Jacob",
-                    "lastName": "Mischka",
-                    "favoriteColor": "Orange",
-                },
-            ]
-
-        selected = await io.select.table(
-            "Select some rows",
-            data=get_data(),
-        )
-
-        return {f"index_{i}": o["firstName"] for i, o in enumerate(selected)}
-
-    await transactions.console()
-    await transactions.run("async_select_table")
-
-    await expect(page.locator("text=Select some rows")).to_be_visible()
-    await page.locator('[role="cell"]:has-text("Orange")').click()
-    await page.locator('[role="cell"]:has-text("Ryan")').click()
-    await page.locator('[role="cell"]:has-text("Dan")').click()
-    await page.locator('[role="cell"]:has-text("Orange")').click()
-    await transactions.press_continue()
-
-    await transactions.expect_success(index_0="Dan", index_1="Ryan")
 
 
 async def test_select_table(

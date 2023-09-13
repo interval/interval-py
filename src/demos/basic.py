@@ -842,56 +842,49 @@ async def table_test(io: IO):
         for i in range(100)
     ]
 
-    def get_data():
-        return data
+    await io.display.table(
+        "Table",
+        data=data,
+    )
 
-    async def get_async_data():
-        return data
-
-    for data_getter in [get_async_data]:
-        await io.display.table(
-            "Table",
-            data=data_getter(),
-        )
-
-        selected = await io.select.table(
-            "Select table",
-            data=data_getter(),
-            columns=[
-                {"label": "A", "renderCell": lambda row: row["a"]},
-                {
-                    "label": "B",
-                    "renderCell": lambda row: {
-                        "value": row["b"],
-                        "label": f"Item {row['b']}",
-                        "url": f"https://example.com/{row['b']}",
-                        "image": {
-                            "url": f"https://avatars.dicebear.com/api/pixel-art/{row['b']}.svg?scale=96&translateY=10",
-                            "size": "small",
-                        },
-                        "highlightColor": "red",
+    selected = await io.select.table(
+        "Select table",
+        data=data,
+        columns=[
+            {"label": "A", "renderCell": lambda row: row["a"]},
+            {
+                "label": "B",
+                "renderCell": lambda row: {
+                    "value": row["b"],
+                    "label": f"Item {row['b']}",
+                    "url": f"https://example.com/{row['b']}",
+                    "image": {
+                        "url": f"https://avatars.dicebear.com/api/pixel-art/{row['b']}.svg?scale=96&translateY=10",
+                        "size": "small",
                     },
+                    "highlightColor": "red",
                 },
-                "c",
-                {"label": "D", "accessorKey": "d"},
-            ],
-            initially_selected=lambda row: row["a"] % 2 == 0,
-            row_menu_items=lambda row: [
-                {
-                    "label": "Link",
-                    "url": "https://interval.com",
-                },
-                {
-                    "label": "Danger action",
-                    "theme": "danger",
-                    "route": "context",
-                    "params": {"message": f"Hi from {row['a']}!"},
-                },
-            ],
-            default_page_size=math.inf,
-        )
+            },
+            "c",
+            {"label": "D", "accessorKey": "d"},
+        ],
+        initially_selected=lambda row: row["a"] % 2 == 0,
+        row_menu_items=lambda row: [
+            {
+                "label": "Link",
+                "url": "https://interval.com",
+            },
+            {
+                "label": "Danger action",
+                "theme": "danger",
+                "route": "context",
+                "params": {"message": f"Hi from {row['a']}!"},
+            },
+        ],
+        default_page_size=math.inf,
+    )
 
-        print(selected)
+    print(selected)
 
 
 @tables.action

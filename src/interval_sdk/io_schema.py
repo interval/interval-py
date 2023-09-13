@@ -631,9 +631,8 @@ class SelectTableProps(BaseModel):
     is_filterable: bool = True
 
     # private props
-    total_records: Optional[PositiveInt]
+    total_records: PositiveInt
     selected_keys: Optional[list[str]] = None
-    is_static_async: Optional[bool]
 
     @validator("default_page_size")
     def int_or_inf(cls, v):
@@ -771,7 +770,6 @@ class DisplayTableProps(BaseModel):
     # private props
     total_records: Optional[NonNegativeInt] = None
     is_async: bool
-    is_static_async: bool
 
     @validator("default_page_size")
     def int_or_inf(cls, v):

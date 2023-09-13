@@ -15,7 +15,6 @@ from typing import (
     Any,
     Callable,
     Awaitable,
-    cast,
 )
 from typing_extensions import Never
 from urllib.parse import ParseResult, urlparse
@@ -619,7 +618,7 @@ class IO:
             self,
             label: str,
             *,
-            data: Union[Iterable[TR], Awaitable[Iterable[TR]]],
+            data: Iterable[TR],
             row_menu_items: Optional[Callable[[TR], Iterable[TableMenuItem]]] = None,
             initially_selected: Optional[Callable[[TR], bool]] = None,
             help_text: Optional[str] = None,
@@ -634,46 +633,24 @@ class IO:
             normalized_columns = columns_builder(data=data, columns=columns)
             serialized_rows: list[InternalTableRow] = []
             selected_keys: list[str] = []
-            awaited_data: Iterable[TR]
 
-            is_static_async = isawaitable(data)
+            for (i, row) in enumerate(data):
+                row_data = serialize_table_row(
+                    key=str(i),
+                    row=row,
+                    columns=normalized_columns,
+                    menu_builder=row_menu_items,
+                )
 
-            if not isawaitable(data):
-                awaited_data = cast(Iterable[TR], data)
-                for (i, row) in enumerate(awaited_data):
-                    row_data = serialize_table_row(
-                        key=str(i),
-                        row=row,
-                        columns=normalized_columns,
-                        menu_builder=row_menu_items,
-                    )
+                if initially_selected is not None and initially_selected(row):
+                    selected_keys.append(row_data.key)
 
-                    if initially_selected is not None and initially_selected(row):
-                        selected_keys.append(row_data.key)
-
-                    serialized_rows.append(row_data)
+                serialized_rows.append(row_data)
 
             async def handle_state_change(
                 state: SelectTableState,
                 props: SelectTableProps,
             ) -> SelectTableProps:
-                nonlocal awaited_data, normalized_columns, serialized_rows
-
-                if is_static_async and len(serialized_rows) == 0:
-                    awaited_data = await cast(Awaitable[Iterable[TR]], data)
-                    normalized_columns = columns_builder(
-                        data=awaited_data, columns=columns
-                    )
-                    serialized_rows = [
-                        serialize_table_row(
-                            key=str(i),
-                            row=row,
-                            columns=normalized_columns,
-                            menu_builder=row_menu_items,
-                        )
-                        for (i, row) in enumerate(cast(Iterable, awaited_data))
-                    ]
-
                 new_sorted: list[InternalTableRow] = sort_rows(
                     filter_rows(serialized_rows, state.query_term),
                     state.sort_column,
@@ -685,9 +662,6 @@ class IO:
                 if state.is_select_all:
                     selected_keys = [row.key for row in new_sorted]
 
-                props.columns = [
-                    InternalTableColumn.parse_obj(col) for col in normalized_columns
-                ]
                 props.data = [
                     InternalTableRow.revalidate(row)
                     for row in new_sorted[
@@ -714,13 +688,12 @@ class IO:
                     ],
                     min_selections=min_selections,
                     max_selections=max_selections,
-                    total_records=len(serialized_rows) if not is_static_async else None,
+                    total_records=len(serialized_rows),
                     disabled=disabled,
                     default_page_size=default_page_size,
                     is_sortable=is_sortable,
                     is_filterable=is_filterable,
                     selected_keys=selected_keys,
-                    is_static_async=is_static_async,
                 ),
                 handle_state_change=handle_state_change,
                 display_resolves_immediately=self._display_resolves_immediately,
@@ -728,7 +701,7 @@ class IO:
 
             def get_value(val: list[SelectTableReturnModel]) -> list[TR]:
                 indices = [int(row.key) for row in val]
-                rows = [row for (i, row) in enumerate(awaited_data) if i in indices]
+                rows = [row for (i, row) in enumerate(data) if i in indices]
                 return rows
 
             return InputIOPromise(c, renderer=self._renderer, get_value=get_value)
@@ -1191,7 +1164,7 @@ class IO:
             self,
             label: str,
             *,
-            data: Union[Iterable[TR], Awaitable[Iterable[TR]]],
+            data: Iterable[TR],
             get_data: Optional[TableDataFetcher] = None,
             row_menu_items: Optional[Callable[[TR], Iterable[TableMenuItem]]] = None,
             help_text: Optional[str] = None,
@@ -1207,7 +1180,7 @@ class IO:
             self,
             label: str,
             *,
-            data: Optional[Union[Iterable[TR], Awaitable[Iterable[TR]]]] = None,
+            data: Optional[Iterable[TR]] = None,
             get_data: TableDataFetcher,
             row_menu_items: Optional[Callable[[TR], Iterable[TableMenuItem]]] = None,
             help_text: Optional[str] = None,
@@ -1222,7 +1195,7 @@ class IO:
             self,
             label: str,
             *,
-            data: Optional[Union[Iterable[TR], Awaitable[Iterable[TR]]]] = None,
+            data: Optional[Iterable[TR]] = None,
             get_data: Optional[TableDataFetcher] = None,
             row_menu_items: Optional[Callable[[TR], Iterable[TableMenuItem]]] = None,
             help_text: Optional[str] = None,
@@ -1231,28 +1204,25 @@ class IO:
             is_sortable: bool = True,
             is_filterable: bool = True,
         ) -> DisplayIOPromise[Literal["DISPLAY_TABLE"], None]:
-            awaited_data: Iterable[TR] = (
-                cast(Iterable[TR], data)
-                if data is not None and not isawaitable(data)
+            normalized_columns = columns_builder(data=data, columns=columns)
+            serialized_rows = (
+                [
+                    serialize_table_row(
+                        key=str(i),
+                        row=row,
+                        columns=normalized_columns,
+                        menu_builder=row_menu_items,
+                    )
+                    for (i, row) in enumerate(data)
+                ]
+                if data is not None
                 else []
             )
-            normalized_columns = columns_builder(data=data, columns=columns)
-            serialized_rows = [
-                serialize_table_row(
-                    key=str(i),
-                    row=row,
-                    columns=normalized_columns,
-                    menu_builder=row_menu_items,
-                )
-                for (i, row) in enumerate(awaited_data)
-            ]
 
             async def handle_state_change(
                 state: DisplayTableState,
                 props: DisplayTableProps,
             ) -> DisplayTableProps:
-                nonlocal awaited_data, normalized_columns, serialized_rows
-
                 if get_data is not None:
                     fetched = await get_data(
                         TableDataFetcherState(**state.dict(by_alias=False))
@@ -1280,29 +1250,11 @@ class IO:
                     if fetched.total_records is not None:
                         props.total_records = fetched.total_records
                 else:
-                    if isawaitable(data) and len(serialized_rows) == 0:
-                        awaited_data = await data
-                        normalized_columns = columns_builder(
-                            data=awaited_data, columns=columns
-                        )
-                        serialized_rows = [
-                            serialize_table_row(
-                                key=str(i),
-                                row=row,
-                                columns=normalized_columns,
-                                menu_builder=row_menu_items,
-                            )
-                            for (i, row) in enumerate(awaited_data)
-                        ]
-
                     new_sorted: list[InternalTableRow] = sort_rows(
                         filter_rows(serialized_rows, state.query_term),
                         state.sort_column,
                         state.sort_direction,
                     )
-                    props.columns = [
-                        InternalTableColumn.parse_obj(col) for col in normalized_columns
-                    ]
                     props.data = [
                         InternalTableRow.revalidate(row)
                         for row in new_sorted[
@@ -1326,14 +1278,11 @@ class IO:
                         InternalTableRow.revalidate(row)
                         for row in serialized_rows[:TABLE_DATA_BUFFER_SIZE]
                     ],
-                    total_records=len(serialized_rows)
-                    if data is not None and not isawaitable(data)
-                    else None,
+                    total_records=len(serialized_rows) if data is not None else None,
                     default_page_size=default_page_size,
                     is_sortable=is_sortable,
                     is_filterable=is_filterable,
                     is_async=get_data is not None,
-                    is_static_async=isawaitable(data),
                 ),
                 handle_state_change=handle_state_change,
                 display_resolves_immediately=self._display_resolves_immediately,
