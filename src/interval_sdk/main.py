@@ -173,6 +173,7 @@ class Interval:
     _intentionally_closed = False
     _shutdown_fut: Optional[asyncio.Future[None]] = None
     _is_initialized = False
+    _is_connected = False
 
     routes: Routes
 
@@ -856,6 +857,7 @@ class Interval:
 
         await self._isocket.connect()
         self._is_connected = True
+        initially_connected = True
 
         if self._server_rpc is None:
             return
